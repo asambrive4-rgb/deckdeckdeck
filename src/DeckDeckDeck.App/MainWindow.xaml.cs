@@ -25,8 +25,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        viewModel.SelectSlot(slotKey);
-        e.Handled = true;
+        e.Handled = viewModel.SelectSlot(slotKey);
     }
 
     private static bool TryGetSlotKey(Key key, out SlotKey slotKey)

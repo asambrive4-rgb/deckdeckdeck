@@ -12,6 +12,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <Button Width="76"
@@ -30,6 +31,12 @@
                            Foreground="#69768A"
                            Text="{Binding Subtitle}" />
             </StackPanel>
+
+            <Button Grid.Column="2"
+                    Width="76"
+                    Height="36"
+                    Command="{Binding EditCategoryCommand}"
+                    Content="Edit" />
         </Grid>
 
         <views:NumpadGridView Grid.Row="1"

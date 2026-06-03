@@ -1,17 +1,26 @@
 using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.Services;
 
 namespace DeckDeckDeck.App.ViewModels;
 
 public sealed class HomeViewModel
 {
-    private readonly Action<SlotKey, string> _openCategory;
-    private readonly Action<string> _showStatus;
+    private readonly Action<Category> _openCategory;
+    private readonly Action<SlotKey> _createCategory;
 
-    public HomeViewModel(Action<SlotKey, string> openCategory, Action<string> showStatus)
+    public HomeViewModel(
+        CategoryService categoryService,
+        SettingsService settingsService,
+        SlotService slotService,
+        Action<Category> openCategory,
+        Action<SlotKey> createCategory)
     {
         _openCategory = openCategory;
-        _showStatus = showStatus;
-        NumpadGrid = new NumpadGridViewModel(SlotKeyCatalog.All.Select(CreateSlot));
+        _createCategory = createCategory;
+
+        var categories = categoryService.GetAll();
+        var settings = settingsService.Load();
+        NumpadGrid = slotService.BuildCategoryGrid(categories, settings, SelectCategorySlot);
     }
 
     public string Title => "DeckDeckDeck";
@@ -20,36 +29,20 @@ public sealed class HomeViewModel
 
     public NumpadGridViewModel NumpadGrid { get; }
 
-    public void SelectSlot(SlotKey slotKey)
+    public bool SelectSlot(SlotKey slotKey)
     {
         NumpadGrid.SelectSlot(slotKey);
+        return true;
     }
 
-    private SlotViewModel CreateSlot(SlotKey slotKey)
+    private void SelectCategorySlot(SlotKey slotKey, Category? category)
     {
-        var title = slotKey switch
+        if (category is null)
         {
-            SlotKey.Numpad1 => "Writing",
-            SlotKey.Numpad2 => "Review",
-            SlotKey.Numpad3 => "Summary",
-            _ => null
-        };
-
-        return new SlotViewModel(
-            slotKey,
-            title,
-            isEnabledSlot: true,
-            selectedSlotKey => SelectCategorySlot(selectedSlotKey, title));
-    }
-
-    private void SelectCategorySlot(SlotKey slotKey, string? title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            _showStatus($"{slotKey.GetDisplayText()} category editor is planned for stage 2.");
+            _createCategory(slotKey);
             return;
         }
 
-        _openCategory(slotKey, title);
+        _openCategory(category);
     }
 }

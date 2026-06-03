@@ -62,4 +62,9 @@ public static class SlotKeyCatalog
             _ => throw new ArgumentOutOfRangeException(nameof(slotKey), slotKey, null)
         };
     }
+
+    public static int GetSortOrder(this SlotKey slotKey)
+    {
+        return All.ToList().IndexOf(slotKey);
+    }
 }

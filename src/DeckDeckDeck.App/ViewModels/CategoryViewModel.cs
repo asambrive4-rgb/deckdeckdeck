@@ -1,28 +1,36 @@
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.Services;
 
 namespace DeckDeckDeck.App.ViewModels;
 
 public sealed class CategoryViewModel
 {
-    private readonly Action<string> _showStatus;
+    private readonly Category _category;
+    private readonly Action<Category, SlotKey, Snippet?> _editSnippet;
 
     public CategoryViewModel(
-        SlotKey categorySlotKey,
-        string categoryName,
+        Category category,
+        SnippetService snippetService,
+        SettingsService settingsService,
+        SlotService slotService,
         Action showHome,
-        Action<string> showStatus)
+        Action<Category> editCategory,
+        Action<Category, SlotKey, Snippet?> editSnippet)
     {
-        CategorySlotKey = categorySlotKey;
-        Title = categoryName;
-        Subtitle = $"{categorySlotKey.GetDisplayText()} category";
-        BackCommand = new RelayCommand(showHome);
-        _showStatus = showStatus;
-        NumpadGrid = new NumpadGridViewModel(SlotKeyCatalog.All.Select(CreateSlot));
-    }
+        _category = category;
+        _editSnippet = editSnippet;
 
-    public SlotKey CategorySlotKey { get; }
+        Title = category.Name;
+        Subtitle = $"{category.SlotKey.GetDisplayText()} category";
+        BackCommand = new RelayCommand(showHome);
+        EditCategoryCommand = new RelayCommand(() => editCategory(_category));
+
+        var snippets = snippetService.GetByCategoryId(category.Id);
+        var settings = settingsService.Load();
+        NumpadGrid = slotService.BuildSnippetGrid(snippets, settings, SelectSnippetSlot);
+    }
 
     public string Title { get; }
 
@@ -32,36 +40,16 @@ public sealed class CategoryViewModel
 
     public ICommand BackCommand { get; }
 
-    public void SelectSlot(SlotKey slotKey)
+    public ICommand EditCategoryCommand { get; }
+
+    public bool SelectSlot(SlotKey slotKey)
     {
         NumpadGrid.SelectSlot(slotKey);
+        return true;
     }
 
-    private SlotViewModel CreateSlot(SlotKey slotKey)
+    private void SelectSnippetSlot(SlotKey slotKey, Snippet? snippet)
     {
-        var title = slotKey switch
-        {
-            SlotKey.Numpad1 => "Outline",
-            SlotKey.Numpad3 => "Structure",
-            SlotKey.Numpad5 => "Translate",
-            _ => null
-        };
-
-        return new SlotViewModel(
-            slotKey,
-            title,
-            isEnabledSlot: true,
-            selectedSlotKey => SelectSnippetSlot(selectedSlotKey, title));
-    }
-
-    private void SelectSnippetSlot(SlotKey slotKey, string? title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            _showStatus($"{slotKey.GetDisplayText()} snippet editor is planned for stage 2.");
-            return;
-        }
-
-        _showStatus($"{title} paste flow is planned for stage 4.");
+        _editSnippet(_category, slotKey, snippet);
     }
 }

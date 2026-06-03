@@ -21,6 +21,12 @@
         <DataTemplate DataType="{x:Type viewModels:CategoryViewModel}">
             <views:CategoryView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:CategoryEditViewModel}">
+            <views:CategoryEditView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:SnippetEditViewModel}">
+            <views:SnippetEditView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid Margin="20">
