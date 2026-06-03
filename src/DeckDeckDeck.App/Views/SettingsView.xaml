@@ -16,22 +16,22 @@
             <TextBlock Margin="0,4,0,0"
                        FontSize="14"
                        Foreground="#69768A"
-                       Text="Launcher behavior" />
+                       Text="실행 동작" />
         </StackPanel>
 
         <StackPanel Grid.Row="1">
             <CheckBox Margin="0,0,0,14"
-                      Content="Hide window after paste"
+                      Content="붙여넣은 후 창 숨기기"
                       FontSize="15"
                       IsChecked="{Binding AutoHideAfterPaste}" />
             <CheckBox Margin="0,0,0,22"
-                      Content="Restore clipboard after paste"
+                      Content="붙여넣은 후 클립보드 복원"
                       FontSize="15"
                       IsChecked="{Binding RestoreClipboardAfterPaste}" />
 
             <TextBlock Margin="0,0,0,6"
                        FontWeight="SemiBold"
-                       Text="Hotkeys" />
+                       Text="단축키" />
             <Border Padding="12"
                     Background="#F8FAFD"
                     BorderBrush="#DDE4EE"
@@ -45,7 +45,7 @@
 
             <TextBlock Margin="0,18,0,6"
                        FontWeight="SemiBold"
-                       Text="Permission notice" />
+                       Text="권한 안내" />
             <Border Padding="12"
                     Background="#FFF8E6">
                 <TextBlock Foreground="#6F4E00"
@@ -72,12 +72,12 @@
                     Height="36"
                     Margin="0,0,8,0"
                     Command="{Binding BackCommand}"
-                    Content="Back" />
+                    Content="뒤로" />
             <Button Grid.Column="2"
                     Width="82"
                     Height="36"
                     Command="{Binding SaveCommand}"
-                    Content="Save" />
+                    Content="저장" />
         </Grid>
     </Grid>
 </UserControl>

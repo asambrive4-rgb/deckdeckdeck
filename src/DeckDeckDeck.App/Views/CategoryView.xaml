@@ -19,7 +19,7 @@
                     Height="36"
                     Margin="0,0,14,0"
                     Command="{Binding BackCommand}"
-                    Content="Back" />
+                    Content="뒤로" />
 
             <StackPanel Grid.Column="1">
                 <TextBlock FontSize="28"
@@ -36,7 +36,7 @@
                     Width="86"
                     Height="36"
                     Command="{Binding SettingsCommand}"
-                    Content="Settings" />
+                    Content="설정" />
         </Grid>
 
         <views:NumpadGridView Grid.Row="1"

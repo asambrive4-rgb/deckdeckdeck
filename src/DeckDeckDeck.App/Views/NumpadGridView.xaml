@@ -63,7 +63,7 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
             <Setter Property="FontSize" Value="13" />
-            <Setter Property="ToolTip" Value="Edit slot" />
+            <Setter Property="ToolTip" Value="슬롯 편집" />
         </Style>
     </UserControl.Resources>
 

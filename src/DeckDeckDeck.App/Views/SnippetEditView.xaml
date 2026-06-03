@@ -17,7 +17,7 @@
                        FontSize="14"
                        Foreground="#69768A">
                 <Run Text="{Binding CategoryName, Mode=OneWay}" />
-                <Run Text=" / Slot " />
+                <Run Text=" / 슬롯 " />
                 <Run Text="{Binding KeyText, Mode=OneWay}" />
             </TextBlock>
         </StackPanel>
@@ -35,7 +35,7 @@
             <StackPanel>
                 <TextBlock Margin="0,0,0,6"
                            FontWeight="SemiBold"
-                           Text="Title" />
+                           Text="슬롯 명" />
                 <TextBox Height="36"
                          Padding="8,6"
                          Text="{Binding SnippetTitle, UpdateSourceTrigger=PropertyChanged}" />
@@ -45,7 +45,7 @@
                         Margin="0,14,0,0">
                 <TextBlock Margin="0,0,0,6"
                            FontWeight="SemiBold"
-                           Text="Content" />
+                           Text="실행" />
                 <TextBox MinHeight="180"
                          Padding="8"
                          AcceptsReturn="True"
@@ -59,7 +59,7 @@
                         Margin="0,14,0,0">
                 <TextBlock Margin="0,0,0,6"
                            FontWeight="SemiBold"
-                           Text="Description" />
+                           Text="설명" />
                 <TextBox Height="70"
                          Padding="8"
                          AcceptsReturn="True"
@@ -70,7 +70,7 @@
 
             <CheckBox Grid.Row="3"
                       Margin="0,14,0,0"
-                      Content="Slot enabled"
+                      Content="이 슬롯 사용"
                       FontWeight="SemiBold"
                       IsChecked="{Binding IsSlotEnabled}" />
 
@@ -78,7 +78,7 @@
                         Margin="0,14,0,0">
                 <TextBlock Margin="0,0,0,6"
                            FontWeight="SemiBold"
-                           Text="Image" />
+                           Text="이미지" />
                 <DockPanel LastChildFill="False">
                     <Border Width="72"
                             Height="72"
@@ -93,12 +93,12 @@
                         <Button Width="120"
                                 Height="32"
                                 Command="{Binding ChooseImageCommand}"
-                                Content="Choose Image" />
+                                Content="이미지 선택" />
                         <Button Width="120"
                                 Height="32"
                                 Margin="0,8,0,0"
                                 Command="{Binding RemoveImageCommand}"
-                                Content="Remove Image"
+                                Content="이미지 제거"
                                 IsEnabled="{Binding HasImage}" />
                     </StackPanel>
                 </DockPanel>
@@ -123,19 +123,19 @@
             <Button Width="82"
                     Height="36"
                     Command="{Binding DeleteCommand}"
-                    Content="Delete"
+                    Content="삭제"
                     IsEnabled="{Binding CanDelete}" />
             <Button Grid.Column="2"
                     Width="82"
                     Height="36"
                     Margin="0,0,8,0"
                     Command="{Binding CancelCommand}"
-                    Content="Cancel" />
+                    Content="취소" />
             <Button Grid.Column="3"
                     Width="82"
                     Height="36"
                     Command="{Binding SaveCommand}"
-                    Content="Save" />
+                    Content="저장" />
         </Grid>
     </Grid>
 </UserControl>

@@ -26,7 +26,7 @@ public sealed class CategoryViewModel
         _pasteSnippet = pasteSnippet;
 
         Title = category.Name;
-        Subtitle = $"{category.SlotKey.GetDisplayText()} category";
+        Subtitle = $"슬롯 {category.SlotKey.GetDisplayText()} 카테고리";
         BackCommand = new RelayCommand(showHome);
         SettingsCommand = new RelayCommand(showSettings);
 

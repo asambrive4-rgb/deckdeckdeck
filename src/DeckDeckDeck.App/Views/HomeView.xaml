@@ -29,7 +29,7 @@
                     Width="86"
                     Height="36"
                     Command="{Binding SettingsCommand}"
-                    Content="Settings" />
+                    Content="설정" />
         </Grid>
 
         <views:NumpadGridView Grid.Row="1"

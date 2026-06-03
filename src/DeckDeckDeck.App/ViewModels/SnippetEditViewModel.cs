@@ -74,7 +74,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         RemoveImageCommand = new RelayCommand(RemoveImage);
     }
 
-    public string Title => IsExisting ? "Edit Snippet" : "New Snippet";
+    public string Title => IsExisting ? "실행 항목 편집" : "새 실행 항목";
 
     public Guid CategoryId { get; }
 
@@ -151,7 +151,7 @@ public sealed class SnippetEditViewModel : ObservableObject
                 return;
             }
 
-            ErrorMessage = "Snippet title is required.";
+            ErrorMessage = "슬롯 명을 입력해 주세요.";
             return;
         }
 
@@ -162,7 +162,7 @@ public sealed class SnippetEditViewModel : ObservableObject
                 return;
             }
 
-            ErrorMessage = "Snippet content is required.";
+            ErrorMessage = "실행 내용을 입력해 주세요.";
             return;
         }
 
@@ -178,7 +178,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         DeleteOriginalImageIfReplaced();
         _originalImagePath = _imagePath;
         _originalThumbnailPath = ThumbnailPath;
-        _showStatus($"{snippet.Title} saved.");
+        _showStatus($"{snippet.Title} 저장됨.");
         _afterSave(snippet);
     }
 
@@ -196,8 +196,8 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         var confirmed = _dialogService.Confirm(
-            "Delete snippet",
-            "Delete this snippet?");
+            "실행 항목 삭제",
+            "이 실행 항목을 삭제할까요?");
 
         if (!confirmed)
         {
@@ -208,7 +208,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         var deletedImageFiles = _snippetService.Delete(_snippetId.Value);
         _thumbnailService?.DeleteImageFiles(deletedImageFiles);
 
-        _showStatus("Snippet deleted.");
+        _showStatus("실행 항목을 삭제했습니다.");
         _afterDelete();
     }
 
@@ -216,7 +216,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     {
         if (_thumbnailService is null)
         {
-            ErrorMessage = "Image storage is not ready.";
+            ErrorMessage = "이미지 저장소가 준비되지 않았습니다.";
             return;
         }
 
@@ -301,7 +301,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         DeleteCurrentUnsavedImage();
-        _showStatus($"{KeyText} slot updated.");
+        _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
         _cancel();
 
         return true;
@@ -323,7 +323,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Slot setting could not be saved.";
+            ErrorMessage = "슬롯 설정을 저장하지 못했습니다.";
             _loggingService?.Log($"Setting save failed for snippet slot {SlotKey}.", ex);
 
             return false;

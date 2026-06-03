@@ -39,18 +39,18 @@ public sealed class SettingsViewModel : ObservableObject
         BackCommand = new RelayCommand(_cancel);
     }
 
-    public string Title => "Settings";
+    public string Title => "설정";
 
     public string HomeHotkey => _settings.HomeHotkey;
 
     public string DirectCategoryHotkeys => _settings.DirectCategoryHotkeys;
 
-    public string HomeHotkeyText => $"Home: {HomeHotkey}";
+    public string HomeHotkeyText => $"홈: {HomeHotkey}";
 
-    public string DirectCategoryHotkeysText => $"Direct category: {DirectCategoryHotkeys}";
+    public string DirectCategoryHotkeysText => $"카테고리 바로 열기: {DirectCategoryHotkeys}";
 
     public string AdminPermissionNotice =>
-        "Administrator apps, protected input fields, security software, and some games may block paste input unless DeckDeckDeck runs with matching permissions.";
+        "관리자 권한 앱, 보호된 입력창, 보안 프로그램, 일부 게임에서는 DeckDeckDeck도 같은 권한으로 실행해야 붙여넣기가 동작할 수 있습니다.";
 
     public bool AutoHideAfterPaste
     {
@@ -81,12 +81,12 @@ public sealed class SettingsViewModel : ObservableObject
             _settings.AutoHideAfterPaste = AutoHideAfterPaste;
             _settings.RestoreClipboardAfterPaste = RestoreClipboardAfterPaste;
             _settingsService.Save(_settings);
-            _showStatus("Settings saved.");
+            _showStatus("설정을 저장했습니다.");
             _afterSave();
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Settings could not be saved.";
+            ErrorMessage = "설정을 저장하지 못했습니다.";
             _loggingService?.Log("Settings save failed.", ex);
         }
     }

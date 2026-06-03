@@ -28,7 +28,7 @@ public sealed class HotkeyService : IDisposable
 
         if (_source is null)
         {
-            return ["global hotkey registration failed: window source was not ready"];
+            return ["전역 단축키를 등록하지 못했습니다: 창이 아직 준비되지 않았습니다."];
         }
 
         _source.AddHook(WndProc);
@@ -50,7 +50,7 @@ public sealed class HotkeyService : IDisposable
             }
 
             var errorCode = Marshal.GetLastWin32Error();
-            failures.Add($"global hotkey registration failed for Ctrl+Numpad {digit} (Win32 error {errorCode})");
+            failures.Add($"Ctrl+숫자 키패드 {digit} 전역 단축키를 등록하지 못했습니다. (Win32 오류 {errorCode})");
         }
 
         return failures;

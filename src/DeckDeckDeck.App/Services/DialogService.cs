@@ -18,8 +18,8 @@ public sealed class DialogService
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Select image",
-            Filter = "Image files (*.png;*.jpg;*.jpeg;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif|All files (*.*)|*.*",
+            Title = "이미지 선택",
+            Filter = "이미지 파일 (*.png;*.jpg;*.jpeg;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif|모든 파일 (*.*)|*.*",
             CheckFileExists = true,
             Multiselect = false
         };

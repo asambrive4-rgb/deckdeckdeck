@@ -69,7 +69,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         RemoveImageCommand = new RelayCommand(RemoveImage);
     }
 
-    public string Title => IsExisting ? "Edit Category" : "New Category";
+    public string Title => IsExisting ? "카테고리 편집" : "새 카테고리";
 
     public SlotKey SlotKey { get; }
 
@@ -136,7 +136,7 @@ public sealed class CategoryEditViewModel : ObservableObject
                 return;
             }
 
-            ErrorMessage = "Category name is required.";
+            ErrorMessage = "카테고리 이름을 입력해 주세요.";
             return;
         }
 
@@ -152,7 +152,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         DeleteOriginalImageIfReplaced();
         _originalImagePath = _imagePath;
         _originalThumbnailPath = ThumbnailPath;
-        _showStatus($"{category.Name} saved.");
+        _showStatus($"{category.Name} 저장됨.");
         _afterSave(category);
     }
 
@@ -170,8 +170,8 @@ public sealed class CategoryEditViewModel : ObservableObject
         }
 
         var confirmed = _dialogService.Confirm(
-            "Delete category",
-            "Delete this category and all snippets inside it?");
+            "카테고리 삭제",
+            "이 카테고리와 안에 있는 모든 실행 항목을 삭제할까요?");
 
         if (!confirmed)
         {
@@ -188,7 +188,7 @@ public sealed class CategoryEditViewModel : ObservableObject
             }
         }
 
-        _showStatus("Category deleted.");
+        _showStatus("카테고리를 삭제했습니다.");
         _afterDelete();
     }
 
@@ -196,7 +196,7 @@ public sealed class CategoryEditViewModel : ObservableObject
     {
         if (_thumbnailService is null)
         {
-            ErrorMessage = "Image storage is not ready.";
+            ErrorMessage = "이미지 저장소가 준비되지 않았습니다.";
             return;
         }
 
@@ -281,7 +281,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         }
 
         DeleteCurrentUnsavedImage();
-        _showStatus($"{KeyText} slot updated.");
+        _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
         _cancel();
 
         return true;
@@ -303,7 +303,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Slot setting could not be saved.";
+            ErrorMessage = "슬롯 설정을 저장하지 못했습니다.";
             _loggingService?.Log($"Setting save failed for category slot {SlotKey}.", ex);
 
             return false;

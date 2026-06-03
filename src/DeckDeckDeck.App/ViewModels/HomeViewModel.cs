@@ -32,7 +32,7 @@ public sealed class HomeViewModel
 
     public string Title => "DeckDeckDeck";
 
-    public string Subtitle => "Categories";
+    public string Subtitle => "카테고리";
 
     public NumpadGridViewModel NumpadGrid { get; }
 

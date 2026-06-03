@@ -93,7 +93,7 @@ public sealed class LocalDataServiceTests
         Assert.False(reloaded.AutoHideAfterPaste);
         Assert.False(reloaded.RestoreClipboardAfterPaste);
         Assert.True(returned);
-        Assert.Equal("Settings saved.", status);
+        Assert.Equal("설정을 저장했습니다.", status);
     }
 
     [Fact]
@@ -285,7 +285,7 @@ public sealed class LocalDataServiceTests
 
         var exception = Assert.Throws<InvalidOperationException>(() => services.ThumbnailService.StoreImage(missingPath));
 
-        Assert.Contains("does not exist", exception.Message);
+        Assert.Contains("존재하지 않습니다", exception.Message);
     }
 
     [Fact]
@@ -297,7 +297,7 @@ public sealed class LocalDataServiceTests
 
         var exception = Assert.Throws<InvalidOperationException>(() => services.ThumbnailService.StoreImage(textPath));
 
-        Assert.Contains("Unsupported image type", exception.Message);
+        Assert.Contains("지원하지 않는 이미지 형식", exception.Message);
     }
 
     [Fact]
@@ -380,7 +380,7 @@ public sealed class LocalDataServiceTests
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
 
         Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Writing category", viewModel.StatusMessage);
+        Assert.Equal("Writing 카테고리", viewModel.StatusMessage);
     }
 
     [Fact]
@@ -395,7 +395,7 @@ public sealed class LocalDataServiceTests
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad2);
 
         Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("New category for 2", viewModel.StatusMessage);
+        Assert.Equal("슬롯 2에 새 카테고리 만들기", viewModel.StatusMessage);
         Assert.True(enteredEditMode);
     }
 
@@ -410,7 +410,7 @@ public sealed class LocalDataServiceTests
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
 
         Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("1 slot is disabled.", viewModel.StatusMessage);
+        Assert.Equal("슬롯 1은 사용 안 함 상태입니다.", viewModel.StatusMessage);
     }
 
     [Fact]
@@ -423,7 +423,7 @@ public sealed class LocalDataServiceTests
         home.SettingsCommand.Execute(null);
 
         Assert.IsType<SettingsViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Settings", viewModel.StatusMessage);
+        Assert.Equal("설정", viewModel.StatusMessage);
     }
 
     [Fact]
@@ -437,7 +437,7 @@ public sealed class LocalDataServiceTests
         home.NumpadGrid.Numpad1.EditCommand.Execute(null);
 
         Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Edit Writing", viewModel.StatusMessage);
+        Assert.Equal("Writing 편집", viewModel.StatusMessage);
     }
 
     [Fact]
@@ -485,7 +485,7 @@ public sealed class LocalDataServiceTests
         categoryViewModel.NumpadGrid.Numpad3.EditCommand.Execute(null);
 
         Assert.IsType<SnippetEditViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Edit Structure", viewModel.StatusMessage);
+        Assert.Equal("Structure 편집", viewModel.StatusMessage);
     }
 
     [Fact]
@@ -500,7 +500,7 @@ public sealed class LocalDataServiceTests
         home.NumpadGrid.Numpad2.EditCommand.Execute(null);
 
         Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("New category for 2", viewModel.StatusMessage);
+        Assert.Equal("슬롯 2에 새 카테고리 만들기", viewModel.StatusMessage);
     }
 
     [Fact]

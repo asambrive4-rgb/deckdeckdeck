@@ -32,13 +32,13 @@ public sealed class ThumbnailService
     {
         if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
         {
-            throw new InvalidOperationException("Image file does not exist.");
+            throw new InvalidOperationException("이미지 파일이 존재하지 않습니다.");
         }
 
         var extension = Path.GetExtension(sourcePath);
         if (!SupportedExtensions.Contains(extension))
         {
-            throw new InvalidOperationException("Unsupported image type. Use PNG, JPG, BMP, or GIF.");
+            throw new InvalidOperationException("지원하지 않는 이미지 형식입니다. PNG, JPG, BMP, GIF를 사용해 주세요.");
         }
 
         Directory.CreateDirectory(_fileStorageService.ImageOriginalsPath);
@@ -85,7 +85,7 @@ public sealed class ThumbnailService
 
         if (source.PixelWidth <= 0 || source.PixelHeight <= 0)
         {
-            throw new InvalidOperationException("Image could not be loaded.");
+            throw new InvalidOperationException("이미지를 불러오지 못했습니다.");
         }
 
         var longestSide = Math.Max(source.PixelWidth, source.PixelHeight);

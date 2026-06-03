@@ -20,7 +20,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly Action _enterEditMode;
     private readonly Action _completePasteSelection;
     private object _currentViewModel = null!;
-    private string _statusMessage = "Ready.";
+    private string _statusMessage = "준비됨.";
 
     public MainViewModel(
         Func<IntPtr>? getPasteTargetWindowHandle = null,
@@ -108,27 +108,27 @@ public sealed class MainViewModel : ObservableObject
             EditCategory,
             CreateCategory,
             () => ShowSettings(ShowHome));
-        StatusMessage = "Home";
+        StatusMessage = "홈";
     }
 
     public void OpenHomeFromHotkey()
     {
         ShowHome();
-        StatusMessage = "Home opened from global hotkey.";
+        StatusMessage = "전역 단축키로 홈을 열었습니다.";
     }
 
     public void OpenCategoryFromHotkey(SlotKey slotKey)
     {
         if (!IsDirectCategorySlot(slotKey))
         {
-            StatusMessage = "Global direct category hotkeys only support Ctrl+Numpad 1~9.";
+            StatusMessage = "카테고리 바로 열기 단축키는 Ctrl+숫자 키패드 1~9만 지원합니다.";
             return;
         }
 
         var settings = _settingsService.Load();
         if (settings.EnabledSlotKeys.TryGetValue(slotKey, out var isEnabled) && !isEnabled)
         {
-            StatusMessage = $"{slotKey.GetDisplayText()} slot is disabled.";
+            StatusMessage = $"슬롯 {slotKey.GetDisplayText()}은 사용 안 함 상태입니다.";
             return;
         }
 
@@ -151,7 +151,7 @@ public sealed class MainViewModel : ObservableObject
 
         StatusMessage = failures.Count == 1
             ? failures[0]
-            : $"global hotkey registration failed for {failures.Count} hotkeys.";
+            : $"전역 단축키 {failures.Count}개를 등록하지 못했습니다.";
         _loggingService?.Log(StatusMessage);
     }
 
@@ -180,7 +180,7 @@ public sealed class MainViewModel : ObservableObject
             _thumbnailService,
             _settingsService,
             _loggingService);
-        StatusMessage = $"New category for {slotKey.GetDisplayText()}";
+        StatusMessage = $"슬롯 {slotKey.GetDisplayText()}에 새 카테고리 만들기";
     }
 
     private void EditCategory(Category category)
@@ -198,7 +198,7 @@ public sealed class MainViewModel : ObservableObject
             _thumbnailService,
             _settingsService,
             _loggingService);
-        StatusMessage = $"Edit {category.Name}";
+        StatusMessage = $"{category.Name} 편집";
     }
 
     private void OpenCategory(Category category)
@@ -212,7 +212,7 @@ public sealed class MainViewModel : ObservableObject
             () => ShowSettings(() => OpenCategoryById(category.Id)),
             EditSnippet,
             PasteSnippet);
-        StatusMessage = $"{category.Name} category";
+        StatusMessage = $"{category.Name} 카테고리";
     }
 
     private void OpenCategoryById(Guid categoryId)
@@ -245,8 +245,8 @@ public sealed class MainViewModel : ObservableObject
             _settingsService,
             _loggingService);
         StatusMessage = snippet is null
-            ? $"New snippet for {slotKey.GetDisplayText()}"
-            : $"Edit {snippet.Title}";
+            ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
+            : $"{snippet.Title} 편집";
     }
 
     private void ShowSettings(Action returnTo)
@@ -258,7 +258,7 @@ public sealed class MainViewModel : ObservableObject
             returnTo,
             ShowStatus,
             _loggingService);
-        StatusMessage = "Settings";
+        StatusMessage = "설정";
     }
 
     private async Task PasteSnippet(Snippet snippet)
