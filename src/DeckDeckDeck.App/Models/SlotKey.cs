@@ -67,4 +67,39 @@ public static class SlotKeyCatalog
     {
         return All.ToList().IndexOf(slotKey);
     }
+
+    public static int GetGridRow(this SlotKey slotKey)
+    {
+        return slotKey switch
+        {
+            SlotKey.NumpadDivide or SlotKey.NumpadMultiply or SlotKey.NumpadSubtract => 0,
+            SlotKey.Numpad7 or SlotKey.Numpad8 or SlotKey.Numpad9 or SlotKey.NumpadAdd => 1,
+            SlotKey.Numpad4 or SlotKey.Numpad5 or SlotKey.Numpad6 => 2,
+            SlotKey.Numpad1 or SlotKey.Numpad2 or SlotKey.Numpad3 => 3,
+            SlotKey.Numpad0 or SlotKey.NumpadDecimal => 4,
+            _ => throw new ArgumentOutOfRangeException(nameof(slotKey), slotKey, null)
+        };
+    }
+
+    public static int GetGridColumn(this SlotKey slotKey)
+    {
+        return slotKey switch
+        {
+            SlotKey.NumpadDivide or SlotKey.Numpad7 or SlotKey.Numpad4 or SlotKey.Numpad1 or SlotKey.Numpad0 => 0,
+            SlotKey.NumpadMultiply or SlotKey.Numpad8 or SlotKey.Numpad5 or SlotKey.Numpad2 => 1,
+            SlotKey.NumpadSubtract or SlotKey.Numpad9 or SlotKey.Numpad6 or SlotKey.Numpad3 or SlotKey.NumpadDecimal => 2,
+            SlotKey.NumpadAdd => 3,
+            _ => throw new ArgumentOutOfRangeException(nameof(slotKey), slotKey, null)
+        };
+    }
+
+    public static int GetGridRowSpan(this SlotKey slotKey)
+    {
+        return slotKey == SlotKey.NumpadAdd ? 2 : 1;
+    }
+
+    public static int GetGridColumnSpan(this SlotKey slotKey)
+    {
+        return slotKey == SlotKey.Numpad0 ? 2 : 1;
+    }
 }

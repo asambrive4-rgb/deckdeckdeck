@@ -33,10 +33,10 @@
             </StackPanel>
 
             <Button Grid.Column="2"
-                    Width="76"
+                    Width="86"
                     Height="36"
-                    Command="{Binding EditCategoryCommand}"
-                    Content="Edit" />
+                    Command="{Binding SettingsCommand}"
+                    Content="Settings" />
         </Grid>
 
         <views:NumpadGridView Grid.Row="1"

@@ -34,7 +34,14 @@ public sealed class SnippetService
             .FirstOrDefault(snippet => snippet.Id == id);
     }
 
-    public Snippet Create(Guid categoryId, SlotKey slotKey, string title, string content, string? description)
+    public Snippet Create(
+        Guid categoryId,
+        SlotKey slotKey,
+        string title,
+        string content,
+        string? description,
+        string? imagePath = null,
+        string? thumbnailPath = null)
     {
         using var dbContext = _dbContextFactory.Create();
 
@@ -47,6 +54,8 @@ public sealed class SnippetService
             Title = title.Trim(),
             Content = content,
             Description = NormalizeOptionalText(description),
+            ImagePath = imagePath,
+            ThumbnailPath = thumbnailPath,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -62,27 +71,55 @@ public sealed class SnippetService
         using var dbContext = _dbContextFactory.Create();
 
         var snippet = dbContext.Snippets.First(item => item.Id == id);
-        snippet.Title = title.Trim();
-        snippet.Content = content;
-        snippet.Description = NormalizeOptionalText(description);
-        snippet.UpdatedAt = DateTime.UtcNow;
+        UpdateText(snippet, title, content, description);
 
         dbContext.SaveChanges();
 
         return snippet;
     }
 
-    public void Delete(Guid id)
+    public Snippet Update(
+        Guid id,
+        string title,
+        string content,
+        string? description,
+        string? imagePath,
+        string? thumbnailPath)
     {
         using var dbContext = _dbContextFactory.Create();
 
         var snippet = dbContext.Snippets.First(item => item.Id == id);
+        UpdateText(snippet, title, content, description);
+        snippet.ImagePath = imagePath;
+        snippet.ThumbnailPath = thumbnailPath;
+
+        dbContext.SaveChanges();
+
+        return snippet;
+    }
+
+    public ImageFileSet Delete(Guid id)
+    {
+        using var dbContext = _dbContextFactory.Create();
+
+        var snippet = dbContext.Snippets.First(item => item.Id == id);
+        var imageFiles = new ImageFileSet(snippet.ImagePath, snippet.ThumbnailPath);
         dbContext.Snippets.Remove(snippet);
         dbContext.SaveChanges();
+
+        return imageFiles;
     }
 
     private static string? NormalizeOptionalText(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static void UpdateText(Snippet snippet, string title, string content, string? description)
+    {
+        snippet.Title = title.Trim();
+        snippet.Content = content;
+        snippet.Description = NormalizeOptionalText(description);
+        snippet.UpdatedAt = DateTime.UtcNow;
     }
 }

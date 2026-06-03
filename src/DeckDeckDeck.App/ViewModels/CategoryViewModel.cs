@@ -9,6 +9,7 @@ public sealed class CategoryViewModel
 {
     private readonly Category _category;
     private readonly Action<Category, SlotKey, Snippet?> _editSnippet;
+    private readonly Func<Snippet, Task> _pasteSnippet;
 
     public CategoryViewModel(
         Category category,
@@ -16,20 +17,22 @@ public sealed class CategoryViewModel
         SettingsService settingsService,
         SlotService slotService,
         Action showHome,
-        Action<Category> editCategory,
-        Action<Category, SlotKey, Snippet?> editSnippet)
+        Action showSettings,
+        Action<Category, SlotKey, Snippet?> editSnippet,
+        Func<Snippet, Task> pasteSnippet)
     {
         _category = category;
         _editSnippet = editSnippet;
+        _pasteSnippet = pasteSnippet;
 
         Title = category.Name;
         Subtitle = $"{category.SlotKey.GetDisplayText()} category";
         BackCommand = new RelayCommand(showHome);
-        EditCategoryCommand = new RelayCommand(() => editCategory(_category));
+        SettingsCommand = new RelayCommand(showSettings);
 
         var snippets = snippetService.GetByCategoryId(category.Id);
         var settings = settingsService.Load();
-        NumpadGrid = slotService.BuildSnippetGrid(snippets, settings, SelectSnippetSlot);
+        NumpadGrid = slotService.BuildSnippetGrid(snippets, settings, SelectSnippetSlot, EditSnippetSlot);
     }
 
     public string Title { get; }
@@ -40,7 +43,7 @@ public sealed class CategoryViewModel
 
     public ICommand BackCommand { get; }
 
-    public ICommand EditCategoryCommand { get; }
+    public ICommand SettingsCommand { get; }
 
     public bool SelectSlot(SlotKey slotKey)
     {
@@ -50,6 +53,29 @@ public sealed class CategoryViewModel
 
     private void SelectSnippetSlot(SlotKey slotKey, Snippet? snippet)
     {
+        if (snippet is null)
+        {
+            _editSnippet(_category, slotKey, snippet);
+            return;
+        }
+
+        _ = PasteSnippetSafely(snippet);
+    }
+
+    private void EditSnippetSlot(SlotKey slotKey, Snippet? snippet)
+    {
         _editSnippet(_category, slotKey, snippet);
+    }
+
+    private async Task PasteSnippetSafely(Snippet snippet)
+    {
+        try
+        {
+            await _pasteSnippet(snippet);
+        }
+        catch
+        {
+            // Paste failures are intentionally silent in this stage.
+        }
     }
 }

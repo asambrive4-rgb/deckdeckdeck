@@ -28,6 +28,8 @@
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <StackPanel>
@@ -66,7 +68,43 @@
                          VerticalScrollBarVisibility="Auto" />
             </StackPanel>
 
-            <TextBlock Grid.Row="3"
+            <CheckBox Grid.Row="3"
+                      Margin="0,14,0,0"
+                      Content="Slot enabled"
+                      FontWeight="SemiBold"
+                      IsChecked="{Binding IsSlotEnabled}" />
+
+            <StackPanel Grid.Row="4"
+                        Margin="0,14,0,0">
+                <TextBlock Margin="0,0,0,6"
+                           FontWeight="SemiBold"
+                           Text="Image" />
+                <DockPanel LastChildFill="False">
+                    <Border Width="72"
+                            Height="72"
+                            Background="#F3F5F7"
+                            BorderBrush="#CBD3DF"
+                            BorderThickness="1">
+                        <Image Source="{Binding ThumbnailPath}"
+                               Stretch="Uniform" />
+                    </Border>
+                    <StackPanel Margin="12,0,0,0"
+                                VerticalAlignment="Center">
+                        <Button Width="120"
+                                Height="32"
+                                Command="{Binding ChooseImageCommand}"
+                                Content="Choose Image" />
+                        <Button Width="120"
+                                Height="32"
+                                Margin="0,8,0,0"
+                                Command="{Binding RemoveImageCommand}"
+                                Content="Remove Image"
+                                IsEnabled="{Binding HasImage}" />
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+
+            <TextBlock Grid.Row="5"
                        Margin="0,14,0,0"
                        Foreground="#B42318"
                        Text="{Binding ErrorMessage}"

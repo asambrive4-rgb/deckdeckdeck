@@ -33,7 +33,21 @@ public sealed class CategoryService
             .FirstOrDefault(category => category.Id == id);
     }
 
-    public Category Create(SlotKey slotKey, string name, string? description)
+    public Category? GetBySlotKey(SlotKey slotKey)
+    {
+        using var dbContext = _dbContextFactory.Create();
+
+        return dbContext.Categories
+            .AsNoTracking()
+            .FirstOrDefault(category => category.SlotKey == slotKey);
+    }
+
+    public Category Create(
+        SlotKey slotKey,
+        string name,
+        string? description,
+        string? imagePath = null,
+        string? thumbnailPath = null)
     {
         using var dbContext = _dbContextFactory.Create();
 
@@ -44,6 +58,8 @@ public sealed class CategoryService
             SlotKey = slotKey,
             Name = name.Trim(),
             Description = NormalizeOptionalText(description),
+            ImagePath = imagePath,
+            ThumbnailPath = thumbnailPath,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -59,26 +75,62 @@ public sealed class CategoryService
         using var dbContext = _dbContextFactory.Create();
 
         var category = dbContext.Categories.First(item => item.Id == id);
-        category.Name = name.Trim();
-        category.Description = NormalizeOptionalText(description);
-        category.UpdatedAt = DateTime.UtcNow;
+        UpdateText(category, name, description);
 
         dbContext.SaveChanges();
 
         return category;
     }
 
-    public void Delete(Guid id)
+    public Category Update(
+        Guid id,
+        string name,
+        string? description,
+        string? imagePath,
+        string? thumbnailPath)
     {
         using var dbContext = _dbContextFactory.Create();
 
         var category = dbContext.Categories.First(item => item.Id == id);
+        UpdateText(category, name, description);
+        category.ImagePath = imagePath;
+        category.ThumbnailPath = thumbnailPath;
+
+        dbContext.SaveChanges();
+
+        return category;
+    }
+
+    public IReadOnlyList<ImageFileSet> Delete(Guid id)
+    {
+        using var dbContext = _dbContextFactory.Create();
+
+        var category = dbContext.Categories
+            .Include(item => item.Snippets)
+            .First(item => item.Id == id);
+        var imageFiles = new List<ImageFileSet>
+        {
+            new(category.ImagePath, category.ThumbnailPath)
+        };
+        imageFiles.AddRange(category.Snippets.Select(snippet => new ImageFileSet(
+            snippet.ImagePath,
+            snippet.ThumbnailPath)));
+
         dbContext.Categories.Remove(category);
         dbContext.SaveChanges();
+
+        return imageFiles;
     }
 
     private static string? NormalizeOptionalText(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private static void UpdateText(Category category, string name, string? description)
+    {
+        category.Name = name.Trim();
+        category.Description = NormalizeOptionalText(description);
+        category.UpdatedAt = DateTime.UtcNow;
     }
 }

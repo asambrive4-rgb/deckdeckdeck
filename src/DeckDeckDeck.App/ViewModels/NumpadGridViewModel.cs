@@ -8,7 +8,8 @@ public sealed class NumpadGridViewModel
 
     public NumpadGridViewModel(IEnumerable<SlotViewModel> slots)
     {
-        _slotsByKey = slots.ToDictionary(slot => slot.SlotKey);
+        Slots = slots.ToList();
+        _slotsByKey = Slots.ToDictionary(slot => slot.SlotKey);
 
         Numpad0 = GetRequiredSlot(SlotKey.Numpad0);
         Numpad1 = GetRequiredSlot(SlotKey.Numpad1);
@@ -26,6 +27,8 @@ public sealed class NumpadGridViewModel
         NumpadAdd = GetRequiredSlot(SlotKey.NumpadAdd);
         NumpadDecimal = GetRequiredSlot(SlotKey.NumpadDecimal);
     }
+
+    public IReadOnlyList<SlotViewModel> Slots { get; }
 
     public SlotViewModel Numpad0 { get; }
 

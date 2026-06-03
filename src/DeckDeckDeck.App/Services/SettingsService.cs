@@ -7,10 +7,8 @@ public sealed class SettingsService
 {
     private const string AutoHideAfterPasteKey = "autoHideAfterPaste";
     private const string RestoreClipboardAfterPasteKey = "restoreClipboardAfterPaste";
-    private const string ShowDisabledSlotsKey = "showDisabledSlots";
     private const string HomeHotkeyKey = "homeHotkey";
     private const string DirectCategoryHotkeysKey = "directCategoryHotkeys";
-    private const string ShowAdminPermissionNoticeKey = "showAdminPermissionNotice";
     private const string SlotEnabledPrefix = "enabledSlotKeys.";
 
     private readonly AppDbContextFactory _dbContextFactory;
@@ -31,10 +29,8 @@ public sealed class SettingsService
         {
             AutoHideAfterPaste = ReadBool(entries, AutoHideAfterPasteKey, true),
             RestoreClipboardAfterPaste = ReadBool(entries, RestoreClipboardAfterPasteKey, true),
-            ShowDisabledSlots = ReadBool(entries, ShowDisabledSlotsKey, true),
             HomeHotkey = ReadString(entries, HomeHotkeyKey, "Ctrl + Numpad0"),
             DirectCategoryHotkeys = ReadString(entries, DirectCategoryHotkeysKey, "Ctrl + Numpad1~9"),
-            ShowAdminPermissionNotice = ReadBool(entries, ShowAdminPermissionNoticeKey, true),
             EnabledSlotKeys = SlotKeyCatalog.All.ToDictionary(
                 slotKey => slotKey,
                 slotKey => ReadBool(entries, GetSlotEnabledKey(slotKey), true))
@@ -46,14 +42,36 @@ public sealed class SettingsService
         using var dbContext = _dbContextFactory.Create();
         AddIfMissing(dbContext, AutoHideAfterPasteKey, true.ToString());
         AddIfMissing(dbContext, RestoreClipboardAfterPasteKey, true.ToString());
-        AddIfMissing(dbContext, ShowDisabledSlotsKey, true.ToString());
         AddIfMissing(dbContext, HomeHotkeyKey, "Ctrl + Numpad0");
         AddIfMissing(dbContext, DirectCategoryHotkeysKey, "Ctrl + Numpad1~9");
-        AddIfMissing(dbContext, ShowAdminPermissionNoticeKey, true.ToString());
 
         foreach (var slotKey in SlotKeyCatalog.All)
         {
             AddIfMissing(dbContext, GetSlotEnabledKey(slotKey), true.ToString());
+        }
+
+        dbContext.SaveChanges();
+    }
+
+    public void SetSlotEnabled(SlotKey slotKey, bool enabled)
+    {
+        using var dbContext = _dbContextFactory.Create();
+        Upsert(dbContext, GetSlotEnabledKey(slotKey), enabled.ToString());
+        dbContext.SaveChanges();
+    }
+
+    public void Save(AppSettings settings)
+    {
+        using var dbContext = _dbContextFactory.Create();
+        Upsert(dbContext, AutoHideAfterPasteKey, settings.AutoHideAfterPaste.ToString());
+        Upsert(dbContext, RestoreClipboardAfterPasteKey, settings.RestoreClipboardAfterPaste.ToString());
+        Upsert(dbContext, HomeHotkeyKey, settings.HomeHotkey);
+        Upsert(dbContext, DirectCategoryHotkeysKey, settings.DirectCategoryHotkeys);
+
+        foreach (var slotKey in SlotKeyCatalog.All)
+        {
+            var enabled = !settings.EnabledSlotKeys.TryGetValue(slotKey, out var value) || value;
+            Upsert(dbContext, GetSlotEnabledKey(slotKey), enabled.ToString());
         }
 
         dbContext.SaveChanges();
@@ -67,6 +85,19 @@ public sealed class SettingsService
         }
 
         dbContext.Settings.Add(new SettingEntry { Key = key, Value = value });
+    }
+
+    private static void Upsert(AppDbContext dbContext, string key, string value)
+    {
+        var setting = dbContext.Settings.FirstOrDefault(item => item.Key == key);
+
+        if (setting is null)
+        {
+            dbContext.Settings.Add(new SettingEntry { Key = key, Value = value });
+            return;
+        }
+
+        setting.Value = value;
     }
 
     private static bool ReadBool(IReadOnlyDictionary<string, string> values, string key, bool defaultValue)

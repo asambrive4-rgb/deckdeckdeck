@@ -8,7 +8,8 @@ public sealed class SlotService
     public NumpadGridViewModel BuildCategoryGrid(
         IEnumerable<Category> categories,
         AppSettings settings,
-        Action<SlotKey, Category?> onSelected)
+        Action<SlotKey, Category?> onSelected,
+        Action<SlotKey, Category?> onEdit)
     {
         var categoriesBySlot = categories.ToDictionary(category => category.SlotKey);
 
@@ -18,15 +19,18 @@ public sealed class SlotService
             return new SlotViewModel(
                 slotKey,
                 category?.Name,
+                category?.ThumbnailPath,
                 IsEnabled(slotKey, settings),
-                selectedSlotKey => onSelected(selectedSlotKey, category));
+                selectedSlotKey => onSelected(selectedSlotKey, category),
+                selectedSlotKey => onEdit(selectedSlotKey, category));
         }));
     }
 
     public NumpadGridViewModel BuildSnippetGrid(
         IEnumerable<Snippet> snippets,
         AppSettings settings,
-        Action<SlotKey, Snippet?> onSelected)
+        Action<SlotKey, Snippet?> onSelected,
+        Action<SlotKey, Snippet?> onEdit)
     {
         var snippetsBySlot = snippets.ToDictionary(snippet => snippet.SlotKey);
 
@@ -36,8 +40,10 @@ public sealed class SlotService
             return new SlotViewModel(
                 slotKey,
                 snippet?.Title,
+                snippet?.ThumbnailPath,
                 IsEnabled(slotKey, settings),
-                selectedSlotKey => onSelected(selectedSlotKey, snippet));
+                selectedSlotKey => onSelected(selectedSlotKey, snippet),
+                selectedSlotKey => onEdit(selectedSlotKey, snippet));
         }));
     }
 
