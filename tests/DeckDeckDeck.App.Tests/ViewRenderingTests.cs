@@ -91,4 +91,43 @@ public sealed class ViewRenderingTests
 
         Assert.Null(exception);
     }
+
+    [Fact]
+    public void NumpadGridViewLoadsForThumbnailSlot()
+    {
+        Exception? exception = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var slots = SlotKeyCatalog.All.Select(slotKey => new SlotViewModel(
+                    slotKey,
+                    slotKey == SlotKey.Numpad1 ? "GitHub" : null,
+                    slotKey == SlotKey.Numpad1 ? "thumbnail.png" : null,
+                    true,
+                    _ => { },
+                    _ => { }));
+                var viewModel = new NumpadGridViewModel(slots);
+                var view = new NumpadGridView { DataContext = viewModel };
+
+                view.Measure(new Size(560, 680));
+                view.Arrange(new Rect(0, 0, 560, 680));
+                view.UpdateLayout();
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+            }
+            finally
+            {
+                Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(exception);
+    }
 }
