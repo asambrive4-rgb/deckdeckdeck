@@ -15,6 +15,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Action<string> _showStatus;
     private readonly AppSettings _settings;
     private bool _autoHideAfterPaste;
+    private bool _bringWindowToFrontOnHotkey;
     private string _errorMessage = string.Empty;
     private bool _restoreClipboardAfterPaste;
 
@@ -32,6 +33,7 @@ public sealed class SettingsViewModel : ObservableObject
         _loggingService = loggingService;
         _settings = settingsService.Load();
 
+        _bringWindowToFrontOnHotkey = _settings.BringWindowToFrontOnHotkey;
         _autoHideAfterPaste = _settings.AutoHideAfterPaste;
         _restoreClipboardAfterPaste = _settings.RestoreClipboardAfterPaste;
 
@@ -51,6 +53,12 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string AdminPermissionNotice =>
         "관리자 권한 앱, 보호된 입력창, 보안 프로그램, 일부 게임에서는 DeckDeckDeck도 같은 권한으로 실행해야 붙여넣기가 동작할 수 있습니다.";
+
+    public bool BringWindowToFrontOnHotkey
+    {
+        get => _bringWindowToFrontOnHotkey;
+        set => SetProperty(ref _bringWindowToFrontOnHotkey, value);
+    }
 
     public bool AutoHideAfterPaste
     {
@@ -78,6 +86,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         try
         {
+            _settings.BringWindowToFrontOnHotkey = BringWindowToFrontOnHotkey;
             _settings.AutoHideAfterPaste = AutoHideAfterPaste;
             _settings.RestoreClipboardAfterPaste = RestoreClipboardAfterPaste;
             _settingsService.Save(_settings);

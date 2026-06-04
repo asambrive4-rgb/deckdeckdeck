@@ -98,6 +98,11 @@ public sealed class MainViewModel : ObservableObject
         private set => SetProperty(ref _statusMessage, value);
     }
 
+    public AppSettings LoadSettings()
+    {
+        return _settingsService.Load();
+    }
+
     public void ShowHome()
     {
         CurrentViewModel = new HomeViewModel(

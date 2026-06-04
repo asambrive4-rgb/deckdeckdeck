@@ -2,6 +2,12 @@ namespace DeckDeckDeck.App.Native;
 
 public static class Win32Constants
 {
+    public static readonly IntPtr HwndTopmost = new(-1);
+
+    public static readonly IntPtr HwndNotopmost = new(-2);
+
+    public static readonly IntPtr HwndBottom = new(1);
+
     public const int WmMouseActivate = 0x0021;
 
     public const int WmHotkey = 0x0312;

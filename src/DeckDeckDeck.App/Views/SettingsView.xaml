@@ -21,6 +21,10 @@
 
         <StackPanel Grid.Row="1">
             <CheckBox Margin="0,0,0,14"
+                      Content="단축키로 열 때 창을 앞으로 표시"
+                      FontSize="15"
+                      IsChecked="{Binding BringWindowToFrontOnHotkey}" />
+            <CheckBox Margin="0,0,0,14"
                       Content="붙여넣은 후 창 숨기기"
                       FontSize="15"
                       IsChecked="{Binding AutoHideAfterPaste}" />

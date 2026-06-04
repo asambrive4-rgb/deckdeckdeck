@@ -5,6 +5,7 @@ namespace DeckDeckDeck.App.Services;
 
 public sealed class SettingsService
 {
+    private const string BringWindowToFrontOnHotkeyKey = "bringWindowToFrontOnHotkey";
     private const string AutoHideAfterPasteKey = "autoHideAfterPaste";
     private const string RestoreClipboardAfterPasteKey = "restoreClipboardAfterPaste";
     private const string HomeHotkeyKey = "homeHotkey";
@@ -27,6 +28,7 @@ public sealed class SettingsService
 
         return new AppSettings
         {
+            BringWindowToFrontOnHotkey = ReadBool(entries, BringWindowToFrontOnHotkeyKey, true),
             AutoHideAfterPaste = ReadBool(entries, AutoHideAfterPasteKey, true),
             RestoreClipboardAfterPaste = ReadBool(entries, RestoreClipboardAfterPasteKey, true),
             HomeHotkey = ReadString(entries, HomeHotkeyKey, "Ctrl + Numpad0"),
@@ -40,6 +42,7 @@ public sealed class SettingsService
     public void EnsureDefaults()
     {
         using var dbContext = _dbContextFactory.Create();
+        AddIfMissing(dbContext, BringWindowToFrontOnHotkeyKey, true.ToString());
         AddIfMissing(dbContext, AutoHideAfterPasteKey, true.ToString());
         AddIfMissing(dbContext, RestoreClipboardAfterPasteKey, true.ToString());
         AddIfMissing(dbContext, HomeHotkeyKey, "Ctrl + Numpad0");
@@ -63,6 +66,7 @@ public sealed class SettingsService
     public void Save(AppSettings settings)
     {
         using var dbContext = _dbContextFactory.Create();
+        Upsert(dbContext, BringWindowToFrontOnHotkeyKey, settings.BringWindowToFrontOnHotkey.ToString());
         Upsert(dbContext, AutoHideAfterPasteKey, settings.AutoHideAfterPaste.ToString());
         Upsert(dbContext, RestoreClipboardAfterPasteKey, settings.RestoreClipboardAfterPaste.ToString());
         Upsert(dbContext, HomeHotkeyKey, settings.HomeHotkey);

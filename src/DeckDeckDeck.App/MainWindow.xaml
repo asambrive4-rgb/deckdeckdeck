@@ -13,6 +13,7 @@
         MinHeight="620"
         Background="#F3F5F7"
         FontFamily="Segoe UI"
+        ShowActivated="False"
         PreviewKeyDown="OnPreviewKeyDown">
     <Window.Resources>
         <DataTemplate DataType="{x:Type viewModels:HomeViewModel}">

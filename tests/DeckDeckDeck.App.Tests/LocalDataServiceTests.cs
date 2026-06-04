@@ -50,6 +50,7 @@ public sealed class LocalDataServiceTests
 
         var settings = services.SettingsService.Load();
 
+        Assert.True(settings.BringWindowToFrontOnHotkey);
         Assert.True(settings.AutoHideAfterPaste);
         Assert.True(settings.RestoreClipboardAfterPaste);
         Assert.All(SlotKeyCatalog.All, slotKey => Assert.True(settings.EnabledSlotKeys[slotKey]));
@@ -60,12 +61,14 @@ public sealed class LocalDataServiceTests
     {
         var services = CreateServices();
         var settings = services.SettingsService.Load();
+        settings.BringWindowToFrontOnHotkey = false;
         settings.AutoHideAfterPaste = false;
         settings.RestoreClipboardAfterPaste = false;
 
         services.SettingsService.Save(settings);
 
         var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.False(reloaded.BringWindowToFrontOnHotkey);
         Assert.False(reloaded.AutoHideAfterPaste);
         Assert.False(reloaded.RestoreClipboardAfterPaste);
     }
@@ -83,6 +86,7 @@ public sealed class LocalDataServiceTests
             message => status = message,
             services.LoggingService)
         {
+            BringWindowToFrontOnHotkey = false,
             AutoHideAfterPaste = false,
             RestoreClipboardAfterPaste = false
         };
@@ -90,6 +94,7 @@ public sealed class LocalDataServiceTests
         viewModel.SaveCommand.Execute(null);
 
         var reloaded = services.SettingsService.Load();
+        Assert.False(reloaded.BringWindowToFrontOnHotkey);
         Assert.False(reloaded.AutoHideAfterPaste);
         Assert.False(reloaded.RestoreClipboardAfterPaste);
         Assert.True(returned);
@@ -308,6 +313,7 @@ public sealed class LocalDataServiceTests
             "Writing",
             "thumbnail.png",
             true,
+            _ => { },
             _ => { });
 
         Assert.True(slot.HasThumbnail);

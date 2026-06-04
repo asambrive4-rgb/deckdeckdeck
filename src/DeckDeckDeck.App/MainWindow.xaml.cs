@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
 using DeckDeckDeck.App.ViewModels;
@@ -180,6 +181,10 @@ public partial class MainWindow : Window
 
     private void ShowPastePalette()
     {
+        var settings = DataContext is MainViewModel viewModel
+            ? viewModel.LoadSettings()
+            : new AppSettings();
+
         if (!IsVisible)
         {
             Show();
@@ -187,11 +192,19 @@ public partial class MainWindow : Window
 
         if (WindowState == WindowState.Minimized)
         {
-            WindowState = WindowState.Normal;
+            _paletteWindowService.ShowWithoutActivation();
         }
 
-        _paletteWindowService.BringToFrontWithoutActivation();
-        _windowFocusService.TryActivate(_lastPasteTargetWindowHandle);
+        if (settings.BringWindowToFrontOnHotkey)
+        {
+            _paletteWindowService.BringToFrontWithoutActivation();
+            Dispatcher.BeginInvoke(
+                () => _paletteWindowService.ReturnToNormalZOrderWithoutActivation(),
+                DispatcherPriority.ApplicationIdle);
+            return;
+        }
+
+        _paletteWindowService.SendToBottomWithoutActivation();
     }
 
     private void BringWindowToFrontForEdit()

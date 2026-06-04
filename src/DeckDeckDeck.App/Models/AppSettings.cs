@@ -2,6 +2,8 @@ namespace DeckDeckDeck.App.Models;
 
 public sealed class AppSettings
 {
+    public bool BringWindowToFrontOnHotkey { get; set; } = true;
+
     public bool AutoHideAfterPaste { get; set; } = true;
 
     public bool RestoreClipboardAfterPaste { get; set; } = true;
