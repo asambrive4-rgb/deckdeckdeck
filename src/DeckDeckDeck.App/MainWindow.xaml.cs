@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -17,6 +18,7 @@ public partial class MainWindow : Window
     private readonly WindowFocusService _windowFocusService = new();
     private IntPtr _windowHandle;
     private IntPtr _lastPasteTargetWindowHandle;
+    private bool _allowClose;
 
     public MainWindow()
     {
@@ -29,9 +31,15 @@ public partial class MainWindow : Window
             EndPasteSelection);
         SourceInitialized += OnSourceInitialized;
         StateChanged += OnStateChanged;
+        Closing += OnClosing;
         Closed += OnClosed;
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _numpadCaptureService.SlotCaptured += OnNumpadSlotCaptured;
+    }
+
+    internal void AllowCloseForExit()
+    {
+        _allowClose = true;
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -69,6 +77,19 @@ public partial class MainWindow : Window
         _numpadCaptureService.Dispose();
         _paletteWindowService.Dispose();
         _hotkeyService.Dispose();
+    }
+
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        if (_allowClose)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        WindowState = WindowState.Minimized;
+        SaveWindowPlacement();
+        Hide();
     }
 
     private void OnStateChanged(object? sender, EventArgs e)

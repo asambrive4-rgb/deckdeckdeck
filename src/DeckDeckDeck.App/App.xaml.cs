@@ -26,7 +26,7 @@ public partial class App : Application
     {
         var menu = new FormsContextMenuStrip();
         menu.Items.Add(new FormsToolStripMenuItem("열기", null, (_, _) => ShowMainWindow()));
-        menu.Items.Add(new FormsToolStripMenuItem("종료", null, (_, _) => Shutdown()));
+        menu.Items.Add(new FormsToolStripMenuItem("종료", null, (_, _) => ExitApplication()));
 
         _trayIcon = new FormsNotifyIcon
         {
@@ -37,6 +37,16 @@ public partial class App : Application
         };
 
         _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
+    }
+
+    private void ExitApplication()
+    {
+        if (MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.AllowCloseForExit();
+        }
+
+        Shutdown();
     }
 
     private void ShowMainWindow()
