@@ -1,11 +1,14 @@
+using System.IO;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
 using DeckDeckDeck.App.ViewModels;
+using DrawingIcon = System.Drawing.Icon;
 
 namespace DeckDeckDeck.App;
 
@@ -23,6 +26,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        UseApplicationIcon();
         WindowStartupLocation = WindowStartupLocation.Manual;
         DataContext = new MainViewModel(
             () => _lastPasteTargetWindowHandle,
@@ -35,6 +39,28 @@ public partial class MainWindow : Window
         Closed += OnClosed;
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _numpadCaptureService.SlotCaptured += OnNumpadSlotCaptured;
+    }
+
+    private void UseApplicationIcon()
+    {
+        var processPath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(processPath) || !File.Exists(processPath))
+        {
+            return;
+        }
+
+        using var icon = DrawingIcon.ExtractAssociatedIcon(processPath);
+        if (icon is null)
+        {
+            return;
+        }
+
+        var imageSource = Imaging.CreateBitmapSourceFromHIcon(
+            icon.Handle,
+            Int32Rect.Empty,
+            BitmapSizeOptions.FromEmptyOptions());
+        imageSource.Freeze();
+        Icon = imageSource;
     }
 
     internal void AllowCloseForExit()

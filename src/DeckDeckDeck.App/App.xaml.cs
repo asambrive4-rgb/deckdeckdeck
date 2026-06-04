@@ -1,4 +1,6 @@
+using System.IO;
 using System.Windows;
+using DrawingIcon = System.Drawing.Icon;
 using DrawingSystemIcons = System.Drawing.SystemIcons;
 using FormsContextMenuStrip = System.Windows.Forms.ContextMenuStrip;
 using FormsNotifyIcon = System.Windows.Forms.NotifyIcon;
@@ -31,12 +33,27 @@ public partial class App : Application
         _trayIcon = new FormsNotifyIcon
         {
             ContextMenuStrip = menu,
-            Icon = (System.Drawing.Icon)DrawingSystemIcons.Application.Clone(),
+            Icon = CreateTrayIconImage(),
             Text = "DeckDeckDeck 실행 중",
             Visible = true
         };
 
         _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
+    }
+
+    private static DrawingIcon CreateTrayIconImage()
+    {
+        var processPath = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(processPath) && File.Exists(processPath))
+        {
+            var icon = DrawingIcon.ExtractAssociatedIcon(processPath);
+            if (icon is not null)
+            {
+                return icon;
+            }
+        }
+
+        return (DrawingIcon)DrawingSystemIcons.Application.Clone();
     }
 
     private void ExitApplication()
