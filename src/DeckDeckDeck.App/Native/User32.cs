@@ -4,6 +4,8 @@ namespace DeckDeckDeck.App.Native;
 
 public static partial class User32
 {
+    public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -11,6 +13,23 @@ public static partial class User32
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr SetWindowsHookEx(
+        int idHook,
+        LowLevelKeyboardProc lpfn,
+        IntPtr hMod,
+        uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
@@ -96,5 +115,19 @@ public static partial class User32
         public ushort ParamL;
 
         public ushort ParamH;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KeyboardLowLevelHookStruct
+    {
+        public uint VirtualKeyCode;
+
+        public uint ScanCode;
+
+        public uint Flags;
+
+        public uint Time;
+
+        public IntPtr ExtraInfo;
     }
 }

@@ -1,5 +1,6 @@
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
+using System.Globalization;
 
 namespace DeckDeckDeck.App.Services;
 
@@ -10,7 +11,11 @@ public sealed class SettingsService
     private const string RestoreClipboardAfterPasteKey = "restoreClipboardAfterPaste";
     private const string HomeHotkeyKey = "homeHotkey";
     private const string DirectCategoryHotkeysKey = "directCategoryHotkeys";
-    private const string SlotEnabledPrefix = "enabledSlotKeys.";
+    private const string LastWindowLeftKey = "lastWindowLeft";
+    private const string LastWindowTopKey = "lastWindowTop";
+    private const string LastWindowScreenDeviceNameKey = "lastWindowScreenDeviceName";
+    private const string CategorySlotEnabledPrefix = "enabledCategorySlotKeys.";
+    private const string SnippetSlotEnabledPrefix = "enabledSnippetSlotKeys.";
 
     private readonly AppDbContextFactory _dbContextFactory;
 
@@ -32,10 +37,16 @@ public sealed class SettingsService
             AutoHideAfterPaste = ReadBool(entries, AutoHideAfterPasteKey, true),
             RestoreClipboardAfterPaste = ReadBool(entries, RestoreClipboardAfterPasteKey, true),
             HomeHotkey = ReadString(entries, HomeHotkeyKey, "Ctrl + Numpad0"),
-            DirectCategoryHotkeys = ReadString(entries, DirectCategoryHotkeysKey, "Ctrl + Numpad1~9"),
-            EnabledSlotKeys = SlotKeyCatalog.All.ToDictionary(
+            DirectCategoryHotkeys = ReadString(entries, DirectCategoryHotkeysKey, "Ctrl + Numpad1~9, /, *, -, +, ."),
+            LastWindowLeft = ReadNullableDouble(entries, LastWindowLeftKey),
+            LastWindowTop = ReadNullableDouble(entries, LastWindowTopKey),
+            LastWindowScreenDeviceName = ReadNullableString(entries, LastWindowScreenDeviceNameKey),
+            EnabledCategorySlotKeys = SlotKeyCatalog.All.ToDictionary(
                 slotKey => slotKey,
-                slotKey => ReadBool(entries, GetSlotEnabledKey(slotKey), true))
+                slotKey => ReadBool(entries, GetCategorySlotEnabledKey(slotKey), true)),
+            EnabledSnippetSlotKeys = SlotKeyCatalog.All.ToDictionary(
+                slotKey => slotKey,
+                slotKey => ReadBool(entries, GetSnippetSlotEnabledKey(slotKey), true))
         };
     }
 
@@ -46,20 +57,31 @@ public sealed class SettingsService
         AddIfMissing(dbContext, AutoHideAfterPasteKey, true.ToString());
         AddIfMissing(dbContext, RestoreClipboardAfterPasteKey, true.ToString());
         AddIfMissing(dbContext, HomeHotkeyKey, "Ctrl + Numpad0");
-        AddIfMissing(dbContext, DirectCategoryHotkeysKey, "Ctrl + Numpad1~9");
+        AddIfMissing(dbContext, DirectCategoryHotkeysKey, "Ctrl + Numpad1~9, /, *, -, +, .");
+        AddIfMissing(dbContext, LastWindowLeftKey, string.Empty);
+        AddIfMissing(dbContext, LastWindowTopKey, string.Empty);
+        AddIfMissing(dbContext, LastWindowScreenDeviceNameKey, string.Empty);
 
         foreach (var slotKey in SlotKeyCatalog.All)
         {
-            AddIfMissing(dbContext, GetSlotEnabledKey(slotKey), true.ToString());
+            AddIfMissing(dbContext, GetCategorySlotEnabledKey(slotKey), true.ToString());
+            AddIfMissing(dbContext, GetSnippetSlotEnabledKey(slotKey), true.ToString());
         }
 
         dbContext.SaveChanges();
     }
 
-    public void SetSlotEnabled(SlotKey slotKey, bool enabled)
+    public void SetCategorySlotEnabled(SlotKey slotKey, bool enabled)
     {
         using var dbContext = _dbContextFactory.Create();
-        Upsert(dbContext, GetSlotEnabledKey(slotKey), enabled.ToString());
+        Upsert(dbContext, GetCategorySlotEnabledKey(slotKey), enabled.ToString());
+        dbContext.SaveChanges();
+    }
+
+    public void SetSnippetSlotEnabled(SlotKey slotKey, bool enabled)
+    {
+        using var dbContext = _dbContextFactory.Create();
+        Upsert(dbContext, GetSnippetSlotEnabledKey(slotKey), enabled.ToString());
         dbContext.SaveChanges();
     }
 
@@ -71,11 +93,18 @@ public sealed class SettingsService
         Upsert(dbContext, RestoreClipboardAfterPasteKey, settings.RestoreClipboardAfterPaste.ToString());
         Upsert(dbContext, HomeHotkeyKey, settings.HomeHotkey);
         Upsert(dbContext, DirectCategoryHotkeysKey, settings.DirectCategoryHotkeys);
+        Upsert(dbContext, LastWindowLeftKey, FormatNullableDouble(settings.LastWindowLeft));
+        Upsert(dbContext, LastWindowTopKey, FormatNullableDouble(settings.LastWindowTop));
+        Upsert(dbContext, LastWindowScreenDeviceNameKey, settings.LastWindowScreenDeviceName ?? string.Empty);
 
         foreach (var slotKey in SlotKeyCatalog.All)
         {
-            var enabled = !settings.EnabledSlotKeys.TryGetValue(slotKey, out var value) || value;
-            Upsert(dbContext, GetSlotEnabledKey(slotKey), enabled.ToString());
+            var categoryEnabled = !settings.EnabledCategorySlotKeys.TryGetValue(slotKey, out var categoryValue)
+                || categoryValue;
+            var snippetEnabled = !settings.EnabledSnippetSlotKeys.TryGetValue(slotKey, out var snippetValue)
+                || snippetValue;
+            Upsert(dbContext, GetCategorySlotEnabledKey(slotKey), categoryEnabled.ToString());
+            Upsert(dbContext, GetSnippetSlotEnabledKey(slotKey), snippetEnabled.ToString());
         }
 
         dbContext.SaveChanges();
@@ -118,8 +147,33 @@ public sealed class SettingsService
             : defaultValue;
     }
 
-    private static string GetSlotEnabledKey(SlotKey slotKey)
+    private static double? ReadNullableDouble(IReadOnlyDictionary<string, string> values, string key)
     {
-        return $"{SlotEnabledPrefix}{slotKey}";
+        return values.TryGetValue(key, out var value)
+            && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private static string? ReadNullableString(IReadOnlyDictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
+            ? value
+            : null;
+    }
+
+    private static string FormatNullableDouble(double? value)
+    {
+        return value?.ToString("R", CultureInfo.InvariantCulture) ?? string.Empty;
+    }
+
+    private static string GetCategorySlotEnabledKey(SlotKey slotKey)
+    {
+        return $"{CategorySlotEnabledPrefix}{slotKey}";
+    }
+
+    private static string GetSnippetSlotEnabledKey(SlotKey slotKey)
+    {
+        return $"{SnippetSlotEnabledPrefix}{slotKey}";
     }
 }

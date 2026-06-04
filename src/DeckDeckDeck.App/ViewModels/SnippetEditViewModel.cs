@@ -284,7 +284,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         var settings = _settingsService?.Load();
 
         return settings is null
-            || !settings.EnabledSlotKeys.TryGetValue(SlotKey, out var enabled)
+            || !settings.EnabledSnippetSlotKeys.TryGetValue(SlotKey, out var enabled)
             || enabled;
     }
 
@@ -316,7 +316,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 
         try
         {
-            _settingsService.SetSlotEnabled(SlotKey, IsSlotEnabled);
+            _settingsService.SetSnippetSlotEnabled(SlotKey, IsSlotEnabled);
             _originalIsSlotEnabled = IsSlotEnabled;
 
             return true;

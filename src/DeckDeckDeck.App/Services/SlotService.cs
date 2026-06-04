@@ -20,7 +20,7 @@ public sealed class SlotService
                 slotKey,
                 category?.Name,
                 category?.ThumbnailPath,
-                IsEnabled(slotKey, settings),
+                IsEnabled(slotKey, settings.EnabledCategorySlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, category),
                 selectedSlotKey => onEdit(selectedSlotKey, category));
         }));
@@ -41,14 +41,14 @@ public sealed class SlotService
                 slotKey,
                 snippet?.Title,
                 snippet?.ThumbnailPath,
-                IsEnabled(slotKey, settings),
+                IsEnabled(slotKey, settings.EnabledSnippetSlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, snippet),
                 selectedSlotKey => onEdit(selectedSlotKey, snippet));
         }));
     }
 
-    private static bool IsEnabled(SlotKey slotKey, AppSettings settings)
+    private static bool IsEnabled(SlotKey slotKey, IReadOnlyDictionary<SlotKey, bool> enabledSlotKeys)
     {
-        return !settings.EnabledSlotKeys.TryGetValue(slotKey, out var enabled) || enabled;
+        return !enabledSlotKeys.TryGetValue(slotKey, out var enabled) || enabled;
     }
 }

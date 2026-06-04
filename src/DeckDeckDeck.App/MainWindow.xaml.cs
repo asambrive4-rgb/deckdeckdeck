@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     private readonly HotkeyService _hotkeyService = new();
     private readonly NumpadCaptureService _numpadCaptureService = new();
     private readonly PaletteWindowService _paletteWindowService = new();
+    private readonly WindowPlacementService _windowPlacementService = new();
     private readonly WindowFocusService _windowFocusService = new();
     private IntPtr _windowHandle;
     private IntPtr _lastPasteTargetWindowHandle;
@@ -20,6 +21,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        WindowStartupLocation = WindowStartupLocation.Manual;
         DataContext = new MainViewModel(
             () => _lastPasteTargetWindowHandle,
             HideAfterPaste,
@@ -90,6 +92,7 @@ public partial class MainWindow : Window
     {
         _windowHandle = new WindowInteropHelper(this).Handle;
         _paletteWindowService.Attach(_windowHandle);
+        ApplyWindowPlacement(IntPtr.Zero);
 
         var failures = _hotkeyService.Start(_windowHandle);
 
@@ -101,6 +104,7 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        SaveWindowPlacement();
         _numpadCaptureService.Dispose();
         _paletteWindowService.Dispose();
         _hotkeyService.Dispose();
@@ -110,6 +114,7 @@ public partial class MainWindow : Window
     {
         if (WindowState == WindowState.Minimized)
         {
+            SaveWindowPlacement();
             Hide();
         }
     }
@@ -183,6 +188,7 @@ public partial class MainWindow : Window
     private void HideAfterPaste()
     {
         EndPasteSelection();
+        SaveWindowPlacement();
         Hide();
     }
 
@@ -194,6 +200,7 @@ public partial class MainWindow : Window
 
         if (!IsVisible)
         {
+            ApplyWindowPlacement(_lastPasteTargetWindowHandle);
             Show();
         }
 
@@ -218,6 +225,7 @@ public partial class MainWindow : Window
     {
         if (!IsVisible)
         {
+            ApplyWindowPlacement(IntPtr.Zero);
             Show();
         }
 
@@ -228,5 +236,52 @@ public partial class MainWindow : Window
 
         Activate();
         Focus();
+    }
+
+    private void ApplyWindowPlacement(IntPtr fallbackWindowHandle)
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        var placement = _windowPlacementService.ResolveForWindow(
+            this,
+            viewModel.LoadSettings(),
+            fallbackWindowHandle);
+        Left = placement.Left;
+        Top = placement.Top;
+    }
+
+    private void SaveWindowPlacement()
+    {
+        if (DataContext is not MainViewModel viewModel || _windowHandle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var bounds = WindowState == WindowState.Normal
+            ? new Rect(Left, Top, GetWindowWidthForPlacement(), GetWindowHeightForPlacement())
+            : RestoreBounds;
+
+        if (!double.IsFinite(bounds.Left) || !double.IsFinite(bounds.Top))
+        {
+            return;
+        }
+
+        viewModel.SaveWindowPlacement(
+            bounds.Left,
+            bounds.Top,
+            _windowPlacementService.GetScreenDeviceName(this));
+    }
+
+    private double GetWindowWidthForPlacement()
+    {
+        return ActualWidth > 0 ? ActualWidth : Width;
+    }
+
+    private double GetWindowHeightForPlacement()
+    {
+        return ActualHeight > 0 ? ActualHeight : Height;
     }
 }

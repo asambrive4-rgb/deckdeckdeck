@@ -53,7 +53,37 @@ public sealed class LocalDataServiceTests
         Assert.True(settings.BringWindowToFrontOnHotkey);
         Assert.True(settings.AutoHideAfterPaste);
         Assert.True(settings.RestoreClipboardAfterPaste);
-        Assert.All(SlotKeyCatalog.All, slotKey => Assert.True(settings.EnabledSlotKeys[slotKey]));
+        Assert.Equal("Ctrl + Numpad1~9, /, *, -, +, .", settings.DirectCategoryHotkeys);
+        Assert.Null(settings.LastWindowLeft);
+        Assert.Null(settings.LastWindowTop);
+        Assert.Null(settings.LastWindowScreenDeviceName);
+        Assert.All(SlotKeyCatalog.All, slotKey => Assert.True(settings.EnabledCategorySlotKeys[slotKey]));
+        Assert.All(SlotKeyCatalog.All, slotKey => Assert.True(settings.EnabledSnippetSlotKeys[slotKey]));
+    }
+
+    [Fact]
+    public void CategoryAndSnippetSlotEnabledSettingsAreIndependent()
+    {
+        var services = CreateServices();
+
+        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad2, false);
+        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad4, false);
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.False(reloaded.EnabledCategorySlotKeys[SlotKey.Numpad2]);
+        Assert.True(reloaded.EnabledSnippetSlotKeys[SlotKey.Numpad2]);
+        Assert.True(reloaded.EnabledCategorySlotKeys[SlotKey.Numpad4]);
+        Assert.False(reloaded.EnabledSnippetSlotKeys[SlotKey.Numpad4]);
+    }
+
+    [Fact]
+    public void HotkeyServiceRegistersDirectCategorySymbolHotkeys()
+    {
+        var registeredSlotKeys = HotkeyService.GetRegisteredHotkeys()
+            .Select(hotkey => hotkey.SlotKey)
+            .ToArray();
+
+        Assert.Equal(SlotKeyCatalog.All, registeredSlotKeys);
     }
 
     [Fact]
@@ -71,6 +101,85 @@ public sealed class LocalDataServiceTests
         Assert.False(reloaded.BringWindowToFrontOnHotkey);
         Assert.False(reloaded.AutoHideAfterPaste);
         Assert.False(reloaded.RestoreClipboardAfterPaste);
+    }
+
+    [Fact]
+    public void SettingsSavePersistsLastWindowPlacement()
+    {
+        var services = CreateServices();
+        var settings = services.SettingsService.Load();
+        settings.LastWindowLeft = 120.5;
+        settings.LastWindowTop = 240.25;
+        settings.LastWindowScreenDeviceName = "Monitor2";
+
+        services.SettingsService.Save(settings);
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.Equal(120.5, reloaded.LastWindowLeft);
+        Assert.Equal(240.25, reloaded.LastWindowTop);
+        Assert.Equal("Monitor2", reloaded.LastWindowScreenDeviceName);
+    }
+
+    [Fact]
+    public void WindowPlacementUsesSavedPositionInsideWorkArea()
+    {
+        var settings = new AppSettings
+        {
+            LastWindowLeft = 2100,
+            LastWindowTop = 120,
+            LastWindowScreenDeviceName = "Secondary"
+        };
+        var workAreas = new[]
+        {
+            new WindowWorkArea("Primary", 0, 0, 1920, 1080, true),
+            new WindowWorkArea("Secondary", 1920, 0, 1920, 1080)
+        };
+
+        var placement = WindowPlacementService.Resolve(settings, 560, 680, workAreas);
+
+        Assert.Equal(2100, placement.Left);
+        Assert.Equal(120, placement.Top);
+        Assert.Equal("Secondary", placement.ScreenDeviceName);
+    }
+
+    [Fact]
+    public void WindowPlacementFallsBackToBottomRightWhenSavedPositionIsOffScreen()
+    {
+        var settings = new AppSettings
+        {
+            LastWindowLeft = 5000,
+            LastWindowTop = 3000,
+            LastWindowScreenDeviceName = "Missing"
+        };
+        var workAreas = new[]
+        {
+            new WindowWorkArea("Primary", 0, 0, 1920, 1080, true)
+        };
+
+        var placement = WindowPlacementService.Resolve(settings, 560, 680, workAreas);
+
+        Assert.Equal(1336, placement.Left);
+        Assert.Equal(376, placement.Top);
+        Assert.Equal("Primary", placement.ScreenDeviceName);
+    }
+
+    [Fact]
+    public void WindowPlacementUsesFallbackWorkAreaWhenNoSavedPositionExists()
+    {
+        var settings = new AppSettings();
+        var primary = new WindowWorkArea("Primary", 0, 0, 1920, 1080, true);
+        var secondary = new WindowWorkArea("Secondary", 1920, 0, 1920, 1080);
+
+        var placement = WindowPlacementService.Resolve(
+            settings,
+            560,
+            680,
+            [primary, secondary],
+            secondary);
+
+        Assert.Equal(3256, placement.Left);
+        Assert.Equal(376, placement.Top);
+        Assert.Equal("Secondary", placement.ScreenDeviceName);
     }
 
     [Fact]
@@ -390,6 +499,19 @@ public sealed class LocalDataServiceTests
     }
 
     [Fact]
+    public void DirectCategoryHotkeyOpensExistingSymbolCategory()
+    {
+        var services = CreateServices();
+        services.CategoryService.Create(SlotKey.NumpadAdd, "Symbols", null);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.NumpadAdd);
+
+        Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal("Symbols 카테고리", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public void DirectCategoryHotkeyOpensCategoryEditorForEmptySlot()
     {
         var services = CreateServices();
@@ -410,7 +532,7 @@ public sealed class LocalDataServiceTests
     {
         var services = CreateServices();
         services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        services.SettingsService.SetSlotEnabled(SlotKey.Numpad1, false);
+        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad1, false);
         var viewModel = CreateMainViewModel(services);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
@@ -498,7 +620,7 @@ public sealed class LocalDataServiceTests
     public void DisabledSlotEditCommandStillOpensCategoryEditor()
     {
         var services = CreateServices();
-        services.SettingsService.SetSlotEnabled(SlotKey.Numpad2, false);
+        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad2, false);
         var viewModel = CreateMainViewModel(services);
         var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
 
@@ -521,7 +643,9 @@ public sealed class LocalDataServiceTests
         editor.IsSlotEnabled = false;
         editor.SaveCommand.Execute(null);
 
-        Assert.False(services.SettingsService.Load().EnabledSlotKeys[SlotKey.Numpad2]);
+        var settings = services.SettingsService.Load();
+        Assert.False(settings.EnabledCategorySlotKeys[SlotKey.Numpad2]);
+        Assert.True(settings.EnabledSnippetSlotKeys[SlotKey.Numpad2]);
         Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
     }
 
@@ -539,8 +663,41 @@ public sealed class LocalDataServiceTests
         editor.IsSlotEnabled = false;
         editor.SaveCommand.Execute(null);
 
-        Assert.False(services.SettingsService.Load().EnabledSlotKeys[SlotKey.Numpad4]);
+        var settings = services.SettingsService.Load();
+        Assert.True(settings.EnabledCategorySlotKeys[SlotKey.Numpad4]);
+        Assert.False(settings.EnabledSnippetSlotKeys[SlotKey.Numpad4]);
         Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+    }
+
+    [Fact]
+    public void DisabledCategorySlotDoesNotDisableSameSnippetSlot()
+    {
+        var services = CreateServices();
+        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad4, false);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var categoryViewModel = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+
+        Assert.True(categoryViewModel.NumpadGrid.Numpad4.SelectCommand.CanExecute(null));
+        viewModel.SelectSlot(SlotKey.Numpad4);
+
+        Assert.IsType<SnippetEditViewModel>(viewModel.CurrentViewModel);
+    }
+
+    [Fact]
+    public void DisabledSnippetSlotDoesNotDisableSameCategorySlot()
+    {
+        var services = CreateServices();
+        services.CategoryService.Create(SlotKey.Numpad4, "Writing", null);
+        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad4, false);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad4);
+
+        Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal("Writing 카테고리", viewModel.StatusMessage);
     }
 
     [Fact]

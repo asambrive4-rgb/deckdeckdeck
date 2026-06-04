@@ -264,7 +264,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         var settings = _settingsService?.Load();
 
         return settings is null
-            || !settings.EnabledSlotKeys.TryGetValue(SlotKey, out var enabled)
+            || !settings.EnabledCategorySlotKeys.TryGetValue(SlotKey, out var enabled)
             || enabled;
     }
 
@@ -296,7 +296,7 @@ public sealed class CategoryEditViewModel : ObservableObject
 
         try
         {
-            _settingsService.SetSlotEnabled(SlotKey, IsSlotEnabled);
+            _settingsService.SetCategorySlotEnabled(SlotKey, IsSlotEnabled);
             _originalIsSlotEnabled = IsSlotEnabled;
 
             return true;

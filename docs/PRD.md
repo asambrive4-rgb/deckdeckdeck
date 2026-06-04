@@ -429,13 +429,13 @@ MVP에서는 카드 활성화 상태를 홈 화면과 덱 화면에 동일하게
 ### 흐름
 
 ```text
-사용자가 Ctrl + Numpad 1 입력
-→ 1번 덱 화면 바로 열림
+사용자가 Ctrl + Numpad 1 또는 Ctrl + Numpad + 입력
+→ 해당 덱 화면 바로 열림
 ```
 
 ### 요구사항
 
-- `Ctrl + Numpad 1~9`는 해당 숫자 덱으로 바로 진입한다.
+- `Ctrl + Numpad 1~9`와 `Ctrl + Numpad 기호(/, *, -, +, .)`는 해당 덱으로 바로 진입한다.
 - 해당 카드에 덱가 없으면 새 덱 추가 화면을 열 수 있다.
 - 해당 카드가 비활성화되어 있으면 아무 동작을 하지 않거나 안내를 표시한다.
 
@@ -445,7 +445,7 @@ MVP에서는 카드 활성화 상태를 홈 화면과 덱 화면에 동일하게
 |---|---|
 | Ctrl + Numpad 0 | 홈 화면 |
 | Ctrl + Numpad 1~9 | 숫자 덱 바로 진입 |
-| Ctrl + Numpad 기호 | MVP에서는 직접 진입 미지원, 홈에서 접근 가능 |
+| Ctrl + Numpad 기호 | 기호 덱 바로 진입 |
 
 ---
 
@@ -608,7 +608,7 @@ MVP에서는 카드 활성화 상태를 홈 화면과 덱 화면에 동일하게
 | 붙여넣기 후 자동 숨김 | ON | 문구 실행 후 앱 창을 숨김 |
 | 기존 클립보드 복원 | ON | 붙여넣기 후 기존 클립보드 복원 |
 | 홈 단축키 | Ctrl + Numpad 0 | 홈 화면 호출 단축키 |
-| 직접 진입 단축키 | Ctrl + Numpad 1~9 | 덱 바로 진입 단축키 |
+| 직접 진입 단축키 | Ctrl + Numpad 1~9, 기호 | 덱 바로 진입 단축키 |
 
 관리자 권한 앱과 보호된 입력창에서 붙여넣기가 제한될 수 있다는 안내는 사용자 설정으로 끄고 켜는 항목이 아니라 기본 안내로 제공한다.
 
@@ -622,8 +622,8 @@ MVP에서는 카드 활성화 상태를 홈 화면과 덱 화면에 동일하게
 |---|---|---|
 | FR-001 | 앱은 Windows 전역에서 `Ctrl + Numpad 0` 입력을 감지해야 한다. | Win32 `RegisterHotKey` |
 | FR-002 | `Ctrl + Numpad 0` 입력 시 홈 화면을 표시해야 한다. | WPF MainWindow 표시/활성화 |
-| FR-003 | 앱은 `Ctrl + Numpad 1~9` 입력을 감지해야 한다. | Win32 `RegisterHotKey` |
-| FR-004 | `Ctrl + Numpad 1~9` 입력 시 해당 숫자 카드의 덱 화면으로 바로 이동해야 한다. | ViewModel 상태 전환 |
+| FR-003 | 앱은 `Ctrl + Numpad 1~9`와 `Ctrl + Numpad 기호(/, *, -, +, .)` 입력을 감지해야 한다. | Win32 `RegisterHotKey` |
+| FR-004 | `Ctrl + Numpad 1~9`와 `Ctrl + Numpad 기호(/, *, -, +, .)` 입력 시 해당 카드의 덱 화면으로 바로 이동해야 한다. | ViewModel 상태 전환 |
 | FR-005 | 단축키는 상단 숫자키가 아니라 텐키 숫자키 기준으로 동작해야 한다. | Virtual-Key 기준 구분 |
 | FR-006 | 비활성화된 카드에 대한 직접 진입은 실행되지 않아야 한다. | 카드 활성화 상태 확인 후 무시 |
 | FR-007 | 단축키 연타로 인한 중복 실행을 방지해야 한다. | `MOD_NOREPEAT` 또는 내부 debounce |
@@ -820,7 +820,7 @@ public enum CardKey
 | enabledCardKeys | Dictionary<CardKey, bool> | 전체 true | 카드별 활성화 여부 |
 | showDisabledCards | bool | true | 비활성 카드 표시 여부 |
 | homeHotkey | string | Ctrl + Numpad0 | 홈 화면 진입 단축키 |
-| directDeckHotkeys | string | Ctrl + Numpad1~9 | 덱 직접 진입 단축키 |
+| directDeckHotkeys | string | Ctrl + Numpad1~9, 기호 | 덱 직접 진입 단축키 |
 | showAdminPermissionNotice | bool | true | 관리자 권한 안내 표시 여부 |
 
 ---
@@ -943,6 +943,7 @@ images/thumbnails/{guid}.png
 |---|---|
 | Ctrl + Numpad 0 | 홈 화면 열기 |
 | Ctrl + Numpad 1~9 | 해당 숫자 덱 바로 열기 |
+| Ctrl + Numpad 기호 | 해당 기호 덱 바로 열기 |
 | Numpad 카드 키 | 현재 화면의 해당 카드 선택 |
 | Esc | 창 닫기 또는 이전 화면 |
 | Backspace | 덱 화면에서 홈으로 이동 |
@@ -1194,7 +1195,7 @@ NumpadPromptLauncher/
 | 기술 기반 | C# / .NET 10 LTS / WPF |
 | 아키텍처 | MVVM, CommunityToolkit.Mvvm |
 | 로컬 저장 | SQLite DB, `%AppData%` 파일 저장 |
-| 전역 단축키 | Ctrl + Numpad 0, Ctrl + Numpad 1~9 |
+| 전역 단축키 | Ctrl + Numpad 0, Ctrl + Numpad 1~9, Ctrl + Numpad 기호 |
 | 홈 화면 | 텐키 모양 덱 화면 |
 | 덱 화면 | 텐키 모양 문구 화면 |
 | 카드 키 | 0~9, `/`, `*`, `-`, `+`, `.` |
@@ -1250,7 +1251,7 @@ NumpadPromptLauncher/
 
 - `RegisterHotKey` 기반 HotkeyService 구현
 - Ctrl + Numpad 0 홈 호출
-- Ctrl + Numpad 1~9 직접 진입
+- Ctrl + Numpad 1~9 및 기호 직접 진입
 - 앱 종료 시 핫키 해제
 
 ## 20.4 4단계: 붙여넣기
@@ -1390,7 +1391,7 @@ MVP 이후 아래 기능을 고려할 수 있다.
 | 항목 | 현재 상태 | 제안 |
 |---|---|---|
 | 제품명 | 미정 | Numpad Prompt Launcher, PromptPad 등 후보 가능 |
-| Ctrl + 기호 직접 진입 | 미정 | MVP에서는 제외하고 홈에서 접근 |
+| Ctrl + 기호 직접 진입 | 결정 | MVP에서 직접 진입 지원 |
 | Numpad 0의 홈/카드 충돌 | 부분 미정 | Ctrl+0은 홈, 화면 안에서 0은 카드로 사용 |
 | 비활성 카드 표시 방식 | 결정 | 디자인 가이드의 `Disabled` 상태 기준을 따르며, 다시 활성화는 카드 톱니모양 편집에서 처리 |
 | 삭제 복구 | 미정 | MVP에서는 삭제 전 확인만 제공 |
@@ -1505,7 +1506,7 @@ MVP 이후 아래 기능을 고려할 수 있다.
 | Numpad | 텐키 키를 코드나 문서에서 부르는 이름 | "`Numpad +` 카드를 추가해줘" |
 | 전역 단축키 | 다른 앱을 쓰는 중에도 DeckDeckDeck이 알아듣는 단축키 | "전역 단축키가 중복 실행되지 않게 해줘" |
 | 홈 단축키 | 홈 화면을 여는 단축키. MVP 기본값은 `Ctrl + Numpad 0` | "홈 단축키를 설정 화면에 표시해줘" |
-| 직접 진입 단축키 | 특정 숫자 덱으로 바로 들어가는 단축키. MVP 기본값은 `Ctrl + Numpad 1~9` | "직접 진입 단축키는 숫자만 지원하게 해줘" |
+| 직접 진입 단축키 | 특정 숫자/기호 덱으로 바로 들어가는 단축키. MVP 기본값은 `Ctrl + Numpad 1~9`와 `Ctrl + Numpad 기호` | "직접 진입 단축키에 기호도 포함해줘" |
 
 ## 26.6 구현 용어
 

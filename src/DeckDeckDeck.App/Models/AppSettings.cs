@@ -8,10 +8,19 @@ public sealed class AppSettings
 
     public bool RestoreClipboardAfterPaste { get; set; } = true;
 
-    public Dictionary<SlotKey, bool> EnabledSlotKeys { get; set; } =
+    public Dictionary<SlotKey, bool> EnabledCategorySlotKeys { get; set; } =
+        SlotKeyCatalog.All.ToDictionary(slotKey => slotKey, _ => true);
+
+    public Dictionary<SlotKey, bool> EnabledSnippetSlotKeys { get; set; } =
         SlotKeyCatalog.All.ToDictionary(slotKey => slotKey, _ => true);
 
     public string HomeHotkey { get; set; } = "Ctrl + Numpad0";
 
-    public string DirectCategoryHotkeys { get; set; } = "Ctrl + Numpad1~9";
+    public string DirectCategoryHotkeys { get; set; } = "Ctrl + Numpad1~9, /, *, -, +, .";
+
+    public double? LastWindowLeft { get; set; }
+
+    public double? LastWindowTop { get; set; }
+
+    public string? LastWindowScreenDeviceName { get; set; }
 }

@@ -10,6 +10,16 @@ public static class Win32Constants
 
     public const int WmHotkey = 0x0312;
 
+    public const int WmKeydown = 0x0100;
+
+    public const int WmKeyup = 0x0101;
+
+    public const int WmSyskeydown = 0x0104;
+
+    public const int WmSyskeyup = 0x0105;
+
+    public const int WhKeyboardLl = 13;
+
     public const int SwShownoactivate = 4;
 
     public const uint SwpNosize = 0x0001;
@@ -29,6 +39,10 @@ public static class Win32Constants
     public const uint KeyeventfKeyup = 0x0002;
 
     public const ushort VkControl = 0x11;
+
+    public const ushort VkShift = 0x10;
+
+    public const ushort VkMenu = 0x12;
 
     public const ushort VkV = 0x56;
 

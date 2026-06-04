@@ -103,6 +103,22 @@ public sealed class MainViewModel : ObservableObject
         return _settingsService.Load();
     }
 
+    public void SaveWindowPlacement(double left, double top, string screenDeviceName)
+    {
+        try
+        {
+            var settings = _settingsService.Load();
+            settings.LastWindowLeft = left;
+            settings.LastWindowTop = top;
+            settings.LastWindowScreenDeviceName = screenDeviceName;
+            _settingsService.Save(settings);
+        }
+        catch (Exception ex)
+        {
+            _loggingService?.Log("Window placement save failed.", ex);
+        }
+    }
+
     public void ShowHome()
     {
         CurrentViewModel = new HomeViewModel(
@@ -126,12 +142,12 @@ public sealed class MainViewModel : ObservableObject
     {
         if (!IsDirectCategorySlot(slotKey))
         {
-            StatusMessage = "카테고리 바로 열기 단축키는 Ctrl+숫자 키패드 1~9만 지원합니다.";
+            StatusMessage = "카테고리 바로 열기 단축키는 Ctrl+Numpad 1~9와 기호를 지원합니다.";
             return;
         }
 
         var settings = _settingsService.Load();
-        if (settings.EnabledSlotKeys.TryGetValue(slotKey, out var isEnabled) && !isEnabled)
+        if (settings.EnabledCategorySlotKeys.TryGetValue(slotKey, out var isEnabled) && !isEnabled)
         {
             StatusMessage = $"슬롯 {slotKey.GetDisplayText()}은 사용 안 함 상태입니다.";
             return;
@@ -305,15 +321,7 @@ public sealed class MainViewModel : ObservableObject
 
     private static bool IsDirectCategorySlot(SlotKey slotKey)
     {
-        return slotKey is SlotKey.Numpad1
-            or SlotKey.Numpad2
-            or SlotKey.Numpad3
-            or SlotKey.Numpad4
-            or SlotKey.Numpad5
-            or SlotKey.Numpad6
-            or SlotKey.Numpad7
-            or SlotKey.Numpad8
-            or SlotKey.Numpad9;
+        return slotKey != SlotKey.Numpad0;
     }
 
     private static DefaultServices CreateDefaultServices()
