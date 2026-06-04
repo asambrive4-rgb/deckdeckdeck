@@ -1,7 +1,3 @@
-using System.IO;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-
 namespace DeckDeckDeck.App.Services;
 
 public sealed record StoredImage(string ImagePath, string ThumbnailPath);
@@ -10,131 +6,39 @@ public sealed record ImageFileSet(string? ImagePath, string? ThumbnailPath);
 
 public sealed class ThumbnailService
 {
-    private const int ThumbnailMaxPixels = 96;
-
-    private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".bmp",
-        ".gif"
-    };
-
-    private readonly FileStorageService _fileStorageService;
+    private readonly ThumbnailGenerator _thumbnailGenerator = new();
+    private readonly ImageStorageService _imageStorageService;
 
     public ThumbnailService(FileStorageService fileStorageService)
     {
-        _fileStorageService = fileStorageService;
+        _imageStorageService = new ImageStorageService(fileStorageService);
     }
 
     public StoredImage StoreImage(string sourcePath)
     {
-        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
-        {
-            throw new InvalidOperationException("이미지 파일이 존재하지 않습니다.");
-        }
-
-        var extension = Path.GetExtension(sourcePath);
-        if (!SupportedExtensions.Contains(extension))
-        {
-            throw new InvalidOperationException("지원하지 않는 이미지 형식입니다. PNG, JPG, BMP, GIF를 사용해 주세요.");
-        }
-
-        Directory.CreateDirectory(_fileStorageService.ImageOriginalsPath);
-        Directory.CreateDirectory(_fileStorageService.ImageThumbnailsPath);
-
-        var fileId = Guid.NewGuid().ToString("N");
-        var originalPath = Path.Combine(
-            _fileStorageService.ImageOriginalsPath,
-            $"{fileId}{extension.ToLowerInvariant()}");
-        var thumbnailPath = Path.Combine(_fileStorageService.ImageThumbnailsPath, $"{fileId}.png");
+        var storedImage = _imageStorageService.PrepareStoredImage(sourcePath);
 
         try
         {
-            File.Copy(sourcePath, originalPath);
-            CreateThumbnail(originalPath, thumbnailPath);
-            return new StoredImage(originalPath, thumbnailPath);
+            _imageStorageService.CopyOriginal(sourcePath, storedImage.ImagePath);
+            _thumbnailGenerator.CreateThumbnail(storedImage.ImagePath, storedImage.ThumbnailPath);
+
+            return storedImage;
         }
         catch
         {
-            DeleteImageFiles(originalPath, thumbnailPath);
+            DeleteImageFiles(storedImage.ImagePath, storedImage.ThumbnailPath);
             throw;
         }
     }
 
     public void DeleteImageFiles(ImageFileSet imageFiles)
     {
-        DeleteImageFiles(imageFiles.ImagePath, imageFiles.ThumbnailPath);
+        _imageStorageService.DeleteImageFiles(imageFiles);
     }
 
     public void DeleteImageFiles(string? imagePath, string? thumbnailPath)
     {
-        DeleteImageFile(imagePath);
-        DeleteImageFile(thumbnailPath);
-    }
-
-    private static void CreateThumbnail(string sourcePath, string thumbnailPath)
-    {
-        var source = new BitmapImage();
-        source.BeginInit();
-        source.CacheOption = BitmapCacheOption.OnLoad;
-        source.UriSource = new Uri(sourcePath, UriKind.Absolute);
-        source.EndInit();
-        source.Freeze();
-
-        if (source.PixelWidth <= 0 || source.PixelHeight <= 0)
-        {
-            throw new InvalidOperationException("이미지를 불러오지 못했습니다.");
-        }
-
-        var longestSide = Math.Max(source.PixelWidth, source.PixelHeight);
-        var scale = (double)ThumbnailMaxPixels / longestSide;
-        var thumbnail = new TransformedBitmap(source, new ScaleTransform(scale, scale));
-        thumbnail.Freeze();
-
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(thumbnail));
-
-        using var stream = File.Create(thumbnailPath);
-        encoder.Save(stream);
-    }
-
-    private void DeleteImageFile(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || !IsAppImagePath(path))
-        {
-            return;
-        }
-
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
-            // Image cleanup is best-effort; a locked thumbnail should not interrupt the app.
-        }
-    }
-
-    private bool IsAppImagePath(string path)
-    {
-        var fullPath = Path.GetFullPath(path);
-        return IsUnderDirectory(fullPath, _fileStorageService.ImageOriginalsPath)
-            || IsUnderDirectory(fullPath, _fileStorageService.ImageThumbnailsPath);
-    }
-
-    private static bool IsUnderDirectory(string fullPath, string directory)
-    {
-        var fullDirectory = Path.GetFullPath(directory);
-        if (!fullDirectory.EndsWith(Path.DirectorySeparatorChar))
-        {
-            fullDirectory += Path.DirectorySeparatorChar;
-        }
-
-        return fullPath.StartsWith(fullDirectory, StringComparison.OrdinalIgnoreCase);
+        _imageStorageService.DeleteImageFiles(imagePath, thumbnailPath);
     }
 }

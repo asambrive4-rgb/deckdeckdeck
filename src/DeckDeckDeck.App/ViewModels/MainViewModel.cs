@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
 
@@ -7,18 +6,10 @@ namespace DeckDeckDeck.App.ViewModels;
 
 public sealed class MainViewModel : ObservableObject
 {
-    private readonly CategoryService _categoryService;
-    private readonly DialogService _dialogService;
-    private readonly IClipboardPasteService _clipboardPasteService;
-    private readonly SettingsService _settingsService;
-    private readonly SlotService _slotService;
-    private readonly SnippetService _snippetService;
-    private readonly LoggingService? _loggingService;
-    private readonly ThumbnailService? _thumbnailService;
-    private readonly Func<IntPtr> _getPasteTargetWindowHandle;
-    private readonly Action _hideWindowAfterPaste;
-    private readonly Action _enterEditMode;
-    private readonly Action _completePasteSelection;
+    private CategoryService _categoryService = null!;
+    private MainViewModelNavigator _navigator = null!;
+    private SettingsService _settingsService = null!;
+    private LoggingService? _loggingService;
     private object _currentViewModel = null!;
     private string _statusMessage = "준비됨.";
 
@@ -27,7 +18,7 @@ public sealed class MainViewModel : ObservableObject
         Action? hideWindowAfterPaste = null,
         Action? enterEditMode = null,
         Action? completePasteSelection = null)
-        : this(CreateDefaultServices(), getPasteTargetWindowHandle, hideWindowAfterPaste, enterEditMode, completePasteSelection)
+        : this(AppServices.CreateDefault(), getPasteTargetWindowHandle, hideWindowAfterPaste, enterEditMode, completePasteSelection)
     {
     }
 
@@ -45,43 +36,37 @@ public sealed class MainViewModel : ObservableObject
         LoggingService? loggingService = null,
         ThumbnailService? thumbnailService = null)
     {
-        _categoryService = categoryService;
-        _dialogService = dialogService;
-        _clipboardPasteService = clipboardPasteService ?? new ClipboardPasteService();
-        _settingsService = settingsService;
-        _slotService = slotService;
-        _snippetService = snippetService;
-        _loggingService = loggingService;
-        _thumbnailService = thumbnailService;
-        _getPasteTargetWindowHandle = getPasteTargetWindowHandle ?? (() => IntPtr.Zero);
-        _hideWindowAfterPaste = hideWindowAfterPaste ?? (() => { });
-        _enterEditMode = enterEditMode ?? (() => { });
-        _completePasteSelection = completePasteSelection ?? (() => { });
-        _settingsService.EnsureDefaults();
+        var services = new AppServices(
+            categoryService,
+            dialogService,
+            settingsService,
+            slotService,
+            snippetService,
+            clipboardPasteService ?? new ClipboardPasteService(),
+            loggingService,
+            thumbnailService);
 
-        ShowHome();
+        Initialize(
+            services,
+            getPasteTargetWindowHandle,
+            hideWindowAfterPaste,
+            enterEditMode,
+            completePasteSelection);
     }
 
     private MainViewModel(
-        DefaultServices services,
+        AppServices services,
         Func<IntPtr>? getPasteTargetWindowHandle,
         Action? hideWindowAfterPaste,
         Action? enterEditMode,
         Action? completePasteSelection)
-        : this(
-            services.CategoryService,
-            services.DialogService,
-            services.SettingsService,
-            services.SlotService,
-            services.SnippetService,
-            services.ClipboardPasteService,
+    {
+        Initialize(
+            services,
             getPasteTargetWindowHandle,
             hideWindowAfterPaste,
             enterEditMode,
-            completePasteSelection,
-            services.LoggingService,
-            services.ThumbnailService)
-    {
+            completePasteSelection);
     }
 
     public string WindowTitle => "DeckDeckDeck";
@@ -121,15 +106,7 @@ public sealed class MainViewModel : ObservableObject
 
     public void ShowHome()
     {
-        CurrentViewModel = new HomeViewModel(
-            _categoryService,
-            _settingsService,
-            _slotService,
-            OpenCategory,
-            EditCategory,
-            CreateCategory,
-            () => ShowSettings(ShowHome));
-        StatusMessage = "홈";
+        _navigator.ShowHome();
     }
 
     public void OpenHomeFromHotkey()
@@ -156,11 +133,11 @@ public sealed class MainViewModel : ObservableObject
         var category = _categoryService.GetBySlotKey(slotKey);
         if (category is null)
         {
-            CreateCategory(slotKey);
+            _navigator.CreateCategory(slotKey);
             return;
         }
 
-        OpenCategory(category);
+        _navigator.OpenCategory(category);
     }
 
     public void ReportHotkeyRegistrationFailure(IReadOnlyList<string> failures)
@@ -186,134 +163,6 @@ public sealed class MainViewModel : ObservableObject
         };
     }
 
-    private void CreateCategory(SlotKey slotKey)
-    {
-        _enterEditMode();
-        CurrentViewModel = new CategoryEditViewModel(
-            slotKey,
-            category: null,
-            _categoryService,
-            _dialogService,
-            ShowHome,
-            _ => ShowHome(),
-            ShowHome,
-            ShowStatus,
-            _thumbnailService,
-            _settingsService,
-            _loggingService);
-        StatusMessage = $"슬롯 {slotKey.GetDisplayText()}에 새 카테고리 만들기";
-    }
-
-    private void EditCategory(Category category)
-    {
-        _enterEditMode();
-        CurrentViewModel = new CategoryEditViewModel(
-            category.SlotKey,
-            category,
-            _categoryService,
-            _dialogService,
-            ShowHome,
-            _ => ShowHome(),
-            ShowHome,
-            ShowStatus,
-            _thumbnailService,
-            _settingsService,
-            _loggingService);
-        StatusMessage = $"{category.Name} 편집";
-    }
-
-    private void OpenCategory(Category category)
-    {
-        CurrentViewModel = new CategoryViewModel(
-            category,
-            _snippetService,
-            _settingsService,
-            _slotService,
-            ShowHome,
-            () => ShowSettings(() => OpenCategoryById(category.Id)),
-            EditSnippet,
-            PasteSnippet);
-        StatusMessage = $"{category.Name} 카테고리";
-    }
-
-    private void OpenCategoryById(Guid categoryId)
-    {
-        var category = _categoryService.GetById(categoryId);
-
-        if (category is null)
-        {
-            ShowHome();
-            return;
-        }
-
-        OpenCategory(category);
-    }
-
-    private void EditSnippet(Category category, SlotKey slotKey, Snippet? snippet)
-    {
-        _enterEditMode();
-        CurrentViewModel = new SnippetEditViewModel(
-            category,
-            slotKey,
-            snippet,
-            _snippetService,
-            _dialogService,
-            () => OpenCategoryById(category.Id),
-            _ => OpenCategoryById(category.Id),
-            () => OpenCategoryById(category.Id),
-            ShowStatus,
-            _thumbnailService,
-            _settingsService,
-            _loggingService);
-        StatusMessage = snippet is null
-            ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
-            : $"{snippet.Title} 편집";
-    }
-
-    private void ShowSettings(Action returnTo)
-    {
-        _enterEditMode();
-        CurrentViewModel = new SettingsViewModel(
-            _settingsService,
-            returnTo,
-            returnTo,
-            ShowStatus,
-            _loggingService);
-        StatusMessage = "설정";
-    }
-
-    private async Task PasteSnippet(Snippet snippet)
-    {
-        var settings = _settingsService.Load();
-
-        try
-        {
-            if (settings.AutoHideAfterPaste)
-            {
-                _hideWindowAfterPaste();
-            }
-
-            var pasted = await _clipboardPasteService.PasteSnippetAsync(
-                snippet,
-                _getPasteTargetWindowHandle(),
-                settings);
-
-            if (!pasted)
-            {
-                _loggingService?.Log($"Paste failed for snippet {snippet.Id}.");
-            }
-        }
-        catch (Exception ex)
-        {
-            _loggingService?.Log($"Paste failed for snippet {snippet.Id}.", ex);
-            throw;
-        }
-        finally
-        {
-            _completePasteSelection();
-        }
-    }
-
     private void ShowStatus(string message)
     {
         StatusMessage = message;
@@ -324,32 +173,33 @@ public sealed class MainViewModel : ObservableObject
         return slotKey != SlotKey.Numpad0;
     }
 
-    private static DefaultServices CreateDefaultServices()
+    private void Initialize(
+        AppServices services,
+        Func<IntPtr>? getPasteTargetWindowHandle,
+        Action? hideWindowAfterPaste,
+        Action? enterEditMode,
+        Action? completePasteSelection)
     {
-        var fileStorageService = new FileStorageService();
-        fileStorageService.EnsureCreated();
+        _categoryService = services.CategoryService;
+        _settingsService = services.SettingsService;
+        _loggingService = services.LoggingService;
 
-        var dbContextFactory = new AppDbContextFactory(fileStorageService.DatabasePath);
-        dbContextFactory.EnsureCreated();
+        var pasteFlowService = new PasteFlowService(
+            services.ClipboardPasteService,
+            services.SettingsService,
+            getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
+            hideWindowAfterPaste ?? (() => { }),
+            completePasteSelection ?? (() => { }),
+            services.LoggingService);
 
-        return new DefaultServices(
-            new CategoryService(dbContextFactory),
-            new DialogService(),
-            new SettingsService(dbContextFactory),
-            new SlotService(),
-            new SnippetService(dbContextFactory),
-            new ClipboardPasteService(),
-            new LoggingService(fileStorageService),
-            new ThumbnailService(fileStorageService));
+        _navigator = new MainViewModelNavigator(
+            services,
+            viewModel => CurrentViewModel = viewModel,
+            ShowStatus,
+            enterEditMode ?? (() => { }),
+            pasteFlowService.PasteSnippetAsync);
+        _settingsService.EnsureDefaults();
+
+        ShowHome();
     }
-
-    private sealed record DefaultServices(
-        CategoryService CategoryService,
-        DialogService DialogService,
-        SettingsService SettingsService,
-        SlotService SlotService,
-        SnippetService SnippetService,
-        IClipboardPasteService ClipboardPasteService,
-        LoggingService LoggingService,
-        ThumbnailService ThumbnailService);
 }
