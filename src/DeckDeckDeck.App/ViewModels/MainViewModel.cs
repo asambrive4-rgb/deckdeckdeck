@@ -37,8 +37,15 @@ public sealed class MainViewModel : ObservableObject
         ThumbnailService? thumbnailService = null,
         IFileLaunchService? fileLaunchService = null)
     {
+        var transferService = new CategoryTransferService(
+            categoryService,
+            settingsService,
+            thumbnailService,
+            loggingService);
+
         var services = new AppServices(
             categoryService,
+            transferService,
             dialogService,
             settingsService,
             slotService,

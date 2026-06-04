@@ -4,6 +4,7 @@ namespace DeckDeckDeck.App.Services;
 
 internal sealed record AppServices(
     CategoryService CategoryService,
+    CategoryTransferService CategoryTransferService,
     DialogService DialogService,
     SettingsService SettingsService,
     SlotService SlotService,
@@ -21,15 +22,21 @@ internal sealed record AppServices(
         var dbContextFactory = new AppDbContextFactory(fileStorageService.DatabasePath);
         dbContextFactory.EnsureCreated();
 
+        var categoryService = new CategoryService(dbContextFactory);
+        var settingsService = new SettingsService(dbContextFactory);
+        var loggingService = new LoggingService(fileStorageService);
+        var thumbnailService = new ThumbnailService(fileStorageService);
+
         return new AppServices(
-            new CategoryService(dbContextFactory),
+            categoryService,
+            new CategoryTransferService(categoryService, settingsService, thumbnailService, loggingService),
             new DialogService(),
-            new SettingsService(dbContextFactory),
+            settingsService,
             new SlotService(),
             new SnippetService(dbContextFactory),
             new ClipboardPasteService(),
             new FileLaunchService(),
-            new LoggingService(fileStorageService),
-            new ThumbnailService(fileStorageService));
+            loggingService,
+            thumbnailService);
     }
 }

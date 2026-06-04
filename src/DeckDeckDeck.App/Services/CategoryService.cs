@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DeckDeckDeck.App.Services;
 
+public sealed record CategoryTransferResult(Category Category, IReadOnlyList<ImageFileSet> OverwrittenImageFiles);
+
 public sealed class CategoryService
 {
     private readonly AppDbContextFactory _dbContextFactory;
@@ -118,6 +120,119 @@ public sealed class CategoryService
 
         dbContext.Categories.Remove(category);
         dbContext.SaveChanges();
+
+        return imageFiles;
+    }
+
+    public CategoryTransferResult CopyToSlot(
+        Guid sourceId,
+        SlotKey targetSlotKey,
+        Func<ImageFileSet, ImageFileSet> copyImageFiles)
+    {
+        using var dbContext = _dbContextFactory.Create();
+        var source = dbContext.Categories
+            .AsNoTracking()
+            .Include(item => item.Snippets)
+            .First(item => item.Id == sourceId);
+
+        if (source.SlotKey == targetSlotKey)
+        {
+            throw new InvalidOperationException("같은 슬롯으로는 복사할 수 없습니다.");
+        }
+
+        using var transaction = dbContext.Database.BeginTransaction();
+        var overwrittenImageFiles = RemoveCategoryInSlot(dbContext, targetSlotKey);
+        var now = DateTime.UtcNow;
+        var categoryImageFiles = copyImageFiles(new ImageFileSet(source.ImagePath, source.ThumbnailPath));
+        var copiedCategory = new Category
+        {
+            Id = Guid.NewGuid(),
+            SlotKey = targetSlotKey,
+            Name = source.Name,
+            Description = source.Description,
+            ImagePath = categoryImageFiles.ImagePath,
+            ThumbnailPath = categoryImageFiles.ThumbnailPath,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        foreach (var sourceSnippet in source.Snippets.OrderBy(snippet => snippet.SlotKey.GetSortOrder()))
+        {
+            var snippetImageFiles = copyImageFiles(new ImageFileSet(
+                sourceSnippet.ImagePath,
+                sourceSnippet.ThumbnailPath));
+            copiedCategory.Snippets.Add(new Snippet
+            {
+                Id = Guid.NewGuid(),
+                CategoryId = copiedCategory.Id,
+                SlotKey = sourceSnippet.SlotKey,
+                Title = sourceSnippet.Title,
+                Content = sourceSnippet.Content,
+                ActionType = sourceSnippet.ActionType,
+                LaunchPath = sourceSnippet.LaunchPath,
+                Description = sourceSnippet.Description,
+                ImagePath = snippetImageFiles.ImagePath,
+                ThumbnailPath = snippetImageFiles.ThumbnailPath,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+
+        dbContext.Categories.Add(copiedCategory);
+        dbContext.SaveChanges();
+        transaction.Commit();
+
+        return new CategoryTransferResult(copiedCategory, overwrittenImageFiles);
+    }
+
+    public CategoryTransferResult MoveToSlot(Guid sourceId, SlotKey targetSlotKey)
+    {
+        using var dbContext = _dbContextFactory.Create();
+        var source = dbContext.Categories.First(item => item.Id == sourceId);
+
+        if (source.SlotKey == targetSlotKey)
+        {
+            throw new InvalidOperationException("같은 슬롯으로는 이동할 수 없습니다.");
+        }
+
+        using var transaction = dbContext.Database.BeginTransaction();
+        var overwrittenImageFiles = RemoveCategoryInSlot(dbContext, targetSlotKey);
+
+        source.SlotKey = targetSlotKey;
+        source.UpdatedAt = DateTime.UtcNow;
+        dbContext.SaveChanges();
+        transaction.Commit();
+
+        return new CategoryTransferResult(source, overwrittenImageFiles);
+    }
+
+    private static IReadOnlyList<ImageFileSet> RemoveCategoryInSlot(AppDbContext dbContext, SlotKey slotKey)
+    {
+        var category = dbContext.Categories
+            .Include(item => item.Snippets)
+            .FirstOrDefault(item => item.SlotKey == slotKey);
+
+        if (category is null)
+        {
+            return [];
+        }
+
+        var imageFiles = GetImageFiles(category);
+        dbContext.Categories.Remove(category);
+        dbContext.SaveChanges();
+
+        return imageFiles;
+    }
+
+    private static IReadOnlyList<ImageFileSet> GetImageFiles(Category category)
+    {
+        var imageFiles = new List<ImageFileSet>
+        {
+            new(category.ImagePath, category.ThumbnailPath)
+        };
+        imageFiles.AddRange(category.Snippets.Select(snippet => new ImageFileSet(
+            snippet.ImagePath,
+            snippet.ThumbnailPath)));
 
         return imageFiles;
     }

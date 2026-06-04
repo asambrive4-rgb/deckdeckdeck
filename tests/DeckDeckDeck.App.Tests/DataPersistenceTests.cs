@@ -198,6 +198,82 @@ public sealed class DataPersistenceTests
             });
     }
 
+    [Fact]
+    public void CopyingCategoryToSlotOverwritesTargetAndCopiesSnippets()
+    {
+        var services = CreateServices();
+        var source = services.CategoryService.Create(
+            SlotKey.Numpad4,
+            "Writing",
+            "Draft prompts",
+            "source-category.png",
+            "source-category-thumbnail.png");
+        services.SnippetService.Create(
+            source.Id,
+            SlotKey.Numpad3,
+            "Structure",
+            "Make this clearer.",
+            "Draft helper",
+            "source-snippet.png",
+            "source-snippet-thumbnail.png");
+        services.CategoryService.Create(SlotKey.Numpad5, "Old", null, "old-category.png", "old-category-thumbnail.png");
+
+        var result = services.CategoryService.CopyToSlot(
+            source.Id,
+            SlotKey.Numpad5,
+            imageFiles => new ImageFileSet(
+                imageFiles.ImagePath is null ? null : $"copy-{imageFiles.ImagePath}",
+                imageFiles.ThumbnailPath is null ? null : $"copy-{imageFiles.ThumbnailPath}"));
+
+        var categories = services.CategoryService.GetAll();
+        var copiedCategory = services.CategoryService.GetBySlotKey(SlotKey.Numpad5);
+        var copiedSnippet = Assert.Single(services.SnippetService.GetByCategoryId(copiedCategory!.Id));
+
+        Assert.Equal(2, categories.Count);
+        Assert.NotEqual(source.Id, copiedCategory.Id);
+        Assert.Equal("Writing", copiedCategory.Name);
+        Assert.Equal("Draft prompts", copiedCategory.Description);
+        Assert.Equal("copy-source-category.png", copiedCategory.ImagePath);
+        Assert.Equal("copy-source-category-thumbnail.png", copiedCategory.ThumbnailPath);
+        Assert.Equal("Structure", copiedSnippet.Title);
+        Assert.Equal("Make this clearer.", copiedSnippet.Content);
+        Assert.Equal("Draft helper", copiedSnippet.Description);
+        Assert.Equal("copy-source-snippet.png", copiedSnippet.ImagePath);
+        Assert.Collection(
+            result.OverwrittenImageFiles,
+            imageFiles =>
+            {
+                Assert.Equal("old-category.png", imageFiles.ImagePath);
+                Assert.Equal("old-category-thumbnail.png", imageFiles.ThumbnailPath);
+            });
+    }
+
+    [Fact]
+    public void MovingCategoryToSlotOverwritesTargetAndKeepsSnippets()
+    {
+        var services = CreateServices();
+        var source = services.CategoryService.Create(SlotKey.Numpad4, "Writing", null);
+        services.SnippetService.Create(source.Id, SlotKey.Numpad3, "Structure", "Make this clearer.", null);
+        services.CategoryService.Create(SlotKey.Numpad5, "Old", null, "old-category.png", "old-category-thumbnail.png");
+
+        var result = services.CategoryService.MoveToSlot(source.Id, SlotKey.Numpad5);
+
+        var movedCategory = services.CategoryService.GetBySlotKey(SlotKey.Numpad5);
+        var movedSnippet = Assert.Single(services.SnippetService.GetByCategoryId(source.Id));
+
+        Assert.Null(services.CategoryService.GetBySlotKey(SlotKey.Numpad4));
+        Assert.Equal(source.Id, movedCategory!.Id);
+        Assert.Equal("Writing", movedCategory.Name);
+        Assert.Equal("Structure", movedSnippet.Title);
+        Assert.Collection(
+            result.OverwrittenImageFiles,
+            imageFiles =>
+            {
+                Assert.Equal("old-category.png", imageFiles.ImagePath);
+                Assert.Equal("old-category-thumbnail.png", imageFiles.ThumbnailPath);
+            });
+    }
+
     private static void CreateLegacyDatabase(string databasePath, Guid categoryId, Guid snippetId)
     {
         using var connection = new SqliteConnection($"Data Source={databasePath}");
