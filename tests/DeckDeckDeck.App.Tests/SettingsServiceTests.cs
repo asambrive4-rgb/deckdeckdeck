@@ -1,0 +1,80 @@
+using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.Native;
+using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.ViewModels;
+using DeckDeckDeck.App.Views;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Threading;
+using static DeckDeckDeck.App.Tests.TestAppFactory;
+
+namespace DeckDeckDeck.App.Tests;
+public sealed class SettingsServiceTests
+{
+    [Fact]
+    public void SettingsDefaultsAreCreated()
+    {
+        var services = CreateServices();
+
+        var settings = services.SettingsService.Load();
+
+        Assert.True(settings.BringWindowToFrontOnHotkey);
+        Assert.True(settings.AutoHideAfterPaste);
+        Assert.True(settings.RestoreClipboardAfterPaste);
+        Assert.Equal("Ctrl + Numpad1~9, /, *, -, +, .", settings.DirectCategoryHotkeys);
+        Assert.Null(settings.LastWindowLeft);
+        Assert.Null(settings.LastWindowTop);
+        Assert.Null(settings.LastWindowScreenDeviceName);
+        Assert.All(SlotKeyCatalog.All, slotKey => Assert.True(settings.EnabledCategorySlotKeys[slotKey]));
+        Assert.All(SlotKeyCatalog.All, slotKey => Assert.True(settings.EnabledSnippetSlotKeys[slotKey]));
+    }
+
+    [Fact]
+    public void CategoryAndSnippetSlotEnabledSettingsAreIndependent()
+    {
+        var services = CreateServices();
+
+        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad2, false);
+        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad4, false);
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.False(reloaded.EnabledCategorySlotKeys[SlotKey.Numpad2]);
+        Assert.True(reloaded.EnabledSnippetSlotKeys[SlotKey.Numpad2]);
+        Assert.True(reloaded.EnabledCategorySlotKeys[SlotKey.Numpad4]);
+        Assert.False(reloaded.EnabledSnippetSlotKeys[SlotKey.Numpad4]);
+    }
+
+    [Fact]
+    public void SettingsSavePersistsAutoHideAndClipboardRestore()
+    {
+        var services = CreateServices();
+        var settings = services.SettingsService.Load();
+        settings.BringWindowToFrontOnHotkey = false;
+        settings.AutoHideAfterPaste = false;
+        settings.RestoreClipboardAfterPaste = false;
+
+        services.SettingsService.Save(settings);
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.False(reloaded.BringWindowToFrontOnHotkey);
+        Assert.False(reloaded.AutoHideAfterPaste);
+        Assert.False(reloaded.RestoreClipboardAfterPaste);
+    }
+
+    [Fact]
+    public void SettingsSavePersistsLastWindowPlacement()
+    {
+        var services = CreateServices();
+        var settings = services.SettingsService.Load();
+        settings.LastWindowLeft = 120.5;
+        settings.LastWindowTop = 240.25;
+        settings.LastWindowScreenDeviceName = "Monitor2";
+
+        services.SettingsService.Save(settings);
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.Equal(120.5, reloaded.LastWindowLeft);
+        Assert.Equal(240.25, reloaded.LastWindowTop);
+        Assert.Equal("Monitor2", reloaded.LastWindowScreenDeviceName);
+    }
+}

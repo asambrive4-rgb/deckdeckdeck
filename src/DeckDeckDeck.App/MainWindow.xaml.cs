@@ -41,51 +41,12 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!TryGetSlotKey(e.Key, out var slotKey))
+        if (!NumpadKeyMap.TryGetSlotKey(e.Key, out var slotKey))
         {
             return;
         }
 
         e.Handled = viewModel.SelectSlot(slotKey);
-    }
-
-    private static bool TryGetSlotKey(Key key, out SlotKey slotKey)
-    {
-        slotKey = key switch
-        {
-            Key.NumPad0 => SlotKey.Numpad0,
-            Key.NumPad1 => SlotKey.Numpad1,
-            Key.NumPad2 => SlotKey.Numpad2,
-            Key.NumPad3 => SlotKey.Numpad3,
-            Key.NumPad4 => SlotKey.Numpad4,
-            Key.NumPad5 => SlotKey.Numpad5,
-            Key.NumPad6 => SlotKey.Numpad6,
-            Key.NumPad7 => SlotKey.Numpad7,
-            Key.NumPad8 => SlotKey.Numpad8,
-            Key.NumPad9 => SlotKey.Numpad9,
-            Key.Divide => SlotKey.NumpadDivide,
-            Key.Multiply => SlotKey.NumpadMultiply,
-            Key.Subtract => SlotKey.NumpadSubtract,
-            Key.Add => SlotKey.NumpadAdd,
-            Key.Decimal => SlotKey.NumpadDecimal,
-            _ => default
-        };
-
-        return key is Key.NumPad0
-            or Key.NumPad1
-            or Key.NumPad2
-            or Key.NumPad3
-            or Key.NumPad4
-            or Key.NumPad5
-            or Key.NumPad6
-            or Key.NumPad7
-            or Key.NumPad8
-            or Key.NumPad9
-            or Key.Divide
-            or Key.Multiply
-            or Key.Subtract
-            or Key.Add
-            or Key.Decimal;
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)

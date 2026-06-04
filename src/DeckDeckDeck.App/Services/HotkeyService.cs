@@ -192,23 +192,6 @@ public sealed class HotkeyService : IDisposable
 
     public static IReadOnlyList<(SlotKey SlotKey, uint VirtualKey)> GetRegisteredHotkeys()
     {
-        return
-        [
-            (SlotKey.Numpad0, Win32Constants.VkNumpad0),
-            (SlotKey.Numpad1, Win32Constants.VkNumpad0 + 1),
-            (SlotKey.Numpad2, Win32Constants.VkNumpad0 + 2),
-            (SlotKey.Numpad3, Win32Constants.VkNumpad0 + 3),
-            (SlotKey.Numpad4, Win32Constants.VkNumpad0 + 4),
-            (SlotKey.Numpad5, Win32Constants.VkNumpad0 + 5),
-            (SlotKey.Numpad6, Win32Constants.VkNumpad0 + 6),
-            (SlotKey.Numpad7, Win32Constants.VkNumpad0 + 7),
-            (SlotKey.Numpad8, Win32Constants.VkNumpad0 + 8),
-            (SlotKey.Numpad9, Win32Constants.VkNumpad0 + 9),
-            (SlotKey.NumpadDivide, Win32Constants.VkDivide),
-            (SlotKey.NumpadMultiply, Win32Constants.VkMultiply),
-            (SlotKey.NumpadSubtract, Win32Constants.VkSubtract),
-            (SlotKey.NumpadAdd, Win32Constants.VkAdd),
-            (SlotKey.NumpadDecimal, Win32Constants.VkDecimal)
-        ];
+        return NumpadKeyMap.GetVirtualKeys();
     }
 }

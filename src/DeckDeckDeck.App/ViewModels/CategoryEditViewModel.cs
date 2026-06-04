@@ -13,20 +13,17 @@ public sealed class CategoryEditViewModel : ObservableObject
     private readonly Action _cancel;
     private readonly CategoryService _categoryService;
     private readonly DialogService _dialogService;
+    private readonly EditableImageState _imageState;
     private readonly LoggingService? _loggingService;
     private readonly Guid? _categoryId;
-    private string? _originalImagePath;
     private bool _originalIsSlotEnabled;
-    private string? _originalThumbnailPath;
     private readonly SettingsService? _settingsService;
     private readonly Action<string> _showStatus;
     private readonly ThumbnailService? _thumbnailService;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
-    private string? _imagePath;
     private bool _isSlotEnabled;
     private string _name = string.Empty;
-    private string? _thumbnailPath;
 
     public CategoryEditViewModel(
         SlotKey slotKey,
@@ -53,13 +50,10 @@ public sealed class CategoryEditViewModel : ObservableObject
         _afterDelete = afterDelete;
         _showStatus = showStatus;
         _thumbnailService = thumbnailService;
-        _originalImagePath = category?.ImagePath;
-        _originalThumbnailPath = category?.ThumbnailPath;
+        _imageState = new EditableImageState(category?.ImagePath, category?.ThumbnailPath, thumbnailService);
 
         _name = category?.Name ?? string.Empty;
         _description = category?.Description ?? string.Empty;
-        _imagePath = category?.ImagePath;
-        _thumbnailPath = category?.ThumbnailPath;
         _originalIsSlotEnabled = LoadSlotEnabledState();
         _isSlotEnabled = _originalIsSlotEnabled;
         SaveCommand = new RelayCommand(Save);
@@ -103,19 +97,9 @@ public sealed class CategoryEditViewModel : ObservableObject
         private set => SetProperty(ref _errorMessage, value);
     }
 
-    public string? ThumbnailPath
-    {
-        get => _thumbnailPath;
-        private set
-        {
-            if (SetProperty(ref _thumbnailPath, value))
-            {
-                OnPropertyChanged(nameof(HasImage));
-            }
-        }
-    }
+    public string? ThumbnailPath => _imageState.ThumbnailPath;
 
-    public bool HasImage => !string.IsNullOrWhiteSpace(ThumbnailPath);
+    public bool HasImage => _imageState.HasImage;
 
     public ICommand SaveCommand { get; }
 
@@ -146,19 +130,18 @@ public sealed class CategoryEditViewModel : ObservableObject
         }
 
         var category = _categoryId.HasValue
-            ? _categoryService.Update(_categoryId.Value, Name, Description, _imagePath, ThumbnailPath)
-            : _categoryService.Create(SlotKey, Name, Description, _imagePath, ThumbnailPath);
+            ? _categoryService.Update(_categoryId.Value, Name, Description, _imageState.ImagePath, _imageState.ThumbnailPath)
+            : _categoryService.Create(SlotKey, Name, Description, _imageState.ImagePath, _imageState.ThumbnailPath);
 
-        DeleteOriginalImageIfReplaced();
-        _originalImagePath = _imagePath;
-        _originalThumbnailPath = ThumbnailPath;
+        _imageState.DeleteOriginalImageIfReplaced();
+        _imageState.MarkCurrentAsOriginal();
         _showStatus($"{category.Name} 저장됨.");
         _afterSave(category);
     }
 
     private void Cancel()
     {
-        DeleteCurrentUnsavedImage();
+        _imageState.DeleteCurrentUnsavedImage();
         _cancel();
     }
 
@@ -178,7 +161,7 @@ public sealed class CategoryEditViewModel : ObservableObject
             return;
         }
 
-        DeleteCurrentUnsavedImage();
+        _imageState.DeleteCurrentUnsavedImage();
         var deletedImageFiles = _categoryService.Delete(_categoryId.Value);
         if (_thumbnailService is not null)
         {
@@ -208,10 +191,8 @@ public sealed class CategoryEditViewModel : ObservableObject
 
         try
         {
-            var storedImage = _thumbnailService.StoreImage(selectedPath);
-            DeleteCurrentUnsavedImage();
-            _imagePath = storedImage.ImagePath;
-            ThumbnailPath = storedImage.ThumbnailPath;
+            _imageState.ReplaceWithStoredImage(selectedPath);
+            NotifyImageChanged();
             ErrorMessage = string.Empty;
         }
         catch (Exception ex)
@@ -223,40 +204,14 @@ public sealed class CategoryEditViewModel : ObservableObject
 
     private void RemoveImage()
     {
-        DeleteCurrentUnsavedImage();
-        _imagePath = null;
-        ThumbnailPath = null;
+        _imageState.RemoveImage();
+        NotifyImageChanged();
     }
 
-    private void DeleteCurrentUnsavedImage()
+    private void NotifyImageChanged()
     {
-        if (_thumbnailService is null || IsCurrentOriginalImage())
-        {
-            return;
-        }
-
-        _thumbnailService.DeleteImageFiles(_imagePath, ThumbnailPath);
-    }
-
-    private void DeleteOriginalImageIfReplaced()
-    {
-        if (_thumbnailService is null || IsCurrentOriginalImage())
-        {
-            return;
-        }
-
-        _thumbnailService.DeleteImageFiles(_originalImagePath, _originalThumbnailPath);
-    }
-
-    private bool IsCurrentOriginalImage()
-    {
-        return SamePath(_imagePath, _originalImagePath)
-            && SamePath(ThumbnailPath, _originalThumbnailPath);
-    }
-
-    private static bool SamePath(string? left, string? right)
-    {
-        return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+        OnPropertyChanged(nameof(ThumbnailPath));
+        OnPropertyChanged(nameof(HasImage));
     }
 
     private bool LoadSlotEnabledState()
@@ -280,7 +235,7 @@ public sealed class CategoryEditViewModel : ObservableObject
             return true;
         }
 
-        DeleteCurrentUnsavedImage();
+        _imageState.DeleteCurrentUnsavedImage();
         _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
         _cancel();
 

@@ -32,7 +32,7 @@ public sealed class NumpadCaptureService : IDisposable
             _source?.AddHook(WndProc);
         }
 
-        foreach (var (slotKey, virtualKey) in GetCapturedKeys())
+        foreach (var (slotKey, virtualKey) in NumpadKeyMap.GetVirtualKeys())
         {
             var id = HotkeyIdBase + slotKey.GetSortOrder();
             _hotkeysById[id] = slotKey;
@@ -87,27 +87,5 @@ public sealed class NumpadCaptureService : IDisposable
         SlotCaptured?.Invoke(this, new HotkeyPressedEventArgs(slotKey));
         handled = true;
         return IntPtr.Zero;
-    }
-
-    private static IReadOnlyList<(SlotKey SlotKey, uint VirtualKey)> GetCapturedKeys()
-    {
-        return
-        [
-            (SlotKey.Numpad0, Win32Constants.VkNumpad0),
-            (SlotKey.Numpad1, Win32Constants.VkNumpad0 + 1),
-            (SlotKey.Numpad2, Win32Constants.VkNumpad0 + 2),
-            (SlotKey.Numpad3, Win32Constants.VkNumpad0 + 3),
-            (SlotKey.Numpad4, Win32Constants.VkNumpad0 + 4),
-            (SlotKey.Numpad5, Win32Constants.VkNumpad0 + 5),
-            (SlotKey.Numpad6, Win32Constants.VkNumpad0 + 6),
-            (SlotKey.Numpad7, Win32Constants.VkNumpad0 + 7),
-            (SlotKey.Numpad8, Win32Constants.VkNumpad0 + 8),
-            (SlotKey.Numpad9, Win32Constants.VkNumpad0 + 9),
-            (SlotKey.NumpadDivide, Win32Constants.VkDivide),
-            (SlotKey.NumpadMultiply, Win32Constants.VkMultiply),
-            (SlotKey.NumpadSubtract, Win32Constants.VkSubtract),
-            (SlotKey.NumpadAdd, Win32Constants.VkAdd),
-            (SlotKey.NumpadDecimal, Win32Constants.VkDecimal)
-        ];
     }
 }

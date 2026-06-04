@@ -12,10 +12,9 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly Action<Snippet> _afterSave;
     private readonly Action _cancel;
     private readonly DialogService _dialogService;
+    private readonly EditableImageState _imageState;
     private readonly LoggingService? _loggingService;
-    private string? _originalImagePath;
     private bool _originalIsSlotEnabled;
-    private string? _originalThumbnailPath;
     private readonly SettingsService? _settingsService;
     private readonly Guid? _snippetId;
     private readonly SnippetService _snippetService;
@@ -24,10 +23,8 @@ public sealed class SnippetEditViewModel : ObservableObject
     private string _content = string.Empty;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
-    private string? _imagePath;
     private bool _isSlotEnabled;
     private string _snippetTitle = string.Empty;
-    private string? _thumbnailPath;
 
     public SnippetEditViewModel(
         Category category,
@@ -57,14 +54,11 @@ public sealed class SnippetEditViewModel : ObservableObject
         _afterDelete = afterDelete;
         _showStatus = showStatus;
         _thumbnailService = thumbnailService;
-        _originalImagePath = snippet?.ImagePath;
-        _originalThumbnailPath = snippet?.ThumbnailPath;
+        _imageState = new EditableImageState(snippet?.ImagePath, snippet?.ThumbnailPath, thumbnailService);
 
         _snippetTitle = snippet?.Title ?? string.Empty;
         _content = snippet?.Content ?? string.Empty;
         _description = snippet?.Description ?? string.Empty;
-        _imagePath = snippet?.ImagePath;
-        _thumbnailPath = snippet?.ThumbnailPath;
         _originalIsSlotEnabled = LoadSlotEnabledState();
         _isSlotEnabled = _originalIsSlotEnabled;
         SaveCommand = new RelayCommand(Save);
@@ -118,19 +112,9 @@ public sealed class SnippetEditViewModel : ObservableObject
         private set => SetProperty(ref _errorMessage, value);
     }
 
-    public string? ThumbnailPath
-    {
-        get => _thumbnailPath;
-        private set
-        {
-            if (SetProperty(ref _thumbnailPath, value))
-            {
-                OnPropertyChanged(nameof(HasImage));
-            }
-        }
-    }
+    public string? ThumbnailPath => _imageState.ThumbnailPath;
 
-    public bool HasImage => !string.IsNullOrWhiteSpace(ThumbnailPath);
+    public bool HasImage => _imageState.HasImage;
 
     public ICommand SaveCommand { get; }
 
@@ -172,19 +156,18 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         var snippet = _snippetId.HasValue
-            ? _snippetService.Update(_snippetId.Value, SnippetTitle, Content, Description, _imagePath, ThumbnailPath)
-            : _snippetService.Create(CategoryId, SlotKey, SnippetTitle, Content, Description, _imagePath, ThumbnailPath);
+            ? _snippetService.Update(_snippetId.Value, SnippetTitle, Content, Description, _imageState.ImagePath, _imageState.ThumbnailPath)
+            : _snippetService.Create(CategoryId, SlotKey, SnippetTitle, Content, Description, _imageState.ImagePath, _imageState.ThumbnailPath);
 
-        DeleteOriginalImageIfReplaced();
-        _originalImagePath = _imagePath;
-        _originalThumbnailPath = ThumbnailPath;
+        _imageState.DeleteOriginalImageIfReplaced();
+        _imageState.MarkCurrentAsOriginal();
         _showStatus($"{snippet.Title} 저장됨.");
         _afterSave(snippet);
     }
 
     private void Cancel()
     {
-        DeleteCurrentUnsavedImage();
+        _imageState.DeleteCurrentUnsavedImage();
         _cancel();
     }
 
@@ -204,7 +187,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             return;
         }
 
-        DeleteCurrentUnsavedImage();
+        _imageState.DeleteCurrentUnsavedImage();
         var deletedImageFiles = _snippetService.Delete(_snippetId.Value);
         _thumbnailService?.DeleteImageFiles(deletedImageFiles);
 
@@ -228,10 +211,8 @@ public sealed class SnippetEditViewModel : ObservableObject
 
         try
         {
-            var storedImage = _thumbnailService.StoreImage(selectedPath);
-            DeleteCurrentUnsavedImage();
-            _imagePath = storedImage.ImagePath;
-            ThumbnailPath = storedImage.ThumbnailPath;
+            _imageState.ReplaceWithStoredImage(selectedPath);
+            NotifyImageChanged();
             ErrorMessage = string.Empty;
         }
         catch (Exception ex)
@@ -243,40 +224,14 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private void RemoveImage()
     {
-        DeleteCurrentUnsavedImage();
-        _imagePath = null;
-        ThumbnailPath = null;
+        _imageState.RemoveImage();
+        NotifyImageChanged();
     }
 
-    private void DeleteCurrentUnsavedImage()
+    private void NotifyImageChanged()
     {
-        if (_thumbnailService is null || IsCurrentOriginalImage())
-        {
-            return;
-        }
-
-        _thumbnailService.DeleteImageFiles(_imagePath, ThumbnailPath);
-    }
-
-    private void DeleteOriginalImageIfReplaced()
-    {
-        if (_thumbnailService is null || IsCurrentOriginalImage())
-        {
-            return;
-        }
-
-        _thumbnailService.DeleteImageFiles(_originalImagePath, _originalThumbnailPath);
-    }
-
-    private bool IsCurrentOriginalImage()
-    {
-        return SamePath(_imagePath, _originalImagePath)
-            && SamePath(ThumbnailPath, _originalThumbnailPath);
-    }
-
-    private static bool SamePath(string? left, string? right)
-    {
-        return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+        OnPropertyChanged(nameof(ThumbnailPath));
+        OnPropertyChanged(nameof(HasImage));
     }
 
     private bool LoadSlotEnabledState()
@@ -300,7 +255,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             return true;
         }
 
-        DeleteCurrentUnsavedImage();
+        _imageState.DeleteCurrentUnsavedImage();
         _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
         _cancel();
 
