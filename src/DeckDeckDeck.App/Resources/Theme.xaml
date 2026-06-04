@@ -122,8 +122,8 @@
     <Style x:Key="Deck.SlotThumbnailFrameBorderStyle"
            BasedOn="{StaticResource Deck.ThumbnailFrameBorderStyle}"
            TargetType="{x:Type Border}">
-        <Setter Property="Width" Value="76" />
-        <Setter Property="Height" Value="76" />
+        <Setter Property="Width" Value="42" />
+        <Setter Property="Height" Value="42" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="HorizontalAlignment" Value="Center" />
@@ -362,7 +362,7 @@
 
     <Style x:Key="Deck.SlotMainButtonStyle" TargetType="{x:Type Button}">
         <Setter Property="Margin" Value="4" />
-        <Setter Property="Padding" Value="8" />
+        <Setter Property="Padding" Value="6" />
         <Setter Property="MinHeight" Value="76" />
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
         <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
@@ -413,40 +413,53 @@
         </Style.Triggers>
     </Style>
 
-    <Style x:Key="Deck.SlotEditButtonStyle"
-           BasedOn="{StaticResource Deck.SecondaryButtonStyle}"
-           TargetType="{x:Type Button}">
-        <Setter Property="Width" Value="28" />
-        <Setter Property="Height" Value="28" />
-        <Setter Property="MinHeight" Value="28" />
-        <Setter Property="Margin" Value="0,8,8,0" />
+    <Style x:Key="Deck.SlotEditButtonStyle" TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="22" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="MinHeight" Value="22" />
+        <Setter Property="Margin" Value="0,6,6,0" />
         <Setter Property="Padding" Value="0" />
-        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
-        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
         <Setter Property="HorizontalAlignment" Value="Right" />
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Content" Value="&#xE713;" />
+        <Setter Property="Content" Value="&#xE70F;" />
         <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
         <Setter Property="FontSize" Value="12" />
         <Setter Property="ToolTip" Value="슬롯 편집" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Brand.Sub}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.55" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
         <Style.Triggers>
             <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Empty}" />
-                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
                 <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Muted}" />
             </DataTrigger>
-            <MultiDataTrigger>
-                <MultiDataTrigger.Conditions>
-                    <Condition Binding="{Binding IsEmpty}" Value="True" />
-                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
-                </MultiDataTrigger.Conditions>
-                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
-                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
-                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
-            </MultiDataTrigger>
         </Style.Triggers>
     </Style>
 </ResourceDictionary>

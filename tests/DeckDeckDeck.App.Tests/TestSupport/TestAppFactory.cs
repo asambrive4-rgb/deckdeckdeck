@@ -45,7 +45,8 @@ internal static class TestAppFactory
         Action? hideWindowAfterPaste = null,
         Action? enterEditMode = null,
         Action? completePasteSelection = null,
-        IFileLaunchService? fileLaunchService = null)
+        IFileLaunchService? fileLaunchService = null,
+        IUrlLaunchService? urlLaunchService = null)
     {
         return new MainViewModel(
             services.CategoryService,
@@ -61,6 +62,7 @@ internal static class TestAppFactory
             loggingService: services.LoggingService,
             thumbnailService: services.ThumbnailService,
             fileLaunchService: fileLaunchService,
+            urlLaunchService: urlLaunchService,
             snippetImageService: services.SnippetImageService);
     }
 
@@ -255,6 +257,26 @@ internal sealed class RecordingFileLaunchService : IFileLaunchService
         }
 
         Paths.Add(path);
+        return Result;
+    }
+}
+
+internal sealed class RecordingUrlLaunchService : IUrlLaunchService
+{
+    public bool Result { get; set; } = true;
+
+    public Exception? Exception { get; set; }
+
+    public List<string> Urls { get; } = [];
+
+    public bool TryLaunch(string url)
+    {
+        if (Exception is not null)
+        {
+            throw Exception;
+        }
+
+        Urls.Add(url);
         return Result;
     }
 }

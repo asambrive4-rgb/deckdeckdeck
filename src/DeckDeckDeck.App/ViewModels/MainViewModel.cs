@@ -36,6 +36,7 @@ public sealed class MainViewModel : ObservableObject
         LoggingService? loggingService = null,
         ThumbnailService? thumbnailService = null,
         IFileLaunchService? fileLaunchService = null,
+        IUrlLaunchService? urlLaunchService = null,
         SnippetImageService? snippetImageService = null)
     {
         var transferService = new CategoryTransferService(
@@ -54,6 +55,7 @@ public sealed class MainViewModel : ObservableObject
             snippetImageService,
             clipboardPasteService ?? new ClipboardPasteService(),
             fileLaunchService ?? new FileLaunchService(),
+            urlLaunchService ?? new UrlLaunchService(),
             loggingService,
             thumbnailService);
 
@@ -198,6 +200,7 @@ public sealed class MainViewModel : ObservableObject
         var pasteFlowService = new PasteFlowService(
             services.ClipboardPasteService,
             services.FileLaunchService,
+            services.UrlLaunchService,
             services.SettingsService,
             getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
             hideWindowAfterPaste ?? (() => { }),

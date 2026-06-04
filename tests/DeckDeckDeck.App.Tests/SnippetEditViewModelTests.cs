@@ -40,6 +40,22 @@ public sealed class SnippetEditViewModelTests
     }
 
     [Fact]
+    public void LaunchUrlRequiresValidUrl()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Open site";
+        viewModel.IsLaunchUrlAction = true;
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.Null(savedSnippet);
+        Assert.Equal("열 웹페이지 주소를 http 또는 https 주소로 입력해 주세요.", viewModel.ErrorMessage);
+    }
+
+    [Fact]
     public void LaunchFileSavesWithLaunchPathAndEmptyContent()
     {
         var services = CreateServices();
@@ -57,6 +73,29 @@ public sealed class SnippetEditViewModelTests
         Assert.Equal(SnippetActionType.LaunchFile, savedSnippet.ActionType);
         Assert.Equal(string.Empty, savedSnippet.Content);
         Assert.Equal(@"C:\notes", savedSnippet.LaunchPath);
+    }
+
+    [Fact]
+    public void LaunchUrlSavesWithNormalizedUrlAndEmptyContent()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Open docs";
+        viewModel.Content = "unused";
+        viewModel.LaunchPath = @"C:\unused";
+        viewModel.IsLaunchUrlAction = true;
+        viewModel.LaunchUrl = "example.com/docs";
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal(SnippetActionType.LaunchUrl, savedSnippet.ActionType);
+        Assert.Equal(string.Empty, savedSnippet.Content);
+        Assert.Null(savedSnippet.LaunchPath);
+        Assert.Equal("https://example.com/docs", savedSnippet.LaunchUrl);
+        Assert.Equal("https://example.com/docs", viewModel.LaunchUrl);
     }
 
     [Fact]

@@ -45,7 +45,8 @@ public sealed class SnippetService
         SnippetActionType actionType = SnippetActionType.PasteText,
         string? launchPath = null,
         SlotImageMode slotImageMode = SlotImageMode.Auto,
-        AutoIconCacheEntry? autoIcon = null)
+        AutoIconCacheEntry? autoIcon = null,
+        string? launchUrl = null)
     {
         using var dbContext = _dbContextFactory.Create();
 
@@ -60,6 +61,7 @@ public sealed class SnippetService
             Content = GetStoredContent(actionType, content),
             ActionType = actionType,
             LaunchPath = GetStoredLaunchPath(actionType, launchPath),
+            LaunchUrl = GetStoredLaunchUrl(actionType, launchUrl),
             SlotImageMode = storedImageMode,
             Description = NormalizeOptionalText(description),
             ImagePath = imagePath,
@@ -83,7 +85,7 @@ public sealed class SnippetService
         using var dbContext = _dbContextFactory.Create();
 
         var snippet = dbContext.Snippets.First(item => item.Id == id);
-        UpdateText(snippet, title, content, description, SnippetActionType.PasteText, null);
+        UpdateText(snippet, title, content, description, SnippetActionType.PasteText, null, null);
 
         dbContext.SaveChanges();
 
@@ -100,12 +102,13 @@ public sealed class SnippetService
         SnippetActionType actionType = SnippetActionType.PasteText,
         string? launchPath = null,
         SlotImageMode slotImageMode = SlotImageMode.Auto,
-        AutoIconCacheEntry? autoIcon = null)
+        AutoIconCacheEntry? autoIcon = null,
+        string? launchUrl = null)
     {
         using var dbContext = _dbContextFactory.Create();
 
         var snippet = dbContext.Snippets.First(item => item.Id == id);
-        UpdateText(snippet, title, content, description, actionType, launchPath);
+        UpdateText(snippet, title, content, description, actionType, launchPath, launchUrl);
         var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
         var storedAutoIcon = GetStoredAutoIcon(actionType, storedImageMode, autoIcon);
         snippet.SlotImageMode = storedImageMode;
@@ -147,12 +150,17 @@ public sealed class SnippetService
 
     private static string GetStoredContent(SnippetActionType actionType, string content)
     {
-        return actionType == SnippetActionType.LaunchFile ? string.Empty : content;
+        return actionType == SnippetActionType.PasteText ? content : string.Empty;
     }
 
     private static string? GetStoredLaunchPath(SnippetActionType actionType, string? launchPath)
     {
         return actionType == SnippetActionType.LaunchFile ? NormalizeOptionalText(launchPath) : null;
+    }
+
+    private static string? GetStoredLaunchUrl(SnippetActionType actionType, string? launchUrl)
+    {
+        return actionType == SnippetActionType.LaunchUrl ? NormalizeOptionalText(launchUrl) : null;
     }
 
     private static SlotImageMode GetStoredSlotImageMode(SlotImageMode slotImageMode, string? imagePath)
@@ -186,12 +194,14 @@ public sealed class SnippetService
         string content,
         string? description,
         SnippetActionType actionType,
-        string? launchPath)
+        string? launchPath,
+        string? launchUrl)
     {
         snippet.Title = title.Trim();
         snippet.Content = GetStoredContent(actionType, content);
         snippet.ActionType = actionType;
         snippet.LaunchPath = GetStoredLaunchPath(actionType, launchPath);
+        snippet.LaunchUrl = GetStoredLaunchUrl(actionType, launchUrl);
         snippet.Description = NormalizeOptionalText(description);
         snippet.UpdatedAt = DateTime.UtcNow;
     }

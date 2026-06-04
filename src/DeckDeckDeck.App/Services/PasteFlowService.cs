@@ -12,10 +12,12 @@ internal sealed class PasteFlowService
     private readonly LoggingService? _loggingService;
     private readonly SettingsService _settingsService;
     private readonly Action<string> _showStatus;
+    private readonly IUrlLaunchService _urlLaunchService;
 
     public PasteFlowService(
         IClipboardPasteService clipboardPasteService,
         IFileLaunchService fileLaunchService,
+        IUrlLaunchService urlLaunchService,
         SettingsService settingsService,
         Func<IntPtr> getPasteTargetWindowHandle,
         Action hideWindowAfterPaste,
@@ -25,6 +27,7 @@ internal sealed class PasteFlowService
     {
         _clipboardPasteService = clipboardPasteService;
         _fileLaunchService = fileLaunchService;
+        _urlLaunchService = urlLaunchService;
         _settingsService = settingsService;
         _getPasteTargetWindowHandle = getPasteTargetWindowHandle;
         _hideWindowAfterPaste = hideWindowAfterPaste;
@@ -42,6 +45,12 @@ internal sealed class PasteFlowService
             if (snippet.ActionType == SnippetActionType.LaunchFile)
             {
                 LaunchSnippet(snippet, settings);
+                return;
+            }
+
+            if (snippet.ActionType == SnippetActionType.LaunchUrl)
+            {
+                LaunchUrlSnippet(snippet, settings);
                 return;
             }
 
@@ -112,5 +121,48 @@ internal sealed class PasteFlowService
         }
 
         _loggingService?.Log($"Launch failed for snippet {snippet.Id}: {message}", exception);
+    }
+
+    private void LaunchUrlSnippet(Snippet snippet, AppSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(snippet.LaunchUrl))
+        {
+            ReportUrlLaunchFailure(snippet, "열 웹페이지 주소가 없습니다.");
+            return;
+        }
+
+        try
+        {
+            var launched = _urlLaunchService.TryLaunch(snippet.LaunchUrl);
+            if (!launched)
+            {
+                ReportUrlLaunchFailure(snippet, "웹페이지 주소 형식이 올바르지 않습니다.");
+                return;
+            }
+
+            if (settings.AutoHideAfterPaste)
+            {
+                _hideWindowAfterPaste();
+            }
+
+            _showStatus($"{snippet.Title} 웹페이지를 열었습니다.");
+        }
+        catch (Exception ex)
+        {
+            ReportUrlLaunchFailure(snippet, "웹페이지를 열지 못했습니다.", ex);
+        }
+    }
+
+    private void ReportUrlLaunchFailure(Snippet snippet, string message, Exception? exception = null)
+    {
+        _showStatus($"{snippet.Title} 웹 주소 열기 실패: {message}");
+
+        if (exception is null)
+        {
+            _loggingService?.Log($"Launch URL failed for snippet {snippet.Id}: {message}");
+            return;
+        }
+
+        _loggingService?.Log($"Launch URL failed for snippet {snippet.Id}: {message}", exception);
     }
 }

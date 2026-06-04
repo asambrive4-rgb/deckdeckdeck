@@ -31,6 +31,7 @@ public sealed class DataPersistenceTests
         Assert.Equal("Make this clearer.", snippets[0].Content);
         Assert.Equal(SnippetActionType.PasteText, snippets[0].ActionType);
         Assert.Null(snippets[0].LaunchPath);
+        Assert.Null(snippets[0].LaunchUrl);
         Assert.Equal(SlotImageMode.Auto, snippets[0].SlotImageMode);
     }
 
@@ -60,11 +61,37 @@ public sealed class DataPersistenceTests
         Assert.Equal(SnippetActionType.LaunchFile, snippet.ActionType);
         Assert.Equal(string.Empty, snippet.Content);
         Assert.Equal(@"C:\notes", snippet.LaunchPath);
+        Assert.Null(snippet.LaunchUrl);
         Assert.Equal(SlotImageMode.Auto, snippet.SlotImageMode);
         Assert.Equal(autoIcon.IconPath, snippet.AutoIconPath);
         Assert.Equal(autoIcon.SourcePath, snippet.AutoIconSourcePath);
         Assert.Equal(autoIcon.SourceLastWriteTimeUtc, snippet.AutoIconSourceLastWriteTimeUtc);
         Assert.Equal(autoIcon.SourceLength, snippet.AutoIconSourceLength);
+    }
+
+    [Fact]
+    public void LaunchUrlSnippetPersistsAcrossDbContexts()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Open docs",
+            "unused",
+            null,
+            actionType: SnippetActionType.LaunchUrl,
+            launchPath: @"C:\unused",
+            launchUrl: "https://example.com/docs");
+
+        var reloadedServices = CreateServices(services.Storage.AppDataPath);
+        var snippet = Assert.Single(reloadedServices.SnippetService.GetByCategoryId(category.Id));
+
+        Assert.Equal(SnippetActionType.LaunchUrl, snippet.ActionType);
+        Assert.Equal(string.Empty, snippet.Content);
+        Assert.Null(snippet.LaunchPath);
+        Assert.Equal("https://example.com/docs", snippet.LaunchUrl);
+        Assert.Null(snippet.AutoIconPath);
     }
 
     [Fact]
@@ -86,6 +113,7 @@ public sealed class DataPersistenceTests
         Assert.Equal("Keep me", snippet.Content);
         Assert.Equal(SnippetActionType.PasteText, snippet.ActionType);
         Assert.Null(snippet.LaunchPath);
+        Assert.Null(snippet.LaunchUrl);
         Assert.Equal(SlotImageMode.Auto, snippet.SlotImageMode);
     }
 
@@ -284,6 +312,32 @@ public sealed class DataPersistenceTests
                 Assert.Equal("old-category.png", imageFiles.ImagePath);
                 Assert.Equal("old-category-thumbnail.png", imageFiles.ThumbnailPath);
             });
+    }
+
+    [Fact]
+    public void CopyingCategoryPreservesLaunchUrlSnippets()
+    {
+        var services = CreateServices();
+        var source = services.CategoryService.Create(SlotKey.Numpad4, "Web", null);
+        services.SnippetService.Create(
+            source.Id,
+            SlotKey.Numpad3,
+            "Open docs",
+            "unused",
+            null,
+            actionType: SnippetActionType.LaunchUrl,
+            launchPath: @"C:\unused",
+            launchUrl: "https://example.com/docs");
+
+        services.CategoryService.CopyToSlot(source.Id, SlotKey.Numpad5, imageFiles => imageFiles);
+
+        var copiedCategory = services.CategoryService.GetBySlotKey(SlotKey.Numpad5);
+        var copiedSnippet = Assert.Single(services.SnippetService.GetByCategoryId(copiedCategory!.Id));
+
+        Assert.Equal(SnippetActionType.LaunchUrl, copiedSnippet.ActionType);
+        Assert.Equal(string.Empty, copiedSnippet.Content);
+        Assert.Null(copiedSnippet.LaunchPath);
+        Assert.Equal("https://example.com/docs", copiedSnippet.LaunchUrl);
     }
 
     [Fact]

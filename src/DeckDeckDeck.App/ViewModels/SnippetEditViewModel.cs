@@ -28,6 +28,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private string _errorMessage = string.Empty;
     private bool _isSlotEnabled;
     private string _launchPath = string.Empty;
+    private string _launchUrl = string.Empty;
     private SlotImageMode _slotImageMode = SlotImageMode.Auto;
     private string _snippetTitle = string.Empty;
 
@@ -67,6 +68,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         _content = snippet?.Content ?? string.Empty;
         _actionType = snippet?.ActionType ?? SnippetActionType.PasteText;
         _launchPath = snippet?.LaunchPath ?? string.Empty;
+        _launchUrl = snippet?.LaunchUrl ?? string.Empty;
         _slotImageMode = GetInitialSlotImageMode(snippet);
         _autoIcon = AutoIconCacheEntry.FromSnippet(snippet);
         _description = snippet?.Description ?? string.Empty;
@@ -119,6 +121,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 
             OnPropertyChanged(nameof(IsPasteTextAction));
             OnPropertyChanged(nameof(IsLaunchFileAction));
+            OnPropertyChanged(nameof(IsLaunchUrlAction));
             NotifyImageChanged();
         }
     }
@@ -147,10 +150,28 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
     }
 
+    public bool IsLaunchUrlAction
+    {
+        get => ActionType == SnippetActionType.LaunchUrl;
+        set
+        {
+            if (value)
+            {
+                ActionType = SnippetActionType.LaunchUrl;
+            }
+        }
+    }
+
     public string LaunchPath
     {
         get => _launchPath;
         set => SetProperty(ref _launchPath, value);
+    }
+
+    public string LaunchUrl
+    {
+        get => _launchUrl;
+        set => SetProperty(ref _launchUrl, value);
     }
 
     public string Description
@@ -221,6 +242,18 @@ public sealed class SnippetEditViewModel : ObservableObject
             return;
         }
 
+        var launchUrl = LaunchUrl;
+        if (ActionType == SnippetActionType.LaunchUrl)
+        {
+            if (!UrlAddress.TryNormalize(LaunchUrl, out launchUrl))
+            {
+                ErrorMessage = "열 웹페이지 주소를 http 또는 https 주소로 입력해 주세요.";
+                return;
+            }
+
+            LaunchUrl = launchUrl;
+        }
+
         if (!SaveSlotEnabled())
         {
             return;
@@ -238,7 +271,8 @@ public sealed class SnippetEditViewModel : ObservableObject
                 ActionType,
                 LaunchPath,
                 _slotImageMode,
-                autoIcon)
+                autoIcon,
+                launchUrl)
             : _snippetService.Create(
                 CategoryId,
                 SlotKey,
@@ -250,7 +284,8 @@ public sealed class SnippetEditViewModel : ObservableObject
                 ActionType,
                 LaunchPath,
                 _slotImageMode,
-                autoIcon);
+                autoIcon,
+                launchUrl);
 
         _imageState.DeleteOriginalImageIfReplaced();
         _imageState.MarkCurrentAsOriginal();

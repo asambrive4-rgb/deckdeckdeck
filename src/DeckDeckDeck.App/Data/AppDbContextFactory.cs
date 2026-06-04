@@ -44,6 +44,11 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "LaunchPath",
                 "ALTER TABLE Snippets ADD COLUMN LaunchPath TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "LaunchUrl",
+                "ALTER TABLE Snippets ADD COLUMN LaunchUrl TEXT NULL");
             var addedSlotImageMode = AddColumnIfMissing(
                 dbContext,
                 existingColumns,

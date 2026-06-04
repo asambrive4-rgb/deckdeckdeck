@@ -97,7 +97,7 @@
                             Style="{StaticResource Deck.FieldGroupSpacedStyle}">
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="실행 타입" />
-                    <UniformGrid Columns="2">
+                    <UniformGrid Columns="3">
                         <RadioButton Content="문구 붙여넣기"
                                      GroupName="SnippetActionType"
                                      IsChecked="{Binding IsPasteTextAction, Mode=TwoWay}"
@@ -105,6 +105,10 @@
                         <RadioButton Content="파일/바로 가기 실행"
                                      GroupName="SnippetActionType"
                                      IsChecked="{Binding IsLaunchFileAction, Mode=TwoWay}"
+                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                        <RadioButton Content="웹 주소 열기"
+                                     GroupName="SnippetActionType"
+                                     IsChecked="{Binding IsLaunchUrlAction, Mode=TwoWay}"
                                      Style="{StaticResource Deck.ActionTypeToggleStyle}" />
                     </UniformGrid>
                 </StackPanel>
@@ -141,6 +145,16 @@
                                 Style="{StaticResource Deck.ImageActionButtonStyle}"
                                 Content="폴더 선택" />
                     </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Row="2"
+                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
+                            Visibility="{Binding IsLaunchUrlAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                               Text="열 웹페이지 주소" />
+                    <TextBox Height="36"
+                             Style="{StaticResource Deck.TextBoxStyle}"
+                             Text="{Binding LaunchUrl, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="3"

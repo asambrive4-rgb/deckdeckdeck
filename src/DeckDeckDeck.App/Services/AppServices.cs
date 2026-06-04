@@ -12,6 +12,7 @@ internal sealed record AppServices(
     SnippetImageService? SnippetImageService,
     IClipboardPasteService ClipboardPasteService,
     IFileLaunchService FileLaunchService,
+    IUrlLaunchService UrlLaunchService,
     LoggingService? LoggingService,
     ThumbnailService? ThumbnailService)
 {
@@ -44,6 +45,7 @@ internal sealed record AppServices(
             snippetImageService,
             new ClipboardPasteService(),
             new FileLaunchService(),
+            new UrlLaunchService(),
             loggingService,
             thumbnailService);
     }

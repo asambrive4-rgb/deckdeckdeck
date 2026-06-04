@@ -147,4 +147,100 @@ public sealed class MainViewModelPasteTests
         Assert.Contains("실행 실패", viewModel.StatusMessage);
         Assert.Contains("Launch failed", File.ReadAllText(Path.Combine(services.Storage.LogsPath, "app.log")));
     }
+
+    [Fact]
+    public void LaunchUrlSnippetLaunchesInsteadOfPasting()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Open docs",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.LaunchUrl,
+            launchUrl: "https://example.com/docs");
+        var pasteService = new RecordingClipboardPasteService();
+        var urlLaunchService = new RecordingUrlLaunchService();
+        var hidden = false;
+        var completedPasteSelection = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            pasteService,
+            () => new IntPtr(123),
+            () => hidden = true,
+            completePasteSelection: () => completedPasteSelection = true,
+            urlLaunchService: urlLaunchService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        Assert.Empty(pasteService.Calls);
+        Assert.Equal(["https://example.com/docs"], urlLaunchService.Urls);
+        Assert.True(hidden);
+        Assert.True(completedPasteSelection);
+    }
+
+    [Fact]
+    public void LaunchUrlFailureShowsStatusAndKeepsWindowVisible()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Broken site",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.LaunchUrl,
+            launchUrl: "https://example.com");
+        var urlLaunchService = new RecordingUrlLaunchService { Result = false };
+        var hidden = false;
+        var completedPasteSelection = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            new RecordingClipboardPasteService(),
+            () => new IntPtr(123),
+            () => hidden = true,
+            completePasteSelection: () => completedPasteSelection = true,
+            urlLaunchService: urlLaunchService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        Assert.False(hidden);
+        Assert.True(completedPasteSelection);
+        Assert.Contains("웹 주소 열기 실패", viewModel.StatusMessage);
+        Assert.Contains("Launch URL failed", File.ReadAllText(Path.Combine(services.Storage.LogsPath, "app.log")));
+    }
+
+    [Fact]
+    public void EmptyLaunchUrlShowsStatusAndDoesNotCallLauncher()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Empty site",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.LaunchUrl);
+        var urlLaunchService = new RecordingUrlLaunchService();
+        var hidden = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            new RecordingClipboardPasteService(),
+            () => new IntPtr(123),
+            () => hidden = true,
+            urlLaunchService: urlLaunchService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        Assert.False(hidden);
+        Assert.Empty(urlLaunchService.Urls);
+        Assert.Contains("웹 주소 열기 실패", viewModel.StatusMessage);
+    }
 }

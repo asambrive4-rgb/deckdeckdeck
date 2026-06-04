@@ -18,6 +18,8 @@ public sealed class Snippet
 
     public string? LaunchPath { get; set; }
 
+    public string? LaunchUrl { get; set; }
+
     public SlotImageMode SlotImageMode { get; set; } = SlotImageMode.Auto;
 
     public string? Description { get; set; }
