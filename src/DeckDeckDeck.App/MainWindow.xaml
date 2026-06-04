@@ -11,8 +11,7 @@
         Height="680"
         MinWidth="500"
         MinHeight="620"
-        Background="#F3F5F7"
-        FontFamily="Segoe UI"
+        Style="{StaticResource Deck.MainWindowStyle}"
         ShowActivated="False"
         PreviewKeyDown="OnPreviewKeyDown">
     <Window.Resources>
@@ -39,21 +38,14 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Padding="22"
-                Background="White"
-                BorderBrush="#D9DEE7"
-                BorderThickness="1"
-                CornerRadius="8">
+        <Border Style="{StaticResource Deck.AppPanelBorderStyle}">
             <ContentControl Content="{Binding CurrentViewModel}" />
         </Border>
 
         <Border Grid.Row="1"
                 Margin="0,12,0,0"
-                Padding="12,8"
-                Background="#EAF0F6"
-                CornerRadius="8">
-            <TextBlock Foreground="#485366"
-                       FontSize="13"
+                Style="{StaticResource Deck.StatusPanelBorderStyle}">
+            <TextBlock Style="{StaticResource Deck.StatusTextStyle}"
                        Text="{Binding StatusMessage}" />
         </Border>
     </Grid>

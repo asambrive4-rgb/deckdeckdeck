@@ -8,13 +8,7 @@ public static class Win32Constants
 
     public static readonly IntPtr HwndBottom = new(1);
 
-    public const int WmMouseActivate = 0x0021;
-
     public const int WmHotkey = 0x0312;
-
-    public const int GwlExStyle = -20;
-
-    public const int MaNoActivate = 3;
 
     public const int SwShownoactivate = 4;
 
@@ -25,8 +19,6 @@ public static class Win32Constants
     public const uint SwpNoactivate = 0x0010;
 
     public const uint SwpShowwindow = 0x0040;
-
-    public const int WsExNoactivate = 0x08000000;
 
     public const uint InputKeyboard = 1;
 

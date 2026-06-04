@@ -175,6 +175,11 @@ WPF 앱 변경 작업을 마치고 테스트까지 성공했다면, 사용자가
 ```
 
 3. 생성된 실행 파일을 레포 루트의 `DeckDeckDeck.exe`로 복사합니다.
+   복사 전에 현재 실행 중인 `DeckDeckDeck.exe` 프로세스가 있다면, 파일 잠금을 풀기 위해 종료해도 됩니다.
+
+```powershell
+Get-Process -Name DeckDeckDeck -ErrorAction SilentlyContinue | Stop-Process
+```
 
 ```powershell
 Copy-Item .\artifacts\publish\win-x64\DeckDeckDeck.App.exe .\DeckDeckDeck.exe -Force

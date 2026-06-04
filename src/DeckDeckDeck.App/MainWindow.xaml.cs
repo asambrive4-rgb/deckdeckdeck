@@ -26,6 +26,7 @@ public partial class MainWindow : Window
             EnterEditMode,
             EndPasteSelection);
         SourceInitialized += OnSourceInitialized;
+        StateChanged += OnStateChanged;
         Closed += OnClosed;
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _numpadCaptureService.SlotCaptured += OnNumpadSlotCaptured;
@@ -105,6 +106,14 @@ public partial class MainWindow : Window
         _hotkeyService.Dispose();
     }
 
+    private void OnStateChanged(object? sender, EventArgs e)
+    {
+        if (WindowState == WindowState.Minimized)
+        {
+            Hide();
+        }
+    }
+
     private void OnHotkeyPressed(object? sender, HotkeyPressedEventArgs e)
     {
         if (!Dispatcher.CheckAccess())
@@ -157,14 +166,12 @@ public partial class MainWindow : Window
 
     private void EnterPasteMode()
     {
-        _paletteWindowService.SetPasteMode(true);
         _numpadCaptureService.Start(_windowHandle);
     }
 
     private void EndPasteSelection()
     {
         _numpadCaptureService.Stop();
-        _paletteWindowService.SetPasteMode(false);
     }
 
     private void EnterEditMode()

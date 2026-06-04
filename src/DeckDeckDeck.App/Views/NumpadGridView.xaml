@@ -3,68 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              MinWidth="380">
     <UserControl.Resources>
-        <Style x:Key="SlotMainButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="Margin" Value="6" />
-            <Setter Property="Padding" Value="10" />
-            <Setter Property="MinHeight" Value="76" />
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="#CBD3DF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="#162033" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Stretch" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="Root"
-                                Padding="{TemplateBinding Padding}"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Root" Property="BorderBrush" Value="#4977C2" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Root" Property="Background" Value="#DBE8FA" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Root" Property="Opacity" Value="0.42" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                    <Setter Property="Background" Value="#F8FAFD" />
-                    <Setter Property="BorderBrush" Value="#DDE4EE" />
-                    <Setter Property="Foreground" Value="#64748B" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <Style x:Key="SlotEditButtonStyle" TargetType="{x:Type Button}">
-            <Setter Property="Width" Value="26" />
-            <Setter Property="Height" Value="26" />
-            <Setter Property="Margin" Value="0,10,10,0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="HorizontalAlignment" Value="Right" />
-            <Setter Property="VerticalAlignment" Value="Top" />
-            <Setter Property="Background" Value="#EDF2F8" />
-            <Setter Property="BorderBrush" Value="#CBD3DF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Content" Value="&#xE713;" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="ToolTip" Value="슬롯 편집" />
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DeckDeckDeck.App;component/Resources/Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <ItemsControl ItemsSource="{Binding Slots}">
@@ -99,7 +42,7 @@
             <DataTemplate>
                 <Grid>
                     <Button Command="{Binding SelectCommand}"
-                            Style="{StaticResource SlotMainButtonStyle}">
+                            Style="{StaticResource Deck.SlotMainButtonStyle}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -107,47 +50,33 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="#5F6C80"
+                            <TextBlock Style="{StaticResource Deck.SlotKeyTextStyle}"
                                        Text="{Binding KeyText}" />
                             <StackPanel Grid.Row="1"
                                         Margin="0,8,0,6"
                                         VerticalAlignment="Center">
                                 <Border x:Name="ThumbnailFrame"
-                                        Width="42"
-                                        Height="42"
-                                        Margin="0,0,0,6"
-                                        HorizontalAlignment="Center"
-                                        Background="#EEF2F7"
-                                        BorderBrush="#DDE4EE"
-                                        BorderThickness="1"
-                                        Visibility="Collapsed">
+                                        Style="{StaticResource Deck.SlotThumbnailFrameBorderStyle}">
                                     <Image Source="{Binding ThumbnailPath}"
                                            Stretch="UniformToFill" />
                                 </Border>
                                 <TextBlock x:Name="DisplayTextBlock"
-                                           FontSize="19"
-                                           FontWeight="SemiBold"
-                                           Text="{Binding DisplayText}"
-                                           TextAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" />
+                                           Style="{StaticResource Deck.SlotTitleTextStyle}"
+                                           Text="{Binding DisplayText}" />
                             </StackPanel>
                             <TextBlock Grid.Row="2"
-                                       FontSize="11"
-                                       Foreground="#738096"
-                                       Text="{Binding Caption}"
-                                       TextAlignment="Right" />
+                                       Style="{StaticResource Deck.SlotCaptionTextStyle}"
+                                       Text="{Binding Caption}" />
                         </Grid>
                     </Button>
 
                     <Button Command="{Binding EditCommand}"
-                            Style="{StaticResource SlotEditButtonStyle}" />
+                            Style="{StaticResource Deck.SlotEditButtonStyle}" />
                 </Grid>
                 <DataTemplate.Triggers>
                     <DataTrigger Binding="{Binding HasThumbnail}" Value="True">
                         <Setter TargetName="ThumbnailFrame" Property="Visibility" Value="Visible" />
-                        <Setter TargetName="DisplayTextBlock" Property="FontSize" Value="14" />
+                        <Setter TargetName="DisplayTextBlock" Property="Style" Value="{StaticResource Deck.SlotTitleWithThumbnailTextStyle}" />
                     </DataTrigger>
                 </DataTemplate.Triggers>
             </DataTemplate>

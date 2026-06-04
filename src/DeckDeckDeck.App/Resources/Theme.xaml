@@ -1,0 +1,423 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="Deck.Color.Brand.Main">#FFF7D1</Color>
+    <Color x:Key="Deck.Color.Brand.Sub">#A77743</Color>
+    <Color x:Key="Deck.Color.Brand.Accent">#FFB15E</Color>
+
+    <Color x:Key="Deck.Color.Background.App">#FFF7D1</Color>
+    <Color x:Key="Deck.Color.Background.Surface">#FFFDF4</Color>
+    <Color x:Key="Deck.Color.Background.SurfaceSoft">#FFF3D9</Color>
+    <Color x:Key="Deck.Color.Background.SurfaceMuted">#F3E6CC</Color>
+    <Color x:Key="Deck.Color.Background.Empty">#FFF9EA</Color>
+    <Color x:Key="Deck.Color.Background.Warning">#FFF0C2</Color>
+    <Color x:Key="Deck.Color.Background.DangerSoft">#FFF1EE</Color>
+
+    <Color x:Key="Deck.Color.Line.Soft">#E6CFA8</Color>
+    <Color x:Key="Deck.Color.Line.Strong">#A77743</Color>
+    <Color x:Key="Deck.Color.Line.Muted">#D9C6A2</Color>
+
+    <Color x:Key="Deck.Color.Text.Primary">#3B2A1D</Color>
+    <Color x:Key="Deck.Color.Text.Secondary">#7D5E3E</Color>
+    <Color x:Key="Deck.Color.Text.Muted">#9A7A56</Color>
+    <Color x:Key="Deck.Color.Text.Warning">#6F4E00</Color>
+    <Color x:Key="Deck.Color.Text.Danger">#B42318</Color>
+    <Color x:Key="Deck.Color.Shadow">#000000</Color>
+
+    <SolidColorBrush x:Key="Deck.Brush.Brand.Main" Color="{StaticResource Deck.Color.Brand.Main}" />
+    <SolidColorBrush x:Key="Deck.Brush.Brand.Sub" Color="{StaticResource Deck.Color.Brand.Sub}" />
+    <SolidColorBrush x:Key="Deck.Brush.Brand.Accent" Color="{StaticResource Deck.Color.Brand.Accent}" />
+    <SolidColorBrush x:Key="Deck.Brush.Background.App" Color="{StaticResource Deck.Color.Background.App}" />
+    <SolidColorBrush x:Key="Deck.Brush.Background.Surface" Color="{StaticResource Deck.Color.Background.Surface}" />
+    <SolidColorBrush x:Key="Deck.Brush.Background.SurfaceSoft" Color="{StaticResource Deck.Color.Background.SurfaceSoft}" />
+    <SolidColorBrush x:Key="Deck.Brush.Background.SurfaceMuted" Color="{StaticResource Deck.Color.Background.SurfaceMuted}" />
+    <SolidColorBrush x:Key="Deck.Brush.Background.Empty" Color="{StaticResource Deck.Color.Background.Empty}" />
+    <SolidColorBrush x:Key="Deck.Brush.Background.Warning" Color="{StaticResource Deck.Color.Background.Warning}" />
+    <SolidColorBrush x:Key="Deck.Brush.Background.DangerSoft" Color="{StaticResource Deck.Color.Background.DangerSoft}" />
+    <SolidColorBrush x:Key="Deck.Brush.Line.Soft" Color="{StaticResource Deck.Color.Line.Soft}" />
+    <SolidColorBrush x:Key="Deck.Brush.Line.Strong" Color="{StaticResource Deck.Color.Line.Strong}" />
+    <SolidColorBrush x:Key="Deck.Brush.Line.Muted" Color="{StaticResource Deck.Color.Line.Muted}" />
+    <SolidColorBrush x:Key="Deck.Brush.Text.Primary" Color="{StaticResource Deck.Color.Text.Primary}" />
+    <SolidColorBrush x:Key="Deck.Brush.Text.Secondary" Color="{StaticResource Deck.Color.Text.Secondary}" />
+    <SolidColorBrush x:Key="Deck.Brush.Text.Muted" Color="{StaticResource Deck.Color.Text.Muted}" />
+    <SolidColorBrush x:Key="Deck.Brush.Text.Warning" Color="{StaticResource Deck.Color.Text.Warning}" />
+    <SolidColorBrush x:Key="Deck.Brush.Text.Danger" Color="{StaticResource Deck.Color.Text.Danger}" />
+    <SolidColorBrush x:Key="Deck.Brush.FocusRing" Color="{StaticResource Deck.Color.Brand.Accent}" />
+
+    <CornerRadius x:Key="Deck.Radius.Panel">18</CornerRadius>
+    <CornerRadius x:Key="Deck.Radius.Card">16</CornerRadius>
+    <CornerRadius x:Key="Deck.Radius.Control">12</CornerRadius>
+    <CornerRadius x:Key="Deck.Radius.Thumbnail">10</CornerRadius>
+
+    <Thickness x:Key="Deck.Thickness.Border">1</Thickness>
+    <Thickness x:Key="Deck.Thickness.Focus">2</Thickness>
+    <Thickness x:Key="Deck.Padding.Panel">22</Thickness>
+    <Thickness x:Key="Deck.Padding.Card">12</Thickness>
+    <Thickness x:Key="Deck.Padding.Control">12,6</Thickness>
+    <Thickness x:Key="Deck.Padding.TextBox">8,6</Thickness>
+
+    <DropShadowEffect x:Key="Deck.Effect.CardShadow"
+                      BlurRadius="8"
+                      Color="{StaticResource Deck.Color.Shadow}"
+                      Opacity="0.12"
+                      ShadowDepth="1" />
+
+    <Style x:Key="Deck.FocusVisualStyle" TargetType="{x:Type Control}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="2"
+                               RadiusX="12"
+                               RadiusY="12"
+                               SnapsToDevicePixels="True"
+                               Stroke="{StaticResource Deck.Brush.FocusRing}"
+                               StrokeThickness="2" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Deck.MainWindowStyle" TargetType="{x:Type Window}">
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.App}" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+    </Style>
+
+    <Style x:Key="Deck.AppPanelBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="{StaticResource Deck.Padding.Panel}" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+        <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+        <Setter Property="CornerRadius" Value="{StaticResource Deck.Radius.Panel}" />
+        <Setter Property="Effect" Value="{StaticResource Deck.Effect.CardShadow}" />
+    </Style>
+
+    <Style x:Key="Deck.StatusPanelBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+        <Setter Property="CornerRadius" Value="{StaticResource Deck.Radius.Control}" />
+    </Style>
+
+    <Style x:Key="Deck.InfoPanelBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="{StaticResource Deck.Padding.Card}" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Empty}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+        <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+        <Setter Property="CornerRadius" Value="{StaticResource Deck.Radius.Control}" />
+    </Style>
+
+    <Style x:Key="Deck.WarningPanelBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="{StaticResource Deck.Padding.Card}" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Warning}" />
+        <Setter Property="CornerRadius" Value="{StaticResource Deck.Radius.Control}" />
+    </Style>
+
+    <Style x:Key="Deck.ThumbnailFrameBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Width" Value="72" />
+        <Setter Property="Height" Value="72" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceMuted}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Muted}" />
+        <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+        <Setter Property="CornerRadius" Value="{StaticResource Deck.Radius.Thumbnail}" />
+    </Style>
+
+    <Style x:Key="Deck.SlotThumbnailFrameBorderStyle"
+           BasedOn="{StaticResource Deck.ThumbnailFrameBorderStyle}"
+           TargetType="{x:Type Border}">
+        <Setter Property="Width" Value="42" />
+        <Setter Property="Height" Value="42" />
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Visibility" Value="Collapsed" />
+    </Style>
+
+    <Style x:Key="Deck.TextBlockBaseStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <Style BasedOn="{StaticResource Deck.TextBlockBaseStyle}" TargetType="{x:Type TextBlock}" />
+
+    <Style x:Key="Deck.PageTitleTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+
+    <Style x:Key="Deck.PageSubtitleTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="Margin" Value="0,4,0,0" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+    </Style>
+
+    <Style x:Key="Deck.FieldLabelTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="Margin" Value="0,0,0,6" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="Deck.StatusTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+    </Style>
+
+    <Style x:Key="Deck.ErrorTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Danger}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style x:Key="Deck.WarningTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Warning}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style x:Key="Deck.SlotKeyTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+    </Style>
+
+    <Style x:Key="Deck.SlotTitleTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="19" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style x:Key="Deck.SlotTitleWithThumbnailTextStyle"
+           BasedOn="{StaticResource Deck.SlotTitleTextStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <Style x:Key="Deck.SlotCaptionTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Muted}" />
+        <Setter Property="TextAlignment" Value="Right" />
+    </Style>
+
+    <Style x:Key="Deck.PageHeaderStyle" TargetType="{x:Type StackPanel}">
+        <Setter Property="Margin" Value="0,0,0,18" />
+    </Style>
+
+    <Style x:Key="Deck.FieldGroupStyle" TargetType="{x:Type StackPanel}" />
+
+    <Style x:Key="Deck.FieldGroupSpacedStyle"
+           BasedOn="{StaticResource Deck.FieldGroupStyle}"
+           TargetType="{x:Type StackPanel}">
+        <Setter Property="Margin" Value="0,14,0,0" />
+    </Style>
+
+    <Style x:Key="Deck.FooterActionsGridStyle" TargetType="{x:Type Grid}">
+        <Setter Property="Margin" Value="0,18,0,0" />
+    </Style>
+
+    <Style x:Key="Deck.TextBoxStyle" TargetType="{x:Type TextBox}">
+        <Setter Property="Padding" Value="{StaticResource Deck.Padding.TextBox}" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Muted}" />
+        <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
+    </Style>
+
+    <Style x:Key="Deck.CheckBoxStyle" TargetType="{x:Type CheckBox}">
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
+    </Style>
+
+    <Style x:Key="Deck.BaseButtonStyle" TargetType="{x:Type Button}">
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="{StaticResource Deck.Padding.Control}" />
+        <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="Root"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Deck.Radius.Control}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          RecognizesAccessKey="True"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.55" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Deck.SecondaryButtonStyle"
+           BasedOn="{StaticResource Deck.BaseButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Empty}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.Main}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Deck.PrimaryButtonStyle"
+           BasedOn="{StaticResource Deck.BaseButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Sub}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.Main}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Deck.DangerButtonStyle"
+           BasedOn="{StaticResource Deck.BaseButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.DangerSoft}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Text.Danger}" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Danger}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceMuted}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Deck.FooterButtonStyle"
+           BasedOn="{StaticResource Deck.SecondaryButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="82" />
+    </Style>
+
+    <Style x:Key="Deck.PrimaryFooterButtonStyle"
+           BasedOn="{StaticResource Deck.PrimaryButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="82" />
+    </Style>
+
+    <Style x:Key="Deck.DangerFooterButtonStyle"
+           BasedOn="{StaticResource Deck.DangerButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="82" />
+    </Style>
+
+    <Style x:Key="Deck.ImageActionButtonStyle"
+           BasedOn="{StaticResource Deck.SecondaryButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="120" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <Style x:Key="Deck.SlotMainButtonStyle" TargetType="{x:Type Button}">
+        <Setter Property="Margin" Value="6" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="MinHeight" Value="76" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+        <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="Root"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource Deck.Radius.Card}"
+                            Effect="{StaticResource Deck.Effect.CardShadow}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Deck.Brush.Brand.Main}" />
+                            <Setter TargetName="Root" Property="Margin" Value="0,1,0,-1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.FocusRing}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.55" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Empty}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Muted}" />
+                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Deck.SlotEditButtonStyle"
+           BasedOn="{StaticResource Deck.SecondaryButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="26" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="MinHeight" Value="26" />
+        <Setter Property="Margin" Value="0,10,10,0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Content" Value="&#xE713;" />
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="ToolTip" Value="슬롯 편집" />
+    </Style>
+</ResourceDictionary>

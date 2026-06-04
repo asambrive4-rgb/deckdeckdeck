@@ -22,94 +22,98 @@
             </TextBlock>
         </StackPanel>
 
-        <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-            <StackPanel>
-                <TextBlock Margin="0,0,0,6"
-                           FontWeight="SemiBold"
-                           Text="슬롯 명" />
-                <TextBox Height="36"
-                         Padding="8,6"
-                         Text="{Binding SnippetTitle, UpdateSourceTrigger=PropertyChanged}" />
-            </StackPanel>
+                <StackPanel>
+                    <TextBlock Margin="0,0,0,6"
+                               FontWeight="SemiBold"
+                               Text="슬롯 명" />
+                    <TextBox Height="36"
+                             Padding="8,6"
+                             Text="{Binding SnippetTitle, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
 
-            <StackPanel Grid.Row="1"
-                        Margin="0,14,0,0">
-                <TextBlock Margin="0,0,0,6"
-                           FontWeight="SemiBold"
-                           Text="실행" />
-                <TextBox MinHeight="180"
-                         Padding="8"
-                         AcceptsReturn="True"
-                         AcceptsTab="True"
-                         Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
-                         TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto" />
-            </StackPanel>
+                <StackPanel Grid.Row="1"
+                            Margin="0,14,0,0">
+                    <TextBlock Margin="0,0,0,6"
+                               FontWeight="SemiBold"
+                               Text="실행" />
+                    <TextBox MinHeight="180"
+                             Padding="8"
+                             AcceptsReturn="True"
+                             AcceptsTab="True"
+                             Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto" />
+                </StackPanel>
 
-            <StackPanel Grid.Row="2"
-                        Margin="0,14,0,0">
-                <TextBlock Margin="0,0,0,6"
-                           FontWeight="SemiBold"
-                           Text="설명" />
-                <TextBox Height="70"
-                         Padding="8"
-                         AcceptsReturn="True"
-                         Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
-                         TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto" />
-            </StackPanel>
+                <StackPanel Grid.Row="2"
+                            Margin="0,14,0,0">
+                    <TextBlock Margin="0,0,0,6"
+                               FontWeight="SemiBold"
+                               Text="설명" />
+                    <TextBox Height="70"
+                             Padding="8"
+                             AcceptsReturn="True"
+                             Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto" />
+                </StackPanel>
 
-            <CheckBox Grid.Row="3"
-                      Margin="0,14,0,0"
-                      Content="이 슬롯 사용"
-                      FontWeight="SemiBold"
-                      IsChecked="{Binding IsSlotEnabled}" />
+                <CheckBox Grid.Row="3"
+                          Margin="0,14,0,0"
+                          Content="이 슬롯 사용"
+                          FontWeight="SemiBold"
+                          IsChecked="{Binding IsSlotEnabled}" />
 
-            <StackPanel Grid.Row="4"
-                        Margin="0,14,0,0">
-                <TextBlock Margin="0,0,0,6"
-                           FontWeight="SemiBold"
-                           Text="이미지" />
-                <DockPanel LastChildFill="False">
-                    <Border Width="72"
-                            Height="72"
-                            Background="#F3F5F7"
-                            BorderBrush="#CBD3DF"
-                            BorderThickness="1">
-                        <Image Source="{Binding ThumbnailPath}"
-                               Stretch="Uniform" />
-                    </Border>
-                    <StackPanel Margin="12,0,0,0"
-                                VerticalAlignment="Center">
-                        <Button Width="120"
-                                Height="32"
-                                Command="{Binding ChooseImageCommand}"
-                                Content="이미지 선택" />
-                        <Button Width="120"
-                                Height="32"
-                                Margin="0,8,0,0"
-                                Command="{Binding RemoveImageCommand}"
-                                Content="이미지 제거"
-                                IsEnabled="{Binding HasImage}" />
-                    </StackPanel>
-                </DockPanel>
-            </StackPanel>
+                <StackPanel Grid.Row="4"
+                            Margin="0,14,0,0">
+                    <TextBlock Margin="0,0,0,6"
+                               FontWeight="SemiBold"
+                               Text="이미지" />
+                    <DockPanel LastChildFill="False">
+                        <Border Width="72"
+                                Height="72"
+                                Background="#F3F5F7"
+                                BorderBrush="#CBD3DF"
+                                BorderThickness="1">
+                            <Image Source="{Binding ThumbnailPath}"
+                                   Stretch="Uniform" />
+                        </Border>
+                        <StackPanel Margin="12,0,0,0"
+                                    VerticalAlignment="Center">
+                            <Button Width="120"
+                                    Height="32"
+                                    Command="{Binding ChooseImageCommand}"
+                                    Content="이미지 선택" />
+                            <Button Width="120"
+                                    Height="32"
+                                    Margin="0,8,0,0"
+                                    Command="{Binding RemoveImageCommand}"
+                                    Content="이미지 제거"
+                                    IsEnabled="{Binding HasImage}" />
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
 
-            <TextBlock Grid.Row="5"
-                       Margin="0,14,0,0"
-                       Foreground="#B42318"
-                       Text="{Binding ErrorMessage}"
-                       TextWrapping="Wrap" />
-        </Grid>
+                <TextBlock Grid.Row="5"
+                           Margin="0,14,0,0"
+                           Foreground="#B42318"
+                           Text="{Binding ErrorMessage}"
+                           TextWrapping="Wrap" />
+            </Grid>
+        </ScrollViewer>
 
         <Grid Grid.Row="2"
               Margin="0,18,0,0">
