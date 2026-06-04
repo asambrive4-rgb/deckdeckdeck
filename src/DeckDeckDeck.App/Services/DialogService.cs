@@ -3,9 +3,9 @@ using Microsoft.Win32;
 
 namespace DeckDeckDeck.App.Services;
 
-public sealed class DialogService
+public class DialogService
 {
-    public bool Confirm(string title, string message)
+    public virtual bool Confirm(string title, string message)
     {
         return MessageBox.Show(
             message,
@@ -14,7 +14,7 @@ public sealed class DialogService
             MessageBoxImage.Warning) == MessageBoxResult.Yes;
     }
 
-    public string? SelectImageFile()
+    public virtual string? SelectImageFile()
     {
         var dialog = new OpenFileDialog
         {
@@ -25,5 +25,31 @@ public sealed class DialogService
         };
 
         return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    public virtual string? SelectLaunchFile()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "실행할 파일 선택",
+            Filter = "모든 파일 (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    public virtual string? SelectLaunchFolder()
+    {
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "실행할 폴더 선택",
+            UseDescriptionForTitle = true
+        };
+
+        return dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK
+            ? dialog.SelectedPath
+            : null;
     }
 }

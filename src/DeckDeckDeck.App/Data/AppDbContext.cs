@@ -36,6 +36,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(snippet => snippet.Id).HasConversion<string>();
             entity.Property(snippet => snippet.CategoryId).HasConversion<string>();
             entity.Property(snippet => snippet.SlotKey).HasConversion<string>().IsRequired();
+            entity.Property(snippet => snippet.ActionType).HasConversion<string>().IsRequired();
             entity.Property(snippet => snippet.Title).IsRequired();
             entity.Property(snippet => snippet.Content).IsRequired();
             entity.Property(snippet => snippet.CreatedAt).IsRequired();

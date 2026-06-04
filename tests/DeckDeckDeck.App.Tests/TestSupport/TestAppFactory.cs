@@ -35,7 +35,8 @@ internal static class TestAppFactory
         Func<IntPtr>? getPasteTargetWindowHandle = null,
         Action? hideWindowAfterPaste = null,
         Action? enterEditMode = null,
-        Action? completePasteSelection = null)
+        Action? completePasteSelection = null,
+        IFileLaunchService? fileLaunchService = null)
     {
         return new MainViewModel(
             services.CategoryService,
@@ -49,7 +50,8 @@ internal static class TestAppFactory
             enterEditMode,
             completePasteSelection,
             loggingService: services.LoggingService,
-            thumbnailService: services.ThumbnailService);
+            thumbnailService: services.ThumbnailService,
+            fileLaunchService: fileLaunchService);
     }
 
     public static string CreateTinyBmp(string directory)
@@ -190,6 +192,26 @@ internal sealed class ThrowingClipboardPasteService : IClipboardPasteService
     public Task<bool> PasteSnippetAsync(Snippet snippet, IntPtr targetWindowHandle, AppSettings settings)
     {
         return Task.FromException<bool>(new InvalidOperationException("Paste failed."));
+    }
+}
+
+internal sealed class RecordingFileLaunchService : IFileLaunchService
+{
+    public bool Result { get; set; } = true;
+
+    public Exception? Exception { get; set; }
+
+    public List<string> Paths { get; } = [];
+
+    public bool TryLaunch(string path)
+    {
+        if (Exception is not null)
+        {
+            throw Exception;
+        }
+
+        Paths.Add(path);
+        return Result;
     }
 }
 

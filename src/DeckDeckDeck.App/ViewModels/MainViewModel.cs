@@ -34,7 +34,8 @@ public sealed class MainViewModel : ObservableObject
         Action? enterEditMode = null,
         Action? completePasteSelection = null,
         LoggingService? loggingService = null,
-        ThumbnailService? thumbnailService = null)
+        ThumbnailService? thumbnailService = null,
+        IFileLaunchService? fileLaunchService = null)
     {
         var services = new AppServices(
             categoryService,
@@ -43,6 +44,7 @@ public sealed class MainViewModel : ObservableObject
             slotService,
             snippetService,
             clipboardPasteService ?? new ClipboardPasteService(),
+            fileLaunchService ?? new FileLaunchService(),
             loggingService,
             thumbnailService);
 
@@ -186,10 +188,12 @@ public sealed class MainViewModel : ObservableObject
 
         var pasteFlowService = new PasteFlowService(
             services.ClipboardPasteService,
+            services.FileLaunchService,
             services.SettingsService,
             getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
             hideWindowAfterPaste ?? (() => { }),
             completePasteSelection ?? (() => { }),
+            ShowStatus,
             services.LoggingService);
 
         _navigator = new MainViewModelNavigator(

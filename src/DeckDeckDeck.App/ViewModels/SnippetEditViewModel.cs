@@ -20,10 +20,12 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly SnippetService _snippetService;
     private readonly Action<string> _showStatus;
     private readonly ThumbnailService? _thumbnailService;
+    private SnippetActionType _actionType = SnippetActionType.PasteText;
     private string _content = string.Empty;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
     private bool _isSlotEnabled;
+    private string _launchPath = string.Empty;
     private string _snippetTitle = string.Empty;
 
     public SnippetEditViewModel(
@@ -58,6 +60,8 @@ public sealed class SnippetEditViewModel : ObservableObject
 
         _snippetTitle = snippet?.Title ?? string.Empty;
         _content = snippet?.Content ?? string.Empty;
+        _actionType = snippet?.ActionType ?? SnippetActionType.PasteText;
+        _launchPath = snippet?.LaunchPath ?? string.Empty;
         _description = snippet?.Description ?? string.Empty;
         _originalIsSlotEnabled = LoadSlotEnabledState();
         _isSlotEnabled = _originalIsSlotEnabled;
@@ -66,6 +70,8 @@ public sealed class SnippetEditViewModel : ObservableObject
         DeleteCommand = new RelayCommand(Delete);
         ChooseImageCommand = new RelayCommand(ChooseImage);
         RemoveImageCommand = new RelayCommand(RemoveImage);
+        ChooseLaunchFileCommand = new RelayCommand(ChooseLaunchFile);
+        ChooseLaunchFolderCommand = new RelayCommand(ChooseLaunchFolder);
     }
 
     public string Title => IsExisting ? "실행 항목 편집" : "새 실행 항목";
@@ -92,6 +98,51 @@ public sealed class SnippetEditViewModel : ObservableObject
     {
         get => _content;
         set => SetProperty(ref _content, value);
+    }
+
+    public SnippetActionType ActionType
+    {
+        get => _actionType;
+        private set
+        {
+            if (!SetProperty(ref _actionType, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsPasteTextAction));
+            OnPropertyChanged(nameof(IsLaunchFileAction));
+        }
+    }
+
+    public bool IsPasteTextAction
+    {
+        get => ActionType == SnippetActionType.PasteText;
+        set
+        {
+            if (value)
+            {
+                ActionType = SnippetActionType.PasteText;
+            }
+        }
+    }
+
+    public bool IsLaunchFileAction
+    {
+        get => ActionType == SnippetActionType.LaunchFile;
+        set
+        {
+            if (value)
+            {
+                ActionType = SnippetActionType.LaunchFile;
+            }
+        }
+    }
+
+    public string LaunchPath
+    {
+        get => _launchPath;
+        set => SetProperty(ref _launchPath, value);
     }
 
     public string Description
@@ -126,6 +177,10 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public ICommand RemoveImageCommand { get; }
 
+    public ICommand ChooseLaunchFileCommand { get; }
+
+    public ICommand ChooseLaunchFolderCommand { get; }
+
     private void Save()
     {
         if (string.IsNullOrWhiteSpace(SnippetTitle))
@@ -139,14 +194,20 @@ public sealed class SnippetEditViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(Content))
+        if (ActionType == SnippetActionType.PasteText && string.IsNullOrWhiteSpace(Content))
         {
             if (TrySaveSlotOnly())
             {
                 return;
             }
 
-            ErrorMessage = "실행 내용을 입력해 주세요.";
+            ErrorMessage = "붙여넣을 문구를 입력해 주세요.";
+            return;
+        }
+
+        if (ActionType == SnippetActionType.LaunchFile && string.IsNullOrWhiteSpace(LaunchPath))
+        {
+            ErrorMessage = "실행할 파일 또는 폴더를 선택해 주세요.";
             return;
         }
 
@@ -156,8 +217,25 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         var snippet = _snippetId.HasValue
-            ? _snippetService.Update(_snippetId.Value, SnippetTitle, Content, Description, _imageState.ImagePath, _imageState.ThumbnailPath)
-            : _snippetService.Create(CategoryId, SlotKey, SnippetTitle, Content, Description, _imageState.ImagePath, _imageState.ThumbnailPath);
+            ? _snippetService.Update(
+                _snippetId.Value,
+                SnippetTitle,
+                Content,
+                Description,
+                _imageState.ImagePath,
+                _imageState.ThumbnailPath,
+                ActionType,
+                LaunchPath)
+            : _snippetService.Create(
+                CategoryId,
+                SlotKey,
+                SnippetTitle,
+                Content,
+                Description,
+                _imageState.ImagePath,
+                _imageState.ThumbnailPath,
+                ActionType,
+                LaunchPath);
 
         _imageState.DeleteOriginalImageIfReplaced();
         _imageState.MarkCurrentAsOriginal();
@@ -226,6 +304,30 @@ public sealed class SnippetEditViewModel : ObservableObject
     {
         _imageState.RemoveImage();
         NotifyImageChanged();
+    }
+
+    private void ChooseLaunchFile()
+    {
+        var selectedPath = _dialogService.SelectLaunchFile();
+        if (selectedPath is null)
+        {
+            return;
+        }
+
+        LaunchPath = selectedPath;
+        ErrorMessage = string.Empty;
+    }
+
+    private void ChooseLaunchFolder()
+    {
+        var selectedPath = _dialogService.SelectLaunchFolder();
+        if (selectedPath is null)
+        {
+            return;
+        }
+
+        LaunchPath = selectedPath;
+        ErrorMessage = string.Empty;
     }
 
     private void NotifyImageChanged()

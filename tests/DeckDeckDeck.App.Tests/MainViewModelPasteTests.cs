@@ -80,4 +80,71 @@ public sealed class MainViewModelPasteTests
         Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
         Assert.True(completedPasteSelection);
     }
+
+    [Fact]
+    public void LaunchFileSnippetLaunchesInsteadOfPasting()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Open notes",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.LaunchFile,
+            launchPath: @"C:\notes");
+        var pasteService = new RecordingClipboardPasteService();
+        var launchService = new RecordingFileLaunchService();
+        var hidden = false;
+        var completedPasteSelection = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            pasteService,
+            () => new IntPtr(123),
+            () => hidden = true,
+            completePasteSelection: () => completedPasteSelection = true,
+            fileLaunchService: launchService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        Assert.Empty(pasteService.Calls);
+        Assert.Equal([@"C:\notes"], launchService.Paths);
+        Assert.True(hidden);
+        Assert.True(completedPasteSelection);
+    }
+
+    [Fact]
+    public void LaunchFileFailureShowsStatusAndKeepsWindowVisible()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Missing file",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.LaunchFile,
+            launchPath: @"C:\missing.exe");
+        var launchService = new RecordingFileLaunchService { Result = false };
+        var hidden = false;
+        var completedPasteSelection = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            new RecordingClipboardPasteService(),
+            () => new IntPtr(123),
+            () => hidden = true,
+            completePasteSelection: () => completedPasteSelection = true,
+            fileLaunchService: launchService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        Assert.False(hidden);
+        Assert.True(completedPasteSelection);
+        Assert.Contains("실행 실패", viewModel.StatusMessage);
+        Assert.Contains("Launch failed", File.ReadAllText(Path.Combine(services.Storage.LogsPath, "app.log")));
+    }
 }

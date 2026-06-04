@@ -14,6 +14,10 @@ public sealed class Snippet
 
     public string Content { get; set; } = string.Empty;
 
+    public SnippetActionType ActionType { get; set; } = SnippetActionType.PasteText;
+
+    public string? LaunchPath { get; set; }
+
     public string? Description { get; set; }
 
     public string? ImagePath { get; set; }

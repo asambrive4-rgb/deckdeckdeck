@@ -6,6 +6,51 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/DeckDeckDeck.App;component/Resources/Theme.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <Style x:Key="Deck.ActionTypeToggleStyle" TargetType="{x:Type RadioButton}">
+                <Setter Property="Margin" Value="0,0,8,0" />
+                <Setter Property="MinHeight" Value="36" />
+                <Setter Property="Padding" Value="{StaticResource Deck.Padding.Control}" />
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+                <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type RadioButton}">
+                            <Border x:Name="Root"
+                                    Padding="{TemplateBinding Padding}"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="{StaticResource Deck.Radius.Control}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  RecognizesAccessKey="True"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Sub}" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.FocusRing}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -37,6 +82,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
@@ -50,7 +96,24 @@
                 <StackPanel Grid.Row="1"
                             Style="{StaticResource Deck.FieldGroupSpacedStyle}">
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="실행" />
+                               Text="실행 타입" />
+                    <UniformGrid Columns="2">
+                        <RadioButton Content="문구 붙여넣기"
+                                     GroupName="SnippetActionType"
+                                     IsChecked="{Binding IsPasteTextAction, Mode=TwoWay}"
+                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                        <RadioButton Content="프로그램/파일 실행"
+                                     GroupName="SnippetActionType"
+                                     IsChecked="{Binding IsLaunchFileAction, Mode=TwoWay}"
+                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                    </UniformGrid>
+                </StackPanel>
+
+                <StackPanel Grid.Row="2"
+                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
+                            Visibility="{Binding IsPasteTextAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                               Text="붙여넣을 문구" />
                     <TextBox MinHeight="180"
                              AcceptsReturn="True"
                              AcceptsTab="True"
@@ -61,6 +124,26 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="2"
+                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
+                            Visibility="{Binding IsLaunchFileAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                               Text="실행할 파일 또는 폴더" />
+                    <TextBox Height="36"
+                             Style="{StaticResource Deck.TextBoxStyle}"
+                             Text="{Binding LaunchPath, UpdateSourceTrigger=PropertyChanged}" />
+                    <StackPanel Margin="0,8,0,0"
+                                Orientation="Horizontal">
+                        <Button Command="{Binding ChooseLaunchFileCommand}"
+                                Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                Content="파일 선택" />
+                        <Button Margin="8,0,0,0"
+                                Command="{Binding ChooseLaunchFolderCommand}"
+                                Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                Content="폴더 선택" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Row="3"
                             Style="{StaticResource Deck.FieldGroupSpacedStyle}">
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="설명" />
@@ -72,13 +155,13 @@
                              VerticalScrollBarVisibility="Auto" />
                 </StackPanel>
 
-                <CheckBox Grid.Row="3"
+                <CheckBox Grid.Row="4"
                           Margin="0,14,0,0"
                           Content="이 슬롯 사용"
                           Style="{StaticResource Deck.CheckBoxStyle}"
                           IsChecked="{Binding IsSlotEnabled}" />
 
-                <StackPanel Grid.Row="4"
+                <StackPanel Grid.Row="5"
                             Style="{StaticResource Deck.FieldGroupSpacedStyle}">
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="이미지" />
@@ -101,7 +184,7 @@
                     </DockPanel>
                 </StackPanel>
 
-                <TextBlock Grid.Row="5"
+                <TextBlock Grid.Row="6"
                            Margin="0,14,0,0"
                            Style="{StaticResource Deck.ErrorTextStyle}"
                            Text="{Binding ErrorMessage}"

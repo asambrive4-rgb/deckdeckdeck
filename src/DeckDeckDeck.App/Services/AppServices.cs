@@ -9,6 +9,7 @@ internal sealed record AppServices(
     SlotService SlotService,
     SnippetService SnippetService,
     IClipboardPasteService ClipboardPasteService,
+    IFileLaunchService FileLaunchService,
     LoggingService? LoggingService,
     ThumbnailService? ThumbnailService)
 {
@@ -27,6 +28,7 @@ internal sealed record AppServices(
             new SlotService(),
             new SnippetService(dbContextFactory),
             new ClipboardPasteService(),
+            new FileLaunchService(),
             new LoggingService(fileStorageService),
             new ThumbnailService(fileStorageService));
     }
