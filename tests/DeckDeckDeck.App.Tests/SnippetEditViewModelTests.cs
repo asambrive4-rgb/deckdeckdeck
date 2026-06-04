@@ -36,7 +36,7 @@ public sealed class SnippetEditViewModelTests
         viewModel.SaveCommand.Execute(null);
 
         Assert.Null(savedSnippet);
-        Assert.Equal("실행할 파일 또는 폴더를 선택해 주세요.", viewModel.ErrorMessage);
+        Assert.Equal("실행할 파일, 폴더 또는 바로 가기를 선택해 주세요.", viewModel.ErrorMessage);
     }
 
     [Fact]
@@ -60,19 +60,71 @@ public sealed class SnippetEditViewModelTests
     }
 
     [Fact]
-    public void LaunchFileAndFolderPickerUpdateLaunchPath()
+    public void LaunchFileSavesAutoIconForExe()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        var launchPath = CreateLaunchFile(services, "tool.exe");
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Open tool";
+        viewModel.IsLaunchFileAction = true;
+        viewModel.LaunchPath = launchPath;
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal(SlotImageMode.Auto, savedSnippet.SlotImageMode);
+        Assert.NotNull(savedSnippet.AutoIconPath);
+        Assert.True(File.Exists(savedSnippet.AutoIconPath));
+        Assert.Equal(launchPath, savedSnippet.AutoIconSourcePath);
+        Assert.Equal(savedSnippet.AutoIconPath, viewModel.ThumbnailPath);
+    }
+
+    [Fact]
+    public void RemovingCustomImageReturnsToAutoIcon()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        var launchPath = CreateLaunchFile(services, "shortcut.lnk");
+        var autoIcon = services.FileIconCacheService.GetOrCreateIcon(launchPath, null);
+        var snippet = services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Open shortcut",
+            string.Empty,
+            null,
+            "custom.png",
+            "custom-thumbnail.png",
+            SnippetActionType.LaunchFile,
+            launchPath,
+            SlotImageMode.Custom,
+            autoIcon);
+        var viewModel = CreateViewModel(services, category, _ => { }, snippet: snippet);
+
+        Assert.Equal("custom-thumbnail.png", viewModel.ThumbnailPath);
+
+        viewModel.RemoveImageCommand.Execute(null);
+
+        Assert.Equal(SlotImageMode.Auto, viewModel.SlotImageMode);
+        Assert.False(viewModel.HasImage);
+        Assert.Equal(autoIcon!.IconPath, viewModel.ThumbnailPath);
+    }
+
+    [Fact]
+    public void LaunchFileShortcutAndFolderPickerUpdateLaunchPath()
     {
         var services = CreateServices();
         var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
         var dialogService = new StubDialogService
         {
-            LaunchFile = @"C:\tools\app.exe",
+            LaunchFile = @"C:\Users\Public\Desktop\App.lnk",
             LaunchFolder = @"C:\tools"
         };
         var viewModel = CreateViewModel(services, category, _ => { }, dialogService);
 
         viewModel.ChooseLaunchFileCommand.Execute(null);
-        Assert.Equal(@"C:\tools\app.exe", viewModel.LaunchPath);
+        Assert.Equal(@"C:\Users\Public\Desktop\App.lnk", viewModel.LaunchPath);
 
         viewModel.ChooseLaunchFolderCommand.Execute(null);
         Assert.Equal(@"C:\tools", viewModel.LaunchPath);
@@ -82,20 +134,31 @@ public sealed class SnippetEditViewModelTests
         TestServices services,
         Category category,
         Action<Snippet> afterSave,
-        DialogService? dialogService = null)
+        DialogService? dialogService = null,
+        Snippet? snippet = null)
     {
         return new SnippetEditViewModel(
             category,
             SlotKey.Numpad3,
-            snippet: null,
+            snippet,
             services.SnippetService,
             dialogService ?? new StubDialogService(),
             () => { },
             afterSave,
             () => { },
             _ => { },
+            thumbnailService: services.ThumbnailService,
             settingsService: services.SettingsService,
-            loggingService: services.LoggingService);
+            loggingService: services.LoggingService,
+            snippetImageService: services.SnippetImageService);
+    }
+
+    private static string CreateLaunchFile(TestServices services, string fileName)
+    {
+        var path = Path.Combine(services.Storage.TempPath, fileName);
+        File.WriteAllText(path, "launch");
+
+        return path;
     }
 
     private sealed class StubDialogService : DialogService

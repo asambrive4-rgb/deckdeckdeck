@@ -24,10 +24,10 @@ public sealed class AppDbContextFactory
     {
         using var dbContext = Create();
         dbContext.Database.EnsureCreated();
-        EnsureSnippetActionColumns(dbContext);
+        EnsureSnippetColumns(dbContext);
     }
 
-    private static void EnsureSnippetActionColumns(AppDbContext dbContext)
+    private static void EnsureSnippetColumns(AppDbContext dbContext)
     {
         dbContext.Database.OpenConnection();
 
@@ -44,6 +44,36 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "LaunchPath",
                 "ALTER TABLE Snippets ADD COLUMN LaunchPath TEXT NULL");
+            var addedSlotImageMode = AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "SlotImageMode",
+                "ALTER TABLE Snippets ADD COLUMN SlotImageMode TEXT NOT NULL DEFAULT 'Auto'");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "AutoIconPath",
+                "ALTER TABLE Snippets ADD COLUMN AutoIconPath TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "AutoIconSourcePath",
+                "ALTER TABLE Snippets ADD COLUMN AutoIconSourcePath TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "AutoIconSourceLastWriteTimeUtc",
+                "ALTER TABLE Snippets ADD COLUMN AutoIconSourceLastWriteTimeUtc TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "AutoIconSourceLength",
+                "ALTER TABLE Snippets ADD COLUMN AutoIconSourceLength INTEGER NULL");
+
+            if (addedSlotImageMode)
+            {
+                BackfillSnippetImageModes(dbContext);
+            }
         }
         finally
         {
@@ -67,7 +97,7 @@ public sealed class AppDbContextFactory
         return columns;
     }
 
-    private static void AddColumnIfMissing(
+    private static bool AddColumnIfMissing(
         AppDbContext dbContext,
         HashSet<string> existingColumns,
         string columnName,
@@ -75,12 +105,25 @@ public sealed class AppDbContextFactory
     {
         if (existingColumns.Contains(columnName))
         {
-            return;
+            return false;
         }
 
         using var command = dbContext.Database.GetDbConnection().CreateCommand();
         command.CommandText = alterSql;
         command.ExecuteNonQuery();
         existingColumns.Add(columnName);
+
+        return true;
+    }
+
+    private static void BackfillSnippetImageModes(AppDbContext dbContext)
+    {
+        using var command = dbContext.Database.GetDbConnection().CreateCommand();
+        command.CommandText = """
+            UPDATE Snippets
+            SET SlotImageMode = 'Custom'
+            WHERE ImagePath IS NOT NULL AND TRIM(ImagePath) <> ''
+            """;
+        command.ExecuteNonQuery();
     }
 }

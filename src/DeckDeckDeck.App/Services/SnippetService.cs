@@ -43,11 +43,14 @@ public sealed class SnippetService
         string? imagePath = null,
         string? thumbnailPath = null,
         SnippetActionType actionType = SnippetActionType.PasteText,
-        string? launchPath = null)
+        string? launchPath = null,
+        SlotImageMode slotImageMode = SlotImageMode.Auto,
+        AutoIconCacheEntry? autoIcon = null)
     {
         using var dbContext = _dbContextFactory.Create();
 
         var now = DateTime.UtcNow;
+        var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
         var snippet = new Snippet
         {
             Id = Guid.NewGuid(),
@@ -57,9 +60,14 @@ public sealed class SnippetService
             Content = GetStoredContent(actionType, content),
             ActionType = actionType,
             LaunchPath = GetStoredLaunchPath(actionType, launchPath),
+            SlotImageMode = storedImageMode,
             Description = NormalizeOptionalText(description),
             ImagePath = imagePath,
             ThumbnailPath = thumbnailPath,
+            AutoIconPath = GetStoredAutoIcon(actionType, storedImageMode, autoIcon)?.IconPath,
+            AutoIconSourcePath = GetStoredAutoIcon(actionType, storedImageMode, autoIcon)?.SourcePath,
+            AutoIconSourceLastWriteTimeUtc = GetStoredAutoIcon(actionType, storedImageMode, autoIcon)?.SourceLastWriteTimeUtc,
+            AutoIconSourceLength = GetStoredAutoIcon(actionType, storedImageMode, autoIcon)?.SourceLength,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -90,18 +98,34 @@ public sealed class SnippetService
         string? imagePath,
         string? thumbnailPath,
         SnippetActionType actionType = SnippetActionType.PasteText,
-        string? launchPath = null)
+        string? launchPath = null,
+        SlotImageMode slotImageMode = SlotImageMode.Auto,
+        AutoIconCacheEntry? autoIcon = null)
     {
         using var dbContext = _dbContextFactory.Create();
 
         var snippet = dbContext.Snippets.First(item => item.Id == id);
         UpdateText(snippet, title, content, description, actionType, launchPath);
+        var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
+        var storedAutoIcon = GetStoredAutoIcon(actionType, storedImageMode, autoIcon);
+        snippet.SlotImageMode = storedImageMode;
         snippet.ImagePath = imagePath;
         snippet.ThumbnailPath = thumbnailPath;
+        SetAutoIcon(snippet, storedAutoIcon);
 
         dbContext.SaveChanges();
 
         return snippet;
+    }
+
+    public void UpdateAutoIcon(Guid id, AutoIconCacheEntry? autoIcon)
+    {
+        using var dbContext = _dbContextFactory.Create();
+
+        var snippet = dbContext.Snippets.First(item => item.Id == id);
+        SetAutoIcon(snippet, autoIcon);
+
+        dbContext.SaveChanges();
     }
 
     public ImageFileSet Delete(Guid id)
@@ -129,6 +153,31 @@ public sealed class SnippetService
     private static string? GetStoredLaunchPath(SnippetActionType actionType, string? launchPath)
     {
         return actionType == SnippetActionType.LaunchFile ? NormalizeOptionalText(launchPath) : null;
+    }
+
+    private static SlotImageMode GetStoredSlotImageMode(SlotImageMode slotImageMode, string? imagePath)
+    {
+        return slotImageMode == SlotImageMode.Auto && !string.IsNullOrWhiteSpace(imagePath)
+            ? SlotImageMode.Custom
+            : slotImageMode;
+    }
+
+    private static AutoIconCacheEntry? GetStoredAutoIcon(
+        SnippetActionType actionType,
+        SlotImageMode slotImageMode,
+        AutoIconCacheEntry? autoIcon)
+    {
+        return actionType == SnippetActionType.LaunchFile && slotImageMode != SlotImageMode.None
+            ? autoIcon
+            : null;
+    }
+
+    private static void SetAutoIcon(Snippet snippet, AutoIconCacheEntry? autoIcon)
+    {
+        snippet.AutoIconPath = autoIcon?.IconPath;
+        snippet.AutoIconSourcePath = autoIcon?.SourcePath;
+        snippet.AutoIconSourceLastWriteTimeUtc = autoIcon?.SourceLastWriteTimeUtc;
+        snippet.AutoIconSourceLength = autoIcon?.SourceLength;
     }
 
     private static void UpdateText(

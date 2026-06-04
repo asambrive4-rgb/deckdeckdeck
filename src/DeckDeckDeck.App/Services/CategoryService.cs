@@ -170,9 +170,14 @@ public sealed class CategoryService
                 Content = sourceSnippet.Content,
                 ActionType = sourceSnippet.ActionType,
                 LaunchPath = sourceSnippet.LaunchPath,
+                SlotImageMode = sourceSnippet.SlotImageMode,
                 Description = sourceSnippet.Description,
                 ImagePath = snippetImageFiles.ImagePath,
                 ThumbnailPath = snippetImageFiles.ThumbnailPath,
+                AutoIconPath = sourceSnippet.AutoIconPath,
+                AutoIconSourcePath = sourceSnippet.AutoIconSourcePath,
+                AutoIconSourceLastWriteTimeUtc = sourceSnippet.AutoIconSourceLastWriteTimeUtc,
+                AutoIconSourceLength = sourceSnippet.AutoIconSourceLength,
                 CreatedAt = now,
                 UpdatedAt = now
             });

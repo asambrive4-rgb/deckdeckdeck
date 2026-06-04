@@ -31,6 +31,7 @@ public sealed class DataPersistenceTests
         Assert.Equal("Make this clearer.", snippets[0].Content);
         Assert.Equal(SnippetActionType.PasteText, snippets[0].ActionType);
         Assert.Null(snippets[0].LaunchPath);
+        Assert.Equal(SlotImageMode.Auto, snippets[0].SlotImageMode);
     }
 
     [Fact]
@@ -38,6 +39,11 @@ public sealed class DataPersistenceTests
     {
         var services = CreateServices();
         var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        var autoIcon = new AutoIconCacheEntry(
+            "cache-icon.png",
+            @"C:\notes.exe",
+            new DateTime(2026, 6, 4, 0, 0, 0, DateTimeKind.Utc),
+            123);
         services.SnippetService.Create(
             category.Id,
             SlotKey.Numpad3,
@@ -45,7 +51,8 @@ public sealed class DataPersistenceTests
             string.Empty,
             null,
             actionType: SnippetActionType.LaunchFile,
-            launchPath: @"C:\notes");
+            launchPath: @"C:\notes",
+            autoIcon: autoIcon);
 
         var reloadedServices = CreateServices(services.Storage.AppDataPath);
         var snippet = Assert.Single(reloadedServices.SnippetService.GetByCategoryId(category.Id));
@@ -53,6 +60,11 @@ public sealed class DataPersistenceTests
         Assert.Equal(SnippetActionType.LaunchFile, snippet.ActionType);
         Assert.Equal(string.Empty, snippet.Content);
         Assert.Equal(@"C:\notes", snippet.LaunchPath);
+        Assert.Equal(SlotImageMode.Auto, snippet.SlotImageMode);
+        Assert.Equal(autoIcon.IconPath, snippet.AutoIconPath);
+        Assert.Equal(autoIcon.SourcePath, snippet.AutoIconSourcePath);
+        Assert.Equal(autoIcon.SourceLastWriteTimeUtc, snippet.AutoIconSourceLastWriteTimeUtc);
+        Assert.Equal(autoIcon.SourceLength, snippet.AutoIconSourceLength);
     }
 
     [Fact]
@@ -74,6 +86,32 @@ public sealed class DataPersistenceTests
         Assert.Equal("Keep me", snippet.Content);
         Assert.Equal(SnippetActionType.PasteText, snippet.ActionType);
         Assert.Null(snippet.LaunchPath);
+        Assert.Equal(SlotImageMode.Auto, snippet.SlotImageMode);
+    }
+
+    [Fact]
+    public void ExistingDatabaseWithSnippetImageIsBackfilledAsCustomImage()
+    {
+        var storage = new FileStorageService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+        storage.EnsureCreated();
+        var categoryId = Guid.NewGuid();
+        var snippetId = Guid.NewGuid();
+        CreateLegacyDatabase(
+            storage.DatabasePath,
+            categoryId,
+            snippetId,
+            "legacy-snippet.png",
+            "legacy-snippet-thumbnail.png");
+
+        var dbContextFactory = new AppDbContextFactory(storage.DatabasePath);
+        dbContextFactory.EnsureCreated();
+        var snippetService = new SnippetService(dbContextFactory);
+
+        var snippet = Assert.Single(snippetService.GetByCategoryId(categoryId));
+
+        Assert.Equal(SlotImageMode.Custom, snippet.SlotImageMode);
+        Assert.Equal("legacy-snippet.png", snippet.ImagePath);
+        Assert.Equal("legacy-snippet-thumbnail.png", snippet.ThumbnailPath);
     }
 
     [Fact]
@@ -274,7 +312,12 @@ public sealed class DataPersistenceTests
             });
     }
 
-    private static void CreateLegacyDatabase(string databasePath, Guid categoryId, Guid snippetId)
+    private static void CreateLegacyDatabase(
+        string databasePath,
+        Guid categoryId,
+        Guid snippetId,
+        string? snippetImagePath = null,
+        string? snippetThumbnailPath = null)
     {
         using var connection = new SqliteConnection($"Data Source={databasePath}");
         connection.Open();
@@ -315,10 +358,12 @@ public sealed class DataPersistenceTests
             VALUES ($categoryId, 'Numpad1', 'Tools', NULL, NULL, NULL, $now, $now);
 
             INSERT INTO Snippets (Id, CategoryId, SlotKey, Title, Content, Description, ImagePath, ThumbnailPath, CreatedAt, UpdatedAt)
-            VALUES ($snippetId, $categoryId, 'Numpad3', 'Legacy', 'Keep me', NULL, NULL, NULL, $now, $now);
+            VALUES ($snippetId, $categoryId, 'Numpad3', 'Legacy', 'Keep me', NULL, $snippetImagePath, $snippetThumbnailPath, $now, $now);
             """;
         command.Parameters.AddWithValue("$categoryId", categoryId.ToString());
         command.Parameters.AddWithValue("$snippetId", snippetId.ToString());
+        command.Parameters.AddWithValue("$snippetImagePath", (object?)snippetImagePath ?? DBNull.Value);
+        command.Parameters.AddWithValue("$snippetThumbnailPath", (object?)snippetThumbnailPath ?? DBNull.Value);
         command.Parameters.AddWithValue("$now", DateTime.UtcNow.ToString("O"));
         command.ExecuteNonQuery();
     }

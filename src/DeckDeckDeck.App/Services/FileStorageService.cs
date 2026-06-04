@@ -20,6 +20,7 @@ public sealed class FileStorageService
         ImagesPath = Path.Combine(AppDataPath, "images");
         ImageOriginalsPath = Path.Combine(ImagesPath, "originals");
         ImageThumbnailsPath = Path.Combine(ImagesPath, "thumbnails");
+        IconCachePath = Path.Combine(AppDataPath, "icon-cache");
         LogsPath = Path.Combine(AppDataPath, "logs");
         TempPath = Path.Combine(AppDataPath, "temp");
     }
@@ -34,6 +35,8 @@ public sealed class FileStorageService
 
     public string ImageThumbnailsPath { get; }
 
+    public string IconCachePath { get; }
+
     public string LogsPath { get; }
 
     public string TempPath { get; }
@@ -43,6 +46,7 @@ public sealed class FileStorageService
         Directory.CreateDirectory(AppDataPath);
         Directory.CreateDirectory(ImageOriginalsPath);
         Directory.CreateDirectory(ImageThumbnailsPath);
+        Directory.CreateDirectory(IconCachePath);
         Directory.CreateDirectory(LogsPath);
         Directory.CreateDirectory(TempPath);
     }

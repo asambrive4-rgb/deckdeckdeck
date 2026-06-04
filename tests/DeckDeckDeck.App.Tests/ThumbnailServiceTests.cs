@@ -70,4 +70,75 @@ public sealed class ThumbnailServiceTests
         Assert.True(slot.HasThumbnail);
         Assert.Equal("thumbnail.png", slot.ThumbnailPath);
     }
+
+    [Fact]
+    public void SlotServiceUsesCustomImageBeforeAutoIcon()
+    {
+        var autoIconPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        File.WriteAllText(autoIconPath, "auto");
+        var snippet = new Snippet
+        {
+            SlotKey = SlotKey.Numpad1,
+            Title = "Tool",
+            ActionType = SnippetActionType.LaunchFile,
+            LaunchPath = @"C:\tool.exe",
+            SlotImageMode = SlotImageMode.Custom,
+            ThumbnailPath = "custom-thumbnail.png",
+            AutoIconPath = autoIconPath
+        };
+
+        var grid = new SlotService().BuildSnippetGrid(
+            [snippet],
+            new AppSettings(),
+            (_, _) => { },
+            (_, _) => { });
+
+        Assert.Equal("custom-thumbnail.png", grid.Numpad1.ThumbnailPath);
+    }
+
+    [Fact]
+    public void SlotServiceUsesAutoIconWhenCustomImageIsMissing()
+    {
+        var autoIconPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        File.WriteAllText(autoIconPath, "auto");
+        var snippet = new Snippet
+        {
+            SlotKey = SlotKey.Numpad1,
+            Title = "Tool",
+            ActionType = SnippetActionType.LaunchFile,
+            LaunchPath = @"C:\tool.exe",
+            SlotImageMode = SlotImageMode.Auto,
+            AutoIconPath = autoIconPath
+        };
+
+        var grid = new SlotService().BuildSnippetGrid(
+            [snippet],
+            new AppSettings(),
+            (_, _) => { },
+            (_, _) => { });
+
+        Assert.Equal(autoIconPath, grid.Numpad1.ThumbnailPath);
+    }
+
+    [Fact]
+    public void SlotServiceLeavesThumbnailEmptyWhenNoImageIsAvailable()
+    {
+        var snippet = new Snippet
+        {
+            SlotKey = SlotKey.Numpad1,
+            Title = "Tool",
+            ActionType = SnippetActionType.LaunchFile,
+            LaunchPath = @"C:\tool.exe",
+            SlotImageMode = SlotImageMode.None
+        };
+
+        var grid = new SlotService().BuildSnippetGrid(
+            [snippet],
+            new AppSettings(),
+            (_, _) => { },
+            (_, _) => { });
+
+        Assert.Null(grid.Numpad1.ThumbnailPath);
+        Assert.False(grid.Numpad1.HasThumbnail);
+    }
 }

@@ -118,7 +118,8 @@ internal sealed class MainViewModelNavigator
             _showStatus,
             _services.ThumbnailService,
             _services.SettingsService,
-            _services.LoggingService));
+            _services.LoggingService,
+            _services.SnippetImageService));
         _showStatus(snippet is null
             ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
             : $"{snippet.Title} 편집");

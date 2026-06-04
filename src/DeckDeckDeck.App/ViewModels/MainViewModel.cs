@@ -35,7 +35,8 @@ public sealed class MainViewModel : ObservableObject
         Action? completePasteSelection = null,
         LoggingService? loggingService = null,
         ThumbnailService? thumbnailService = null,
-        IFileLaunchService? fileLaunchService = null)
+        IFileLaunchService? fileLaunchService = null,
+        SnippetImageService? snippetImageService = null)
     {
         var transferService = new CategoryTransferService(
             categoryService,
@@ -50,6 +51,7 @@ public sealed class MainViewModel : ObservableObject
             settingsService,
             slotService,
             snippetService,
+            snippetImageService,
             clipboardPasteService ?? new ClipboardPasteService(),
             fileLaunchService ?? new FileLaunchService(),
             loggingService,

@@ -31,8 +31,8 @@ public class DialogService
     {
         var dialog = new OpenFileDialog
         {
-            Title = "실행할 파일 선택",
-            Filter = "모든 파일 (*.*)|*.*",
+            Title = "실행할 파일 또는 바로 가기 선택",
+            Filter = "모든 파일 (*.*)|*.*|실행 파일 및 바로 가기 (*.exe;*.lnk)|*.exe;*.lnk",
             CheckFileExists = true,
             Multiselect = false
         };

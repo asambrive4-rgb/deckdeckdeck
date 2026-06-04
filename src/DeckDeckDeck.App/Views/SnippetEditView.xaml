@@ -102,7 +102,7 @@
                                      GroupName="SnippetActionType"
                                      IsChecked="{Binding IsPasteTextAction, Mode=TwoWay}"
                                      Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                        <RadioButton Content="프로그램/파일 실행"
+                        <RadioButton Content="파일/바로 가기 실행"
                                      GroupName="SnippetActionType"
                                      IsChecked="{Binding IsLaunchFileAction, Mode=TwoWay}"
                                      Style="{StaticResource Deck.ActionTypeToggleStyle}" />
@@ -127,7 +127,7 @@
                             Style="{StaticResource Deck.FieldGroupSpacedStyle}"
                             Visibility="{Binding IsLaunchFileAction, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="실행할 파일 또는 폴더" />
+                               Text="실행할 파일, 폴더 또는 바로 가기" />
                     <TextBox Height="36"
                              Style="{StaticResource Deck.TextBoxStyle}"
                              Text="{Binding LaunchPath, UpdateSourceTrigger=PropertyChanged}" />
@@ -135,7 +135,7 @@
                                 Orientation="Horizontal">
                         <Button Command="{Binding ChooseLaunchFileCommand}"
                                 Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                Content="파일 선택" />
+                                Content="파일/바로 가기 선택" />
                         <Button Margin="8,0,0,0"
                                 Command="{Binding ChooseLaunchFolderCommand}"
                                 Style="{StaticResource Deck.ImageActionButtonStyle}"

@@ -75,7 +75,7 @@ internal sealed class PasteFlowService
     {
         if (string.IsNullOrWhiteSpace(snippet.LaunchPath))
         {
-            ReportLaunchFailure(snippet, "실행할 파일 또는 폴더 경로가 없습니다.");
+            ReportLaunchFailure(snippet, "실행할 파일, 폴더 또는 바로 가기 경로가 없습니다.");
             return;
         }
 
@@ -84,7 +84,7 @@ internal sealed class PasteFlowService
             var launched = _fileLaunchService.TryLaunch(snippet.LaunchPath);
             if (!launched)
             {
-                ReportLaunchFailure(snippet, "실행할 파일 또는 폴더를 찾지 못했습니다.");
+                ReportLaunchFailure(snippet, "실행할 파일, 폴더 또는 바로 가기를 찾지 못했습니다.");
                 return;
             }
 

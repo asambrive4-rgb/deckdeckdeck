@@ -1,0 +1,39 @@
+using System.IO;
+using DeckDeckDeck.App.Models;
+
+namespace DeckDeckDeck.App.Services;
+
+public sealed record AutoIconCacheEntry(
+    string IconPath,
+    string SourcePath,
+    DateTime SourceLastWriteTimeUtc,
+    long SourceLength)
+{
+    public static AutoIconCacheEntry? FromSnippet(Snippet? snippet)
+    {
+        if (snippet is null
+            || string.IsNullOrWhiteSpace(snippet.AutoIconPath)
+            || string.IsNullOrWhiteSpace(snippet.AutoIconSourcePath)
+            || !snippet.AutoIconSourceLastWriteTimeUtc.HasValue
+            || !snippet.AutoIconSourceLength.HasValue)
+        {
+            return null;
+        }
+
+        return new AutoIconCacheEntry(
+            snippet.AutoIconPath,
+            snippet.AutoIconSourcePath,
+            snippet.AutoIconSourceLastWriteTimeUtc.Value,
+            snippet.AutoIconSourceLength.Value);
+    }
+
+    public bool Matches(FileInfo fileInfo)
+    {
+        return string.Equals(
+                Path.GetFullPath(SourcePath),
+                fileInfo.FullName,
+                StringComparison.OrdinalIgnoreCase)
+            && SourceLastWriteTimeUtc == fileInfo.LastWriteTimeUtc
+            && SourceLength == fileInfo.Length;
+    }
+}

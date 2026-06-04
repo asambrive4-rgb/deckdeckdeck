@@ -17,15 +17,18 @@ public sealed class SnippetEditViewModel : ObservableObject
     private bool _originalIsSlotEnabled;
     private readonly SettingsService? _settingsService;
     private readonly Guid? _snippetId;
+    private readonly SnippetImageService? _snippetImageService;
     private readonly SnippetService _snippetService;
     private readonly Action<string> _showStatus;
     private readonly ThumbnailService? _thumbnailService;
+    private AutoIconCacheEntry? _autoIcon;
     private SnippetActionType _actionType = SnippetActionType.PasteText;
     private string _content = string.Empty;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
     private bool _isSlotEnabled;
     private string _launchPath = string.Empty;
+    private SlotImageMode _slotImageMode = SlotImageMode.Auto;
     private string _snippetTitle = string.Empty;
 
     public SnippetEditViewModel(
@@ -40,7 +43,8 @@ public sealed class SnippetEditViewModel : ObservableObject
         Action<string> showStatus,
         ThumbnailService? thumbnailService = null,
         SettingsService? settingsService = null,
-        LoggingService? loggingService = null)
+        LoggingService? loggingService = null,
+        SnippetImageService? snippetImageService = null)
     {
         CategoryId = category.Id;
         CategoryName = category.Name;
@@ -51,6 +55,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         _dialogService = dialogService;
         _settingsService = settingsService;
         _loggingService = loggingService;
+        _snippetImageService = snippetImageService;
         _cancel = cancel;
         _afterSave = afterSave;
         _afterDelete = afterDelete;
@@ -62,6 +67,8 @@ public sealed class SnippetEditViewModel : ObservableObject
         _content = snippet?.Content ?? string.Empty;
         _actionType = snippet?.ActionType ?? SnippetActionType.PasteText;
         _launchPath = snippet?.LaunchPath ?? string.Empty;
+        _slotImageMode = GetInitialSlotImageMode(snippet);
+        _autoIcon = AutoIconCacheEntry.FromSnippet(snippet);
         _description = snippet?.Description ?? string.Empty;
         _originalIsSlotEnabled = LoadSlotEnabledState();
         _isSlotEnabled = _originalIsSlotEnabled;
@@ -112,6 +119,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 
             OnPropertyChanged(nameof(IsPasteTextAction));
             OnPropertyChanged(nameof(IsLaunchFileAction));
+            NotifyImageChanged();
         }
     }
 
@@ -163,9 +171,11 @@ public sealed class SnippetEditViewModel : ObservableObject
         private set => SetProperty(ref _errorMessage, value);
     }
 
-    public string? ThumbnailPath => _imageState.ThumbnailPath;
+    public string? ThumbnailPath => GetPreviewThumbnailPath();
 
     public bool HasImage => _imageState.HasImage;
+
+    public SlotImageMode SlotImageMode => _slotImageMode;
 
     public ICommand SaveCommand { get; }
 
@@ -207,7 +217,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 
         if (ActionType == SnippetActionType.LaunchFile && string.IsNullOrWhiteSpace(LaunchPath))
         {
-            ErrorMessage = "실행할 파일 또는 폴더를 선택해 주세요.";
+            ErrorMessage = "실행할 파일, 폴더 또는 바로 가기를 선택해 주세요.";
             return;
         }
 
@@ -216,6 +226,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             return;
         }
 
+        var autoIcon = PrepareAutoIconForSave();
         var snippet = _snippetId.HasValue
             ? _snippetService.Update(
                 _snippetId.Value,
@@ -225,7 +236,9 @@ public sealed class SnippetEditViewModel : ObservableObject
                 _imageState.ImagePath,
                 _imageState.ThumbnailPath,
                 ActionType,
-                LaunchPath)
+                LaunchPath,
+                _slotImageMode,
+                autoIcon)
             : _snippetService.Create(
                 CategoryId,
                 SlotKey,
@@ -235,7 +248,9 @@ public sealed class SnippetEditViewModel : ObservableObject
                 _imageState.ImagePath,
                 _imageState.ThumbnailPath,
                 ActionType,
-                LaunchPath);
+                LaunchPath,
+                _slotImageMode,
+                autoIcon);
 
         _imageState.DeleteOriginalImageIfReplaced();
         _imageState.MarkCurrentAsOriginal();
@@ -290,6 +305,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         try
         {
             _imageState.ReplaceWithStoredImage(selectedPath);
+            _slotImageMode = SlotImageMode.Custom;
             NotifyImageChanged();
             ErrorMessage = string.Empty;
         }
@@ -303,6 +319,8 @@ public sealed class SnippetEditViewModel : ObservableObject
     private void RemoveImage()
     {
         _imageState.RemoveImage();
+        _slotImageMode = SlotImageMode.Auto;
+        UpdateAutoIconPreview();
         NotifyImageChanged();
     }
 
@@ -315,6 +333,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         LaunchPath = selectedPath;
+        UpdateAutoIconPreview();
         ErrorMessage = string.Empty;
     }
 
@@ -327,13 +346,74 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         LaunchPath = selectedPath;
+        _autoIcon = null;
         ErrorMessage = string.Empty;
+        NotifyImageChanged();
     }
 
     private void NotifyImageChanged()
     {
         OnPropertyChanged(nameof(ThumbnailPath));
         OnPropertyChanged(nameof(HasImage));
+        OnPropertyChanged(nameof(SlotImageMode));
+    }
+
+    private string? GetPreviewThumbnailPath()
+    {
+        return _slotImageMode switch
+        {
+            SlotImageMode.Custom => _imageState.ThumbnailPath,
+            SlotImageMode.Auto when ActionType == SnippetActionType.LaunchFile => _autoIcon?.IconPath,
+            _ => null
+        };
+    }
+
+    private AutoIconCacheEntry? PrepareAutoIconForSave()
+    {
+        if (_slotImageMode == SlotImageMode.None)
+        {
+            _autoIcon = null;
+            return null;
+        }
+
+        if (_snippetImageService is null)
+        {
+            return ActionType == SnippetActionType.LaunchFile ? _autoIcon : null;
+        }
+
+        _autoIcon = _snippetImageService.PrepareAutoIcon(ActionType, LaunchPath, _autoIcon);
+        NotifyImageChanged();
+
+        return _autoIcon;
+    }
+
+    private void UpdateAutoIconPreview()
+    {
+        if (_slotImageMode == SlotImageMode.None)
+        {
+            _autoIcon = null;
+            NotifyImageChanged();
+            return;
+        }
+
+        if (_snippetImageService is not null)
+        {
+            _autoIcon = _snippetImageService.PrepareAutoIcon(ActionType, LaunchPath, _autoIcon);
+        }
+
+        NotifyImageChanged();
+    }
+
+    private static SlotImageMode GetInitialSlotImageMode(Snippet? snippet)
+    {
+        if (snippet is null)
+        {
+            return SlotImageMode.Auto;
+        }
+
+        return snippet.SlotImageMode == SlotImageMode.Auto && !string.IsNullOrWhiteSpace(snippet.ImagePath)
+            ? SlotImageMode.Custom
+            : snippet.SlotImageMode;
     }
 
     private bool LoadSlotEnabledState()

@@ -19,14 +19,23 @@ internal static class TestAppFactory
 
         var settingsService = new SettingsService(dbContextFactory);
         settingsService.EnsureDefaults();
+        var snippetService = new SnippetService(dbContextFactory);
+        var loggingService = new LoggingService(storage);
+        var fileIconCacheService = new FileIconCacheService(
+            storage,
+            new StubFileIconExtractor(),
+            loggingService);
+        var snippetImageService = new SnippetImageService(snippetService, fileIconCacheService);
 
         return new TestServices(
             storage,
             new CategoryService(dbContextFactory),
-            new SnippetService(dbContextFactory),
+            snippetService,
             settingsService,
-            new LoggingService(storage),
-            new ThumbnailService(storage));
+            loggingService,
+            new ThumbnailService(storage),
+            fileIconCacheService,
+            snippetImageService);
     }
 
     public static MainViewModel CreateMainViewModel(
@@ -42,7 +51,7 @@ internal static class TestAppFactory
             services.CategoryService,
             new DialogService(),
             services.SettingsService,
-            new SlotService(),
+            new SlotService(services.SnippetImageService),
             services.SnippetService,
             clipboardPasteService,
             getPasteTargetWindowHandle,
@@ -51,7 +60,8 @@ internal static class TestAppFactory
             completePasteSelection,
             loggingService: services.LoggingService,
             thumbnailService: services.ThumbnailService,
-            fileLaunchService: fileLaunchService);
+            fileLaunchService: fileLaunchService,
+            snippetImageService: services.SnippetImageService);
     }
 
     public static string CreateTinyBmp(string directory)
@@ -114,7 +124,41 @@ internal sealed record TestServices(
     SnippetService SnippetService,
     SettingsService SettingsService,
     LoggingService LoggingService,
-    ThumbnailService ThumbnailService);
+    ThumbnailService ThumbnailService,
+    FileIconCacheService FileIconCacheService,
+    SnippetImageService SnippetImageService);
+
+internal sealed class StubFileIconExtractor : IFileIconExtractor
+{
+    public int CallCount { get; private set; }
+
+    public bool ShouldSucceed { get; set; } = true;
+
+    public bool TryExtractIcon(string sourcePath, string destinationPngPath)
+    {
+        CallCount++;
+        if (!ShouldSucceed)
+        {
+            return false;
+        }
+
+        File.WriteAllBytes(destinationPngPath, TinyPng);
+        return true;
+    }
+
+    private static readonly byte[] TinyPng =
+    [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+        0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41,
+        0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+        0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+        0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
+        0x42, 0x60, 0x82
+    ];
+}
 
 internal sealed class FakeClipboardService : IClipboardService
 {

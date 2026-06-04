@@ -18,11 +18,21 @@ public sealed class Snippet
 
     public string? LaunchPath { get; set; }
 
+    public SlotImageMode SlotImageMode { get; set; } = SlotImageMode.Auto;
+
     public string? Description { get; set; }
 
     public string? ImagePath { get; set; }
 
     public string? ThumbnailPath { get; set; }
+
+    public string? AutoIconPath { get; set; }
+
+    public string? AutoIconSourcePath { get; set; }
+
+    public DateTime? AutoIconSourceLastWriteTimeUtc { get; set; }
+
+    public long? AutoIconSourceLength { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

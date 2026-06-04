@@ -9,6 +9,7 @@ internal sealed record AppServices(
     SettingsService SettingsService,
     SlotService SlotService,
     SnippetService SnippetService,
+    SnippetImageService? SnippetImageService,
     IClipboardPasteService ClipboardPasteService,
     IFileLaunchService FileLaunchService,
     LoggingService? LoggingService,
@@ -26,14 +27,21 @@ internal sealed record AppServices(
         var settingsService = new SettingsService(dbContextFactory);
         var loggingService = new LoggingService(fileStorageService);
         var thumbnailService = new ThumbnailService(fileStorageService);
+        var snippetService = new SnippetService(dbContextFactory);
+        var fileIconCacheService = new FileIconCacheService(
+            fileStorageService,
+            new ShellFileIconExtractor(),
+            loggingService);
+        var snippetImageService = new SnippetImageService(snippetService, fileIconCacheService);
 
         return new AppServices(
             categoryService,
             new CategoryTransferService(categoryService, settingsService, thumbnailService, loggingService),
             new DialogService(),
             settingsService,
-            new SlotService(),
-            new SnippetService(dbContextFactory),
+            new SlotService(snippetImageService),
+            snippetService,
+            snippetImageService,
             new ClipboardPasteService(),
             new FileLaunchService(),
             loggingService,
