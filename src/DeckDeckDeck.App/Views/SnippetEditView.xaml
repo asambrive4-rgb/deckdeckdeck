@@ -1,6 +1,14 @@
 <UserControl x:Class="DeckDeckDeck.App.Views.SnippetEditView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DeckDeckDeck.App;component/Resources/Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -8,14 +16,10 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Margin="0,0,0,18">
-            <TextBlock FontSize="28"
-                       FontWeight="Bold"
-                       Foreground="#162033"
+        <StackPanel Style="{StaticResource Deck.PageHeaderStyle}">
+            <TextBlock Style="{StaticResource Deck.PageTitleTextStyle}"
                        Text="{Binding Title}" />
-            <TextBlock Margin="0,4,0,0"
-                       FontSize="14"
-                       Foreground="#69768A">
+            <TextBlock Style="{StaticResource Deck.PageSubtitleTextStyle}">
                 <Run Text="{Binding CategoryName, Mode=OneWay}" />
                 <Run Text=" / 슬롯 " />
                 <Run Text="{Binding KeyText, Mode=OneWay}" />
@@ -35,37 +39,34 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <StackPanel>
-                    <TextBlock Margin="0,0,0,6"
-                               FontWeight="SemiBold"
+                <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="슬롯 명" />
                     <TextBox Height="36"
-                             Padding="8,6"
+                             Style="{StaticResource Deck.TextBoxStyle}"
                              Text="{Binding SnippetTitle, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="1"
-                            Margin="0,14,0,0">
-                    <TextBlock Margin="0,0,0,6"
-                               FontWeight="SemiBold"
+                            Style="{StaticResource Deck.FieldGroupSpacedStyle}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="실행" />
                     <TextBox MinHeight="180"
-                             Padding="8"
                              AcceptsReturn="True"
                              AcceptsTab="True"
+                             Style="{StaticResource Deck.TextBoxStyle}"
                              Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
                              TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="2"
-                            Margin="0,14,0,0">
-                    <TextBlock Margin="0,0,0,6"
-                               FontWeight="SemiBold"
+                            Style="{StaticResource Deck.FieldGroupSpacedStyle}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="설명" />
                     <TextBox Height="70"
-                             Padding="8"
                              AcceptsReturn="True"
+                             Style="{StaticResource Deck.TextBoxStyle}"
                              Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
                              TextWrapping="Wrap"
                              VerticalScrollBarVisibility="Auto" />
@@ -74,33 +75,26 @@
                 <CheckBox Grid.Row="3"
                           Margin="0,14,0,0"
                           Content="이 슬롯 사용"
-                          FontWeight="SemiBold"
+                          Style="{StaticResource Deck.CheckBoxStyle}"
                           IsChecked="{Binding IsSlotEnabled}" />
 
                 <StackPanel Grid.Row="4"
-                            Margin="0,14,0,0">
-                    <TextBlock Margin="0,0,0,6"
-                               FontWeight="SemiBold"
+                            Style="{StaticResource Deck.FieldGroupSpacedStyle}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="이미지" />
                     <DockPanel LastChildFill="False">
-                        <Border Width="72"
-                                Height="72"
-                                Background="#F3F5F7"
-                                BorderBrush="#CBD3DF"
-                                BorderThickness="1">
+                        <Border Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
                             <Image Source="{Binding ThumbnailPath}"
                                    Stretch="Uniform" />
                         </Border>
                         <StackPanel Margin="12,0,0,0"
                                     VerticalAlignment="Center">
-                            <Button Width="120"
-                                    Height="32"
-                                    Command="{Binding ChooseImageCommand}"
+                            <Button Command="{Binding ChooseImageCommand}"
+                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
                                     Content="이미지 선택" />
-                            <Button Width="120"
-                                    Height="32"
-                                    Margin="0,8,0,0"
+                            <Button Margin="0,8,0,0"
                                     Command="{Binding RemoveImageCommand}"
+                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
                                     Content="이미지 제거"
                                     IsEnabled="{Binding HasImage}" />
                         </StackPanel>
@@ -109,14 +103,14 @@
 
                 <TextBlock Grid.Row="5"
                            Margin="0,14,0,0"
-                           Foreground="#B42318"
+                           Style="{StaticResource Deck.ErrorTextStyle}"
                            Text="{Binding ErrorMessage}"
                            TextWrapping="Wrap" />
             </Grid>
         </ScrollViewer>
 
         <Grid Grid.Row="2"
-              Margin="0,18,0,0">
+              Style="{StaticResource Deck.FooterActionsGridStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -124,21 +118,18 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <Button Width="82"
-                    Height="36"
-                    Command="{Binding DeleteCommand}"
+            <Button Command="{Binding DeleteCommand}"
+                    Style="{StaticResource Deck.DangerFooterButtonStyle}"
                     Content="삭제"
                     IsEnabled="{Binding CanDelete}" />
             <Button Grid.Column="2"
-                    Width="82"
-                    Height="36"
                     Margin="0,0,8,0"
                     Command="{Binding CancelCommand}"
+                    Style="{StaticResource Deck.FooterButtonStyle}"
                     Content="취소" />
             <Button Grid.Column="3"
-                    Width="82"
-                    Height="36"
                     Command="{Binding SaveCommand}"
+                    Style="{StaticResource Deck.PrimaryFooterButtonStyle}"
                     Content="저장" />
         </Grid>
     </Grid>

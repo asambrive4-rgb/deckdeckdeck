@@ -408,16 +408,37 @@
     <Style x:Key="Deck.SlotEditButtonStyle"
            BasedOn="{StaticResource Deck.SecondaryButtonStyle}"
            TargetType="{x:Type Button}">
-        <Setter Property="Width" Value="26" />
-        <Setter Property="Height" Value="26" />
-        <Setter Property="MinHeight" Value="26" />
-        <Setter Property="Margin" Value="0,10,10,0" />
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Margin" Value="0,8,8,0" />
         <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
         <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Content" Value="&#xE713;" />
         <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="ToolTip" Value="슬롯 편집" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Empty}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Muted}" />
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsEmpty}" Value="True" />
+                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
     </Style>
 </ResourceDictionary>
