@@ -10,6 +10,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 {
     private readonly Action _afterDelete;
     private readonly Action<Snippet> _afterSave;
+    private readonly IAutoBackupCoordinator? _autoBackupCoordinator;
     private readonly Action _cancel;
     private readonly DialogService _dialogService;
     private readonly EditableImageState _imageState;
@@ -45,7 +46,8 @@ public sealed class SnippetEditViewModel : ObservableObject
         ThumbnailService? thumbnailService = null,
         SettingsService? settingsService = null,
         LoggingService? loggingService = null,
-        SnippetImageService? snippetImageService = null)
+        SnippetImageService? snippetImageService = null,
+        IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         CategoryId = category.Id;
         CategoryName = category.Name;
@@ -57,6 +59,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         _settingsService = settingsService;
         _loggingService = loggingService;
         _snippetImageService = snippetImageService;
+        _autoBackupCoordinator = autoBackupCoordinator;
         _cancel = cancel;
         _afterSave = afterSave;
         _afterDelete = afterDelete;
@@ -289,6 +292,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 
         _imageState.DeleteOriginalImageIfReplaced();
         _imageState.MarkCurrentAsOriginal();
+        _autoBackupCoordinator?.RequestAutoBackup();
         _showStatus($"{snippet.Title} 저장됨.");
         _afterSave(snippet);
     }
@@ -319,6 +323,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         var deletedImageFiles = _snippetService.Delete(_snippetId.Value);
         _thumbnailService?.DeleteImageFiles(deletedImageFiles);
 
+        _autoBackupCoordinator?.RequestAutoBackup();
         _showStatus("실행 항목을 삭제했습니다.");
         _afterDelete();
     }
@@ -473,6 +478,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         _imageState.DeleteCurrentUnsavedImage();
+        _autoBackupCoordinator?.RequestAutoBackup();
         _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
         _cancel();
 

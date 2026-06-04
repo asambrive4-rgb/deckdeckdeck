@@ -174,7 +174,8 @@ public sealed class MainViewModelNavigationTests
     public void EmptyCategorySlotEditorCanSaveSlotEnabledOnly()
     {
         var services = CreateServices();
-        var viewModel = CreateMainViewModel(services);
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateMainViewModel(services, autoBackupCoordinator: autoBackup);
         var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
 
         home.NumpadGrid.Numpad2.EditCommand.Execute(null);
@@ -186,6 +187,7 @@ public sealed class MainViewModelNavigationTests
         Assert.False(settings.EnabledCategorySlotKeys[SlotKey.Numpad2]);
         Assert.True(settings.EnabledSnippetSlotKeys[SlotKey.Numpad2]);
         Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal(1, autoBackup.RequestCount);
     }
 
     [Fact]
@@ -193,7 +195,8 @@ public sealed class MainViewModelNavigationTests
     {
         var services = CreateServices();
         services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        var viewModel = CreateMainViewModel(services);
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateMainViewModel(services, autoBackupCoordinator: autoBackup);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
         var categoryViewModel = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
@@ -206,6 +209,7 @@ public sealed class MainViewModelNavigationTests
         Assert.True(settings.EnabledCategorySlotKeys[SlotKey.Numpad4]);
         Assert.False(settings.EnabledSnippetSlotKeys[SlotKey.Numpad4]);
         Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal(1, autoBackup.RequestCount);
     }
 
     [Fact]
@@ -237,5 +241,21 @@ public sealed class MainViewModelNavigationTests
 
         Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
         Assert.Equal("Writing 카테고리", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void SaveWindowPlacementDoesNotRequestAutoBackup()
+    {
+        var services = CreateServices();
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateMainViewModel(services, autoBackupCoordinator: autoBackup);
+
+        viewModel.SaveWindowPlacement(10, 20, "Monitor1");
+
+        var settings = services.SettingsService.Load();
+        Assert.Equal(10, settings.LastWindowLeft);
+        Assert.Equal(20, settings.LastWindowTop);
+        Assert.Equal("Monitor1", settings.LastWindowScreenDeviceName);
+        Assert.Equal(0, autoBackup.RequestCount);
     }
 }

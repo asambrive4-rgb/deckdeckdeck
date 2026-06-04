@@ -52,4 +52,17 @@ public class DialogService
             ? dialog.SelectedPath
             : null;
     }
+
+    public virtual string? SelectBackupFolder()
+    {
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "백업 폴더 선택",
+            UseDescriptionForTitle = true
+        };
+
+        return dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK
+            ? dialog.SelectedPath
+            : null;
+    }
 }

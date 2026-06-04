@@ -5,6 +5,7 @@ namespace DeckDeckDeck.App.Services;
 internal sealed record AppServices(
     CategoryService CategoryService,
     CategoryTransferService CategoryTransferService,
+    BackupService? BackupService,
     DialogService DialogService,
     SettingsService SettingsService,
     SlotService SlotService,
@@ -27,6 +28,7 @@ internal sealed record AppServices(
         var categoryService = new CategoryService(dbContextFactory);
         var settingsService = new SettingsService(dbContextFactory);
         var loggingService = new LoggingService(fileStorageService);
+        var backupService = new BackupService(fileStorageService, settingsService, loggingService);
         var thumbnailService = new ThumbnailService(fileStorageService);
         var snippetService = new SnippetService(dbContextFactory);
         var fileIconCacheService = new FileIconCacheService(
@@ -38,6 +40,7 @@ internal sealed record AppServices(
         return new AppServices(
             categoryService,
             new CategoryTransferService(categoryService, settingsService, thumbnailService, loggingService),
+            backupService,
             new DialogService(),
             settingsService,
             new SlotService(snippetImageService),

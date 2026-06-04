@@ -74,6 +74,11 @@ public partial class MainWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         SaveWindowPlacement();
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.Dispose();
+        }
+
         _numpadCaptureService.Dispose();
         _paletteWindowService.Dispose();
         _hotkeyService.Dispose();

@@ -4,8 +4,9 @@ using DeckDeckDeck.App.Services;
 
 namespace DeckDeckDeck.App.ViewModels;
 
-public sealed class MainViewModel : ObservableObject
+public sealed class MainViewModel : ObservableObject, IDisposable
 {
+    private IAutoBackupCoordinator? _autoBackupCoordinator;
     private CategoryService _categoryService = null!;
     private MainViewModelNavigator _navigator = null!;
     private SettingsService _settingsService = null!;
@@ -37,7 +38,9 @@ public sealed class MainViewModel : ObservableObject
         ThumbnailService? thumbnailService = null,
         IFileLaunchService? fileLaunchService = null,
         IUrlLaunchService? urlLaunchService = null,
-        SnippetImageService? snippetImageService = null)
+        SnippetImageService? snippetImageService = null,
+        BackupService? backupService = null,
+        IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         var transferService = new CategoryTransferService(
             categoryService,
@@ -48,6 +51,7 @@ public sealed class MainViewModel : ObservableObject
         var services = new AppServices(
             categoryService,
             transferService,
+            backupService,
             dialogService,
             settingsService,
             slotService,
@@ -64,7 +68,8 @@ public sealed class MainViewModel : ObservableObject
             getPasteTargetWindowHandle,
             hideWindowAfterPaste,
             enterEditMode,
-            completePasteSelection);
+            completePasteSelection,
+            autoBackupCoordinator);
     }
 
     private MainViewModel(
@@ -79,7 +84,8 @@ public sealed class MainViewModel : ObservableObject
             getPasteTargetWindowHandle,
             hideWindowAfterPaste,
             enterEditMode,
-            completePasteSelection);
+            completePasteSelection,
+            autoBackupCoordinator: null);
     }
 
     public string WindowTitle => "DeckDeckDeck";
@@ -99,6 +105,11 @@ public sealed class MainViewModel : ObservableObject
     public AppSettings LoadSettings()
     {
         return _settingsService.Load();
+    }
+
+    public void Dispose()
+    {
+        (_autoBackupCoordinator as IDisposable)?.Dispose();
     }
 
     public void SaveWindowPlacement(double left, double top, string screenDeviceName)
@@ -191,11 +202,20 @@ public sealed class MainViewModel : ObservableObject
         Func<IntPtr>? getPasteTargetWindowHandle,
         Action? hideWindowAfterPaste,
         Action? enterEditMode,
-        Action? completePasteSelection)
+        Action? completePasteSelection,
+        IAutoBackupCoordinator? autoBackupCoordinator)
     {
         _categoryService = services.CategoryService;
         _settingsService = services.SettingsService;
         _loggingService = services.LoggingService;
+        _autoBackupCoordinator = autoBackupCoordinator
+            ?? (services.BackupService is null
+                ? null
+                : new AutoBackupCoordinator(
+                    services.BackupService,
+                    services.SettingsService,
+                    ShowStatus,
+                    services.LoggingService));
 
         var pasteFlowService = new PasteFlowService(
             services.ClipboardPasteService,
@@ -213,7 +233,8 @@ public sealed class MainViewModel : ObservableObject
             viewModel => CurrentViewModel = viewModel,
             ShowStatus,
             enterEditMode ?? (() => { }),
-            pasteFlowService.PasteSnippetAsync);
+            pasteFlowService.PasteSnippetAsync,
+            _autoBackupCoordinator);
         _settingsService.EnsureDefaults();
 
         ShowHome();

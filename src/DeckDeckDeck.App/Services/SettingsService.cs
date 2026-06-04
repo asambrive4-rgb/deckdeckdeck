@@ -34,6 +34,21 @@ public sealed class SettingsService
                 entries,
                 SettingsKeys.RestoreClipboardAfterPaste,
                 true),
+            AutoBackupEnabled = SettingsValueParser.ReadBool(
+                entries,
+                SettingsKeys.AutoBackupEnabled,
+                false),
+            BackupFolderPath = SettingsValueParser.ReadString(
+                entries,
+                SettingsKeys.BackupFolderPath,
+                string.Empty),
+            AutoBackupRetentionCount = SettingsValueParser.ReadInt(
+                entries,
+                SettingsKeys.AutoBackupRetentionCount,
+                10),
+            LastBackupCreatedAt = SettingsValueParser.ReadNullableDateTimeOffset(
+                entries,
+                SettingsKeys.LastBackupCreatedAt),
             HomeHotkey = SettingsValueParser.ReadString(
                 entries,
                 SettingsKeys.HomeHotkey,
@@ -67,6 +82,13 @@ public sealed class SettingsService
         _slotSettingsService.SetSnippetSlotEnabled(slotKey, enabled);
     }
 
+    public void SetLastBackupCreatedAt(DateTimeOffset createdAt)
+    {
+        _entryStore.Upsert(
+            SettingsKeys.LastBackupCreatedAt,
+            SettingsValueParser.FormatNullableDateTimeOffset(createdAt));
+    }
+
     public void Save(AppSettings settings)
     {
         var values = new[]
@@ -80,6 +102,18 @@ public sealed class SettingsService
             new KeyValuePair<string, string>(
                 SettingsKeys.RestoreClipboardAfterPaste,
                 settings.RestoreClipboardAfterPaste.ToString()),
+            new KeyValuePair<string, string>(
+                SettingsKeys.AutoBackupEnabled,
+                settings.AutoBackupEnabled.ToString()),
+            new KeyValuePair<string, string>(
+                SettingsKeys.BackupFolderPath,
+                settings.BackupFolderPath),
+            new KeyValuePair<string, string>(
+                SettingsKeys.AutoBackupRetentionCount,
+                settings.AutoBackupRetentionCount.ToString()),
+            new KeyValuePair<string, string>(
+                SettingsKeys.LastBackupCreatedAt,
+                SettingsValueParser.FormatNullableDateTimeOffset(settings.LastBackupCreatedAt)),
             new KeyValuePair<string, string>(SettingsKeys.HomeHotkey, settings.HomeHotkey),
             new KeyValuePair<string, string>(SettingsKeys.DirectCategoryHotkeys, settings.DirectCategoryHotkeys),
             new KeyValuePair<string, string>(

@@ -7,6 +7,10 @@ internal static class SettingsKeys
     public const string BringWindowToFrontOnHotkey = "bringWindowToFrontOnHotkey";
     public const string AutoHideAfterPaste = "autoHideAfterPaste";
     public const string RestoreClipboardAfterPaste = "restoreClipboardAfterPaste";
+    public const string AutoBackupEnabled = "autoBackupEnabled";
+    public const string BackupFolderPath = "backupFolderPath";
+    public const string AutoBackupRetentionCount = "autoBackupRetentionCount";
+    public const string LastBackupCreatedAt = "lastBackupCreatedAt";
     public const string HomeHotkey = "homeHotkey";
     public const string DirectCategoryHotkeys = "directCategoryHotkeys";
     public const string LastWindowLeft = "lastWindowLeft";
@@ -21,6 +25,10 @@ internal static class SettingsKeys
         new(BringWindowToFrontOnHotkey, true.ToString()),
         new(AutoHideAfterPaste, true.ToString()),
         new(RestoreClipboardAfterPaste, true.ToString()),
+        new(AutoBackupEnabled, false.ToString()),
+        new(BackupFolderPath, string.Empty),
+        new(AutoBackupRetentionCount, "10"),
+        new(LastBackupCreatedAt, string.Empty),
         new(HomeHotkey, "Ctrl + Numpad0"),
         new(DirectCategoryHotkeys, "Ctrl + Numpad1~9, /, *, -, +, ."),
         new(LastWindowLeft, string.Empty),

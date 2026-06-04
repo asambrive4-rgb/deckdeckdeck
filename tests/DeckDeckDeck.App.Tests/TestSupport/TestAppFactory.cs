@@ -21,6 +21,7 @@ internal static class TestAppFactory
         settingsService.EnsureDefaults();
         var snippetService = new SnippetService(dbContextFactory);
         var loggingService = new LoggingService(storage);
+        var backupService = new BackupService(storage, settingsService, loggingService);
         var fileIconCacheService = new FileIconCacheService(
             storage,
             new StubFileIconExtractor(),
@@ -33,6 +34,7 @@ internal static class TestAppFactory
             snippetService,
             settingsService,
             loggingService,
+            backupService,
             new ThumbnailService(storage),
             fileIconCacheService,
             snippetImageService);
@@ -46,7 +48,8 @@ internal static class TestAppFactory
         Action? enterEditMode = null,
         Action? completePasteSelection = null,
         IFileLaunchService? fileLaunchService = null,
-        IUrlLaunchService? urlLaunchService = null)
+        IUrlLaunchService? urlLaunchService = null,
+        IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         return new MainViewModel(
             services.CategoryService,
@@ -63,7 +66,9 @@ internal static class TestAppFactory
             thumbnailService: services.ThumbnailService,
             fileLaunchService: fileLaunchService,
             urlLaunchService: urlLaunchService,
-            snippetImageService: services.SnippetImageService);
+            snippetImageService: services.SnippetImageService,
+            backupService: services.BackupService,
+            autoBackupCoordinator: autoBackupCoordinator);
     }
 
     public static string CreateTinyBmp(string directory)
@@ -126,6 +131,7 @@ internal sealed record TestServices(
     SnippetService SnippetService,
     SettingsService SettingsService,
     LoggingService LoggingService,
+    BackupService BackupService,
     ThumbnailService ThumbnailService,
     FileIconCacheService FileIconCacheService,
     SnippetImageService SnippetImageService);
@@ -278,6 +284,16 @@ internal sealed class RecordingUrlLaunchService : IUrlLaunchService
 
         Urls.Add(url);
         return Result;
+    }
+}
+
+internal sealed class RecordingAutoBackupCoordinator : IAutoBackupCoordinator
+{
+    public int RequestCount { get; private set; }
+
+    public void RequestAutoBackup()
+    {
+        RequestCount++;
     }
 }
 

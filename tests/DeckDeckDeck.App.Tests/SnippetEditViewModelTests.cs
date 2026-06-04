@@ -169,12 +169,53 @@ public sealed class SnippetEditViewModelTests
         Assert.Equal(@"C:\tools", viewModel.LaunchPath);
     }
 
+    [Fact]
+    public void SaveRequestsAutoBackupAfterSnippetChange()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateViewModel(
+            services,
+            category,
+            _ => { },
+            autoBackupCoordinator: autoBackup);
+        viewModel.SnippetTitle = "Paste";
+        viewModel.Content = "Hello";
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.Equal(1, autoBackup.RequestCount);
+        Assert.Single(services.SnippetService.GetByCategoryId(category.Id));
+    }
+
+    [Fact]
+    public void DeleteRequestsAutoBackupAfterSnippetDelete()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var snippet = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateViewModel(
+            services,
+            category,
+            _ => { },
+            snippet: snippet,
+            autoBackupCoordinator: autoBackup);
+
+        viewModel.DeleteCommand.Execute(null);
+
+        Assert.Null(services.SnippetService.GetById(snippet.Id));
+        Assert.Equal(1, autoBackup.RequestCount);
+    }
+
     private static SnippetEditViewModel CreateViewModel(
         TestServices services,
         Category category,
         Action<Snippet> afterSave,
         DialogService? dialogService = null,
-        Snippet? snippet = null)
+        Snippet? snippet = null,
+        IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         return new SnippetEditViewModel(
             category,
@@ -189,7 +230,8 @@ public sealed class SnippetEditViewModelTests
             thumbnailService: services.ThumbnailService,
             settingsService: services.SettingsService,
             loggingService: services.LoggingService,
-            snippetImageService: services.SnippetImageService);
+            snippetImageService: services.SnippetImageService,
+            autoBackupCoordinator: autoBackupCoordinator);
     }
 
     private static string CreateLaunchFile(TestServices services, string fileName)
@@ -202,6 +244,8 @@ public sealed class SnippetEditViewModelTests
 
     private sealed class StubDialogService : DialogService
     {
+        public bool ConfirmResult { get; init; } = true;
+
         public string? LaunchFile { get; init; }
 
         public string? LaunchFolder { get; init; }
@@ -214,6 +258,11 @@ public sealed class SnippetEditViewModelTests
         public override string? SelectLaunchFolder()
         {
             return LaunchFolder;
+        }
+
+        public override bool Confirm(string title, string message)
+        {
+            return ConfirmResult;
         }
     }
 }

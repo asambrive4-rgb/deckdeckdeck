@@ -6,6 +6,7 @@ namespace DeckDeckDeck.App.ViewModels;
 internal sealed class MainViewModelNavigator
 {
     private readonly Action _enterEditMode;
+    private readonly IAutoBackupCoordinator? _autoBackupCoordinator;
     private readonly Func<Snippet, Task> _pasteSnippet;
     private readonly AppServices _services;
     private readonly Action<string> _showStatus;
@@ -16,13 +17,15 @@ internal sealed class MainViewModelNavigator
         Action<object> showViewModel,
         Action<string> showStatus,
         Action enterEditMode,
-        Func<Snippet, Task> pasteSnippet)
+        Func<Snippet, Task> pasteSnippet,
+        IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         _services = services;
         _showViewModel = showViewModel;
         _showStatus = showStatus;
         _enterEditMode = enterEditMode;
         _pasteSnippet = pasteSnippet;
+        _autoBackupCoordinator = autoBackupCoordinator;
     }
 
     public void ShowHome()
@@ -53,7 +56,8 @@ internal sealed class MainViewModelNavigator
             _showStatus,
             _services.ThumbnailService,
             _services.SettingsService,
-            _services.LoggingService));
+            _services.LoggingService,
+            _autoBackupCoordinator));
         _showStatus($"슬롯 {slotKey.GetDisplayText()}에 새 카테고리 만들기");
     }
 
@@ -72,7 +76,8 @@ internal sealed class MainViewModelNavigator
             _showStatus,
             _services.ThumbnailService,
             _services.SettingsService,
-            _services.LoggingService));
+            _services.LoggingService,
+            _autoBackupCoordinator));
         _showStatus($"{category.Name} 편집");
     }
 
@@ -119,7 +124,8 @@ internal sealed class MainViewModelNavigator
             _services.ThumbnailService,
             _services.SettingsService,
             _services.LoggingService,
-            _services.SnippetImageService));
+            _services.SnippetImageService,
+            _autoBackupCoordinator));
         _showStatus(snippet is null
             ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
             : $"{snippet.Title} 편집");
@@ -133,7 +139,10 @@ internal sealed class MainViewModelNavigator
             returnTo,
             returnTo,
             _showStatus,
-            _services.LoggingService));
+            _services.LoggingService,
+            _services.BackupService,
+            _autoBackupCoordinator,
+            _services.DialogService));
         _showStatus("설정");
     }
 }

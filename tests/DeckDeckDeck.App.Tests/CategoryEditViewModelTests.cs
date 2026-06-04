@@ -72,11 +72,51 @@ public sealed class CategoryEditViewModelTests
         Assert.Equal("Old", services.CategoryService.GetBySlotKey(SlotKey.Numpad5)!.Name);
     }
 
+    [Fact]
+    public void SaveRequestsAutoBackupAfterCategoryChange()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad4, "Writing", null);
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateViewModel(
+            services,
+            category,
+            new StubDialogService(),
+            _ => { },
+            autoBackup);
+        viewModel.Name = "Writing Updated";
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.Equal("Writing Updated", services.CategoryService.GetById(category.Id)!.Name);
+        Assert.Equal(1, autoBackup.RequestCount);
+    }
+
+    [Fact]
+    public void DeleteRequestsAutoBackupAfterCategoryDelete()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad4, "Writing", null);
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateViewModel(
+            services,
+            category,
+            new StubDialogService(),
+            _ => { },
+            autoBackup);
+
+        viewModel.DeleteCommand.Execute(null);
+
+        Assert.Null(services.CategoryService.GetById(category.Id));
+        Assert.Equal(1, autoBackup.RequestCount);
+    }
+
     private static CategoryEditViewModel CreateViewModel(
         TestServices services,
         Category category,
         DialogService dialogService,
-        Action<string> showStatus)
+        Action<string> showStatus,
+        IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         var transferService = new CategoryTransferService(
             services.CategoryService,
@@ -96,7 +136,8 @@ public sealed class CategoryEditViewModelTests
             showStatus,
             services.ThumbnailService,
             services.SettingsService,
-            services.LoggingService);
+            services.LoggingService,
+            autoBackupCoordinator);
     }
 
     private static CategoryTransferTargetSlot GetTargetSlot(

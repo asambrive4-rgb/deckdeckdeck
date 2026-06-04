@@ -21,6 +21,10 @@ public sealed class SettingsServiceTests
         Assert.True(settings.BringWindowToFrontOnHotkey);
         Assert.True(settings.AutoHideAfterPaste);
         Assert.True(settings.RestoreClipboardAfterPaste);
+        Assert.False(settings.AutoBackupEnabled);
+        Assert.Equal(string.Empty, settings.BackupFolderPath);
+        Assert.Equal(10, settings.AutoBackupRetentionCount);
+        Assert.Null(settings.LastBackupCreatedAt);
         Assert.Equal("Ctrl + Numpad1~9, /, *, -, +, .", settings.DirectCategoryHotkeys);
         Assert.Null(settings.LastWindowLeft);
         Assert.Null(settings.LastWindowTop);
@@ -76,5 +80,43 @@ public sealed class SettingsServiceTests
         Assert.Equal(120.5, reloaded.LastWindowLeft);
         Assert.Equal(240.25, reloaded.LastWindowTop);
         Assert.Equal("Monitor2", reloaded.LastWindowScreenDeviceName);
+    }
+
+    [Fact]
+    public void SettingsSavePersistsBackupSettings()
+    {
+        var services = CreateServices();
+        var createdAt = DateTimeOffset.Parse("2026-06-04T12:30:00+09:00");
+        var settings = services.SettingsService.Load();
+        settings.AutoBackupEnabled = true;
+        settings.BackupFolderPath = @"C:\tmp\deckdeckdeck-backups";
+        settings.AutoBackupRetentionCount = 7;
+        settings.LastBackupCreatedAt = createdAt;
+
+        services.SettingsService.Save(settings);
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.True(reloaded.AutoBackupEnabled);
+        Assert.Equal(@"C:\tmp\deckdeckdeck-backups", reloaded.BackupFolderPath);
+        Assert.Equal(7, reloaded.AutoBackupRetentionCount);
+        Assert.Equal(createdAt, reloaded.LastBackupCreatedAt);
+    }
+
+    [Fact]
+    public void SetLastBackupCreatedAtUpdatesOnlyBackupTimestamp()
+    {
+        var services = CreateServices();
+        var settings = services.SettingsService.Load();
+        settings.AutoBackupEnabled = true;
+        settings.BackupFolderPath = @"C:\tmp\deckdeckdeck-backups";
+        services.SettingsService.Save(settings);
+        var createdAt = DateTimeOffset.Parse("2026-06-04T12:30:00+00:00");
+
+        services.SettingsService.SetLastBackupCreatedAt(createdAt);
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.True(reloaded.AutoBackupEnabled);
+        Assert.Equal(@"C:\tmp\deckdeckdeck-backups", reloaded.BackupFolderPath);
+        Assert.Equal(createdAt, reloaded.LastBackupCreatedAt);
     }
 }

@@ -10,6 +10,7 @@ public sealed class CategoryEditViewModel : ObservableObject
 {
     private readonly Action _afterDelete;
     private readonly Action<Category> _afterSave;
+    private readonly IAutoBackupCoordinator? _autoBackupCoordinator;
     private readonly Action _cancel;
     private readonly CategoryService _categoryService;
     private readonly CategoryTransferService _categoryTransferService;
@@ -39,7 +40,8 @@ public sealed class CategoryEditViewModel : ObservableObject
         Action<string> showStatus,
         ThumbnailService? thumbnailService = null,
         SettingsService? settingsService = null,
-        LoggingService? loggingService = null)
+        LoggingService? loggingService = null,
+        IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         SlotKey = slotKey;
         KeyText = slotKey.GetDisplayText();
@@ -49,6 +51,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         _dialogService = dialogService;
         _settingsService = settingsService;
         _loggingService = loggingService;
+        _autoBackupCoordinator = autoBackupCoordinator;
         _cancel = cancel;
         _afterSave = afterSave;
         _afterDelete = afterDelete;
@@ -169,6 +172,7 @@ public sealed class CategoryEditViewModel : ObservableObject
 
         _imageState.DeleteOriginalImageIfReplaced();
         _imageState.MarkCurrentAsOriginal();
+        _autoBackupCoordinator?.RequestAutoBackup();
         ErrorMessage = string.Empty;
 
         return category;
@@ -207,6 +211,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         }
 
         _showStatus("카테고리를 삭제했습니다.");
+        _autoBackupCoordinator?.RequestAutoBackup();
         _afterDelete();
     }
 
@@ -264,6 +269,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         try
         {
             var transferredCategory = transfer(targetSlotKey);
+            _autoBackupCoordinator?.RequestAutoBackup();
             _afterSave(transferredCategory);
             _showStatus(getStatusMessage(targetSlotKey));
         }
@@ -377,6 +383,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         }
 
         _imageState.DeleteCurrentUnsavedImage();
+        _autoBackupCoordinator?.RequestAutoBackup();
         _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
         _cancel();
 

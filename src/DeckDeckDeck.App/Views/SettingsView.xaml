@@ -23,7 +23,9 @@
                        Text="실행 동작" />
         </StackPanel>
 
-        <StackPanel Grid.Row="1">
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel>
             <CheckBox Margin="0,0,0,14"
                       Content="단축키로 열 때 창을 앞으로 표시"
                       Style="{StaticResource Deck.CheckBoxStyle}"
@@ -36,6 +38,31 @@
                       Content="붙여넣은 후 클립보드 복원"
                       Style="{StaticResource Deck.CheckBoxStyle}"
                       IsChecked="{Binding RestoreClipboardAfterPaste}" />
+
+            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                       Text="자동 백업" />
+            <Border Margin="0,0,0,18"
+                    Style="{StaticResource Deck.InfoPanelBorderStyle}">
+                <StackPanel>
+                    <CheckBox Margin="0,0,0,10"
+                              Content="변경 후 자동 백업 사용"
+                              Style="{StaticResource Deck.CheckBoxStyle}"
+                              IsChecked="{Binding AutoBackupEnabled}" />
+                    <TextBlock Margin="0,0,0,8"
+                               Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                               Text="{Binding BackupFolderDisplay}"
+                               TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal">
+                        <Button Command="{Binding ChooseBackupFolderCommand}"
+                                Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                Content="폴더 선택" />
+                        <Button Margin="8,0,0,0"
+                                Command="{Binding CreateManualBackupCommand}"
+                                Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                Content="즉시 백업" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
 
             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                        Text="단축키" />
@@ -59,7 +86,8 @@
                        Style="{StaticResource Deck.ErrorTextStyle}"
                        Text="{Binding ErrorMessage}"
                        TextWrapping="Wrap" />
-        </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
 
         <Grid Grid.Row="2"
               Style="{StaticResource Deck.FooterActionsGridStyle}">

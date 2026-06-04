@@ -8,6 +8,14 @@ public sealed class AppSettings
 
     public bool RestoreClipboardAfterPaste { get; set; } = true;
 
+    public bool AutoBackupEnabled { get; set; }
+
+    public string BackupFolderPath { get; set; } = string.Empty;
+
+    public int AutoBackupRetentionCount { get; set; } = 10;
+
+    public DateTimeOffset? LastBackupCreatedAt { get; set; }
+
     public Dictionary<SlotKey, bool> EnabledCategorySlotKeys { get; set; } =
         SlotKeyCatalog.All.ToDictionary(slotKey => slotKey, _ => true);
 

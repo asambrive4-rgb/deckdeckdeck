@@ -26,6 +26,22 @@ internal static class SettingsValueParser
             : null;
     }
 
+    public static int ReadInt(IReadOnlyDictionary<string, string> values, string key, int defaultValue)
+    {
+        return values.TryGetValue(key, out var value)
+            && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : defaultValue;
+    }
+
+    public static DateTimeOffset? ReadNullableDateTimeOffset(IReadOnlyDictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var value)
+            && DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)
+            ? parsed
+            : null;
+    }
+
     public static string? ReadNullableString(IReadOnlyDictionary<string, string> values, string key)
     {
         return values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
@@ -36,5 +52,10 @@ internal static class SettingsValueParser
     public static string FormatNullableDouble(double? value)
     {
         return value?.ToString("R", CultureInfo.InvariantCulture) ?? string.Empty;
+    }
+
+    public static string FormatNullableDateTimeOffset(DateTimeOffset? value)
+    {
+        return value?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty;
     }
 }
