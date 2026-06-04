@@ -47,14 +47,27 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Style="{StaticResource Deck.SlotKeyTextStyle}"
-                                       Text="{Binding KeyText}" />
-                            <StackPanel Grid.Row="1"
-                                        Margin="0,8,0,6"
-                                        VerticalAlignment="Center">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Style="{StaticResource Deck.SlotKeyTextStyle}"
+                                           Text="{Binding KeyText}" />
+                                <TextBlock x:Name="HeaderTitleTextBlock"
+                                           Grid.Column="1"
+                                           Margin="6,0,24,0"
+                                           Style="{StaticResource Deck.SlotTitleWithThumbnailTextStyle}"
+                                           Text="{Binding Title}"
+                                           Visibility="Collapsed" />
+                            </Grid>
+
+                            <Grid Grid.Row="1"
+                                  Margin="0,2,0,0"
+                                  VerticalAlignment="Center">
                                 <Border x:Name="ThumbnailFrame"
                                         Style="{StaticResource Deck.SlotThumbnailFrameBorderStyle}">
                                     <Image Source="{Binding ThumbnailPath}"
@@ -63,10 +76,7 @@
                                 <TextBlock x:Name="DisplayTextBlock"
                                            Style="{StaticResource Deck.SlotTitleTextStyle}"
                                            Text="{Binding DisplayText}" />
-                            </StackPanel>
-                            <TextBlock Grid.Row="2"
-                                       Style="{StaticResource Deck.SlotCaptionTextStyle}"
-                                       Text="{Binding Caption}" />
+                            </Grid>
                         </Grid>
                     </Button>
 
@@ -76,7 +86,8 @@
                 <DataTemplate.Triggers>
                     <DataTrigger Binding="{Binding HasThumbnail}" Value="True">
                         <Setter TargetName="ThumbnailFrame" Property="Visibility" Value="Visible" />
-                        <Setter TargetName="DisplayTextBlock" Property="Style" Value="{StaticResource Deck.SlotTitleWithThumbnailTextStyle}" />
+                        <Setter TargetName="DisplayTextBlock" Property="Visibility" Value="Collapsed" />
+                        <Setter TargetName="HeaderTitleTextBlock" Property="Visibility" Value="Visible" />
                     </DataTrigger>
                 </DataTemplate.Triggers>
             </DataTemplate>

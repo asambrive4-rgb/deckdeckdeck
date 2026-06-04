@@ -8,9 +8,9 @@
         mc:Ignorable="d"
         Title="{Binding WindowTitle}"
         Width="560"
-        Height="680"
+        Height="720"
         MinWidth="500"
-        MinHeight="620"
+        MinHeight="680"
         Style="{StaticResource Deck.MainWindowStyle}"
         ShowActivated="False"
         PreviewKeyDown="OnPreviewKeyDown">
@@ -32,7 +32,7 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -43,7 +43,7 @@
         </Border>
 
         <Border Grid.Row="1"
-                Margin="0,12,0,0"
+                Margin="0,8,0,0"
                 Style="{StaticResource Deck.StatusPanelBorderStyle}">
             <TextBlock Style="{StaticResource Deck.StatusTextStyle}"
                        Text="{Binding StatusMessage}" />

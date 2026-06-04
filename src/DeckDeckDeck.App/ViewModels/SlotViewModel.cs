@@ -34,7 +34,6 @@ public sealed class SlotViewModel : ObservableObject
         ThumbnailPath = thumbnailPath;
         IsEmpty = string.IsNullOrWhiteSpace(title);
         IsEnabledSlot = isEnabledSlot;
-        Caption = IsEnabledSlot ? (IsEmpty ? "비어 있음" : "준비됨") : "사용 안 함";
         SelectCommand = new RelayCommand(() => onSelected(SlotKey), () => IsEnabledSlot);
         EditCommand = new RelayCommand(() => onEdit(SlotKey));
     }
@@ -60,8 +59,6 @@ public sealed class SlotViewModel : ObservableObject
     public bool IsEmpty { get; }
 
     public bool IsEnabledSlot { get; }
-
-    public string Caption { get; }
 
     public string DisplayText => IsEmpty ? "+" : Title;
 
