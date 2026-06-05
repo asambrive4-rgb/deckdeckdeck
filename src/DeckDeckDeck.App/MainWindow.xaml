@@ -87,15 +87,15 @@
                                     shell:WindowChrome.IsHitTestVisibleInChrome="True">
                             <Button Click="OnMinimizeButtonClick"
                                     Style="{StaticResource Deck.WindowControlButtonStyle}"
-                                    Content="—"
+                                    Content="{StaticResource Deck.Geometry.Minimize}"
                                     ToolTip="최소화" />
                             <Button Click="OnMaximizeRestoreButtonClick"
                                     Style="{StaticResource Deck.WindowControlButtonStyle}"
-                                    Content="□"
+                                    Content="{StaticResource Deck.Geometry.Maximize}"
                                     ToolTip="최대화/복원" />
                             <Button Click="OnCloseButtonClick"
                                     Style="{StaticResource Deck.CloseWindowControlButtonStyle}"
-                                    Content="×"
+                                    Content="{StaticResource Deck.Geometry.Close}"
                                     ToolTip="닫기" />
                         </StackPanel>
                     </Grid>

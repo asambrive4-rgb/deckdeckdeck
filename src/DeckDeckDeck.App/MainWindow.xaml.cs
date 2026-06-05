@@ -103,6 +103,7 @@ public partial class MainWindow : Window
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         _windowHandle = new WindowInteropHelper(this).Handle;
+        ApplyWindowCornerPreference();
         _paletteWindowService.Attach(_windowHandle);
         ApplyWindowPlacement(IntPtr.Zero);
 
@@ -111,6 +112,27 @@ public partial class MainWindow : Window
         if (failures.Count > 0 && DataContext is MainViewModel viewModel)
         {
             viewModel.ReportHotkeyRegistrationFailure(failures);
+        }
+    }
+
+    private void ApplyWindowCornerPreference()
+    {
+        try
+        {
+            // Windows 11 (build 22000) 이상인 경우에만 설정
+            if (Environment.OSVersion.Version.Major >= 10 && Environment.OSVersion.Version.Build >= 22000)
+            {
+                var preference = (int)Native.DwmApi.DWM_WINDOW_CORNER_PREFERENCE.Round;
+                Native.DwmApi.DwmSetWindowAttribute(
+                    _windowHandle,
+                    Native.DwmApi.DWMWA_WINDOW_CORNER_PREFERENCE,
+                    ref preference,
+                    sizeof(int));
+            }
+        }
+        catch
+        {
+            // Fallback: OS 버전에 따른 P/Invoke 오류 또는 예외 발생 시 안전하게 무시
         }
     }
 
