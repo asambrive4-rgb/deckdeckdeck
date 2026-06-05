@@ -56,23 +56,11 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Style="{StaticResource Deck.PageHeaderStyle}">
-            <TextBlock Style="{StaticResource Deck.PageTitleTextStyle}"
-                       Text="{Binding Title}" />
-            <TextBlock Style="{StaticResource Deck.PageSubtitleTextStyle}">
-                <Run Text="{Binding CategoryName, Mode=OneWay}" />
-                <Run Text=" / 슬롯 " />
-                <Run Text="{Binding KeyText, Mode=OneWay}" />
-            </TextBlock>
-        </StackPanel>
-
-        <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto"
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <Grid>
                 <Grid.RowDefinitions>
@@ -206,7 +194,7 @@
             </Grid>
         </ScrollViewer>
 
-        <Grid Grid.Row="2"
+        <Grid Grid.Row="1"
               Style="{StaticResource Deck.FooterActionsGridStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />

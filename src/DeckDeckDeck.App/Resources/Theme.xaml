@@ -81,6 +81,20 @@
         <Setter Property="FontFamily" Value="Segoe UI" />
     </Style>
 
+    <Style x:Key="Deck.TopBarBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Height" Value="46" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.App}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+
+    <Style x:Key="Deck.WindowFrameBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.App}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
     <Style x:Key="Deck.AppPanelBorderStyle" TargetType="{x:Type Border}">
         <Setter Property="Padding" Value="{StaticResource Deck.Padding.Panel}" />
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
@@ -88,6 +102,11 @@
         <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
         <Setter Property="CornerRadius" Value="{StaticResource Deck.Radius.Panel}" />
         <Setter Property="Effect" Value="{StaticResource Deck.Effect.CardShadow}" />
+    </Style>
+
+    <Style x:Key="Deck.AppContentBorderStyle" TargetType="{x:Type Border}">
+        <Setter Property="Padding" Value="12,8,12,12" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
     </Style>
 
     <Style x:Key="Deck.StatusPanelBorderStyle" TargetType="{x:Type Border}">
@@ -164,6 +183,25 @@
            TargetType="{x:Type TextBlock}">
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+    </Style>
+
+    <Style x:Key="Deck.TopBarTitleTextStyle"
+           BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="Deck.TopBarStatusTextStyle"
+           BasedOn="{StaticResource Deck.StatusTextStyle}"
+           TargetType="{x:Type TextBlock}">
+        <Setter Property="MaxWidth" Value="160" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <Style x:Key="Deck.ErrorTextStyle"
@@ -297,6 +335,71 @@
             <Trigger Property="IsPressed" Value="True">
                 <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.Main}" />
                 <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Deck.TopBarActionButtonStyle"
+           BasedOn="{StaticResource Deck.BaseButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+        <Setter Property="FontSize" Value="13" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.Main}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Deck.TopBarBackButtonStyle"
+           BasedOn="{StaticResource Deck.TopBarActionButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="Content" Value="←" />
+        <Setter Property="ToolTip" Value="뒤로" />
+    </Style>
+
+    <Style x:Key="Deck.TopBarSettingsButtonStyle"
+           BasedOn="{StaticResource Deck.TopBarActionButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="58" />
+        <Setter Property="Content" Value="설정" />
+    </Style>
+
+    <Style x:Key="Deck.WindowControlButtonStyle"
+           BasedOn="{StaticResource Deck.TopBarActionButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="38" />
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="Deck.CloseWindowControlButtonStyle"
+           BasedOn="{StaticResource Deck.WindowControlButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.DangerSoft}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Text.Danger}" />
+                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Danger}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceMuted}" />
             </Trigger>
         </Style.Triggers>
     </Style>

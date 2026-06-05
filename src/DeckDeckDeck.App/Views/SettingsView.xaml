@@ -11,20 +11,11 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Style="{StaticResource Deck.PageHeaderStyle}">
-            <TextBlock Style="{StaticResource Deck.PageTitleTextStyle}"
-                       Text="{Binding Title}" />
-            <TextBlock Style="{StaticResource Deck.PageSubtitleTextStyle}"
-                       Text="실행 동작" />
-        </StackPanel>
-
-        <ScrollViewer Grid.Row="1"
-                      VerticalScrollBarVisibility="Auto">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
             <CheckBox Margin="0,0,0,14"
                       Content="단축키로 열 때 창을 앞으로 표시"
@@ -89,7 +80,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <Grid Grid.Row="2"
+        <Grid Grid.Row="1"
               Style="{StaticResource Deck.FooterActionsGridStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />

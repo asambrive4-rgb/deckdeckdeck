@@ -10,40 +10,5 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
-        <Grid Margin="0,0,0,18">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-
-            <Button Width="76"
-                    Margin="0,0,14,0"
-                    Command="{Binding BackCommand}"
-                    Style="{StaticResource Deck.SecondaryButtonStyle}"
-                    Content="뒤로" />
-
-            <StackPanel Grid.Column="1">
-                <TextBlock Style="{StaticResource Deck.PageTitleTextStyle}"
-                           Text="{Binding Title}" />
-                <TextBlock Style="{StaticResource Deck.PageSubtitleTextStyle}"
-                           Text="{Binding Subtitle}" />
-            </StackPanel>
-
-            <Button Grid.Column="2"
-                    Width="86"
-                    Command="{Binding SettingsCommand}"
-                    Style="{StaticResource Deck.SecondaryButtonStyle}"
-                    Content="설정" />
-        </Grid>
-
-        <views:NumpadGridView Grid.Row="1"
-                              DataContext="{Binding NumpadGrid}" />
-    </Grid>
+    <views:NumpadGridView DataContext="{Binding NumpadGrid}" />
 </UserControl>

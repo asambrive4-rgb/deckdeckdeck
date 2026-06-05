@@ -94,6 +94,95 @@ public sealed class MainViewModelNavigationTests
     }
 
     [Fact]
+    public void HomeTopBarShowsSettingsWithoutTitleOrBack()
+    {
+        var services = CreateServices();
+        var viewModel = CreateMainViewModel(services);
+        var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+
+        Assert.Equal(string.Empty, viewModel.TopBarTitle);
+        Assert.Equal("준비됨", viewModel.TopBarStatusMessage);
+        Assert.False(viewModel.ShowTopBarTitle);
+        Assert.False(viewModel.ShowTopBarBackButton);
+        Assert.True(viewModel.ShowTopBarSettingsButton);
+        Assert.Null(viewModel.TopBarBackCommand);
+        Assert.Same(home.SettingsCommand, viewModel.TopBarSettingsCommand);
+    }
+
+    [Fact]
+    public void CategoryTopBarShowsCategoryNameBackAndSettings()
+    {
+        var services = CreateServices();
+        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var category = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+
+        Assert.Equal("Writing", viewModel.TopBarTitle);
+        Assert.True(viewModel.ShowTopBarTitle);
+        Assert.True(viewModel.ShowTopBarBackButton);
+        Assert.True(viewModel.ShowTopBarSettingsButton);
+        Assert.Same(category.BackCommand, viewModel.TopBarBackCommand);
+        Assert.Same(category.SettingsCommand, viewModel.TopBarSettingsCommand);
+    }
+
+    [Fact]
+    public void SettingsTopBarShowsTitleAndBackWithoutSettings()
+    {
+        var services = CreateServices();
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.TopBarSettingsCommand!.Execute(null);
+        var settings = Assert.IsType<SettingsViewModel>(viewModel.CurrentViewModel);
+
+        Assert.Equal("설정", viewModel.TopBarTitle);
+        Assert.True(viewModel.ShowTopBarTitle);
+        Assert.True(viewModel.ShowTopBarBackButton);
+        Assert.False(viewModel.ShowTopBarSettingsButton);
+        Assert.Same(settings.BackCommand, viewModel.TopBarBackCommand);
+        Assert.Null(viewModel.TopBarSettingsCommand);
+    }
+
+    [Fact]
+    public void CategoryEditorTopBarShowsSlotTitleAndBackWithoutSettings()
+    {
+        var services = CreateServices();
+        var viewModel = CreateMainViewModel(services);
+        var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+
+        home.NumpadGrid.Numpad2.EditCommand.Execute(null);
+        var editor = Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
+
+        Assert.Equal("카테고리 편집 / 슬롯 2", viewModel.TopBarTitle);
+        Assert.True(viewModel.ShowTopBarTitle);
+        Assert.True(viewModel.ShowTopBarBackButton);
+        Assert.False(viewModel.ShowTopBarSettingsButton);
+        Assert.Same(editor.CancelCommand, viewModel.TopBarBackCommand);
+        Assert.Null(viewModel.TopBarSettingsCommand);
+    }
+
+    [Fact]
+    public void SnippetEditorTopBarShowsSlotTitleAndBackWithoutSettings()
+    {
+        var services = CreateServices();
+        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var category = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        category.NumpadGrid.Numpad3.EditCommand.Execute(null);
+        var editor = Assert.IsType<SnippetEditViewModel>(viewModel.CurrentViewModel);
+
+        Assert.Equal("실행 항목 편집 / 슬롯 3", viewModel.TopBarTitle);
+        Assert.True(viewModel.ShowTopBarTitle);
+        Assert.True(viewModel.ShowTopBarBackButton);
+        Assert.False(viewModel.ShowTopBarSettingsButton);
+        Assert.Same(editor.CancelCommand, viewModel.TopBarBackCommand);
+        Assert.Null(viewModel.TopBarSettingsCommand);
+    }
+
+    [Fact]
     public void HomeSlotEditCommandOpensCategoryEditor()
     {
         var services = CreateServices();

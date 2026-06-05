@@ -83,6 +83,23 @@ public partial class MainWindow : Window
         e.Handled = viewModel.SelectSlot(slotKey);
     }
 
+    private void OnMinimizeButtonClick(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void OnMaximizeRestoreButtonClick(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
+
+    private void OnCloseButtonClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         _windowHandle = new WindowInteropHelper(this).Handle;

@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:views="clr-namespace:DeckDeckDeck.App.Views"
         xmlns:viewModels="clr-namespace:DeckDeckDeck.App.ViewModels"
         mc:Ignorable="d"
@@ -14,7 +15,15 @@
         Style="{StaticResource Deck.MainWindowStyle}"
         ShowActivated="False"
         PreviewKeyDown="OnPreviewKeyDown">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="46"
+                            GlassFrameThickness="0"
+                            ResizeBorderThickness="6"
+                            UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
+
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <DataTemplate DataType="{x:Type viewModels:HomeViewModel}">
             <views:HomeView />
         </DataTemplate>
@@ -32,21 +41,71 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid Margin="12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <Grid Background="{StaticResource Deck.Brush.Background.App}">
+        <Border Style="{StaticResource Deck.WindowFrameBorderStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="46" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-        <Border Style="{StaticResource Deck.AppPanelBorderStyle}">
-            <ContentControl Content="{Binding CurrentViewModel}" />
-        </Border>
+                <Border Style="{StaticResource Deck.TopBarBorderStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="1"
-                Margin="0,8,0,0"
-                Style="{StaticResource Deck.StatusPanelBorderStyle}">
-            <TextBlock Style="{StaticResource Deck.StatusTextStyle}"
-                       Text="{Binding StatusMessage}" />
+                        <Button Command="{Binding TopBarBackCommand}"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                                Style="{StaticResource Deck.TopBarBackButtonStyle}"
+                                Visibility="{Binding ShowTopBarBackButton, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <TextBlock Grid.Column="1"
+                                   Margin="8,0,12,0"
+                                   Style="{StaticResource Deck.TopBarTitleTextStyle}"
+                                   Text="{Binding TopBarTitle}"
+                                   Visibility="{Binding ShowTopBarTitle, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <TextBlock Grid.Column="2"
+                                   Margin="0,0,8,0"
+                                   Style="{StaticResource Deck.TopBarStatusTextStyle}"
+                                   Text="{Binding TopBarStatusMessage}" />
+
+                        <Button Grid.Column="3"
+                                Margin="0,0,8,0"
+                                Command="{Binding TopBarSettingsCommand}"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                                Style="{StaticResource Deck.TopBarSettingsButtonStyle}"
+                                Visibility="{Binding ShowTopBarSettingsButton, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <StackPanel Grid.Column="4"
+                                    Orientation="Horizontal"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                            <Button Click="OnMinimizeButtonClick"
+                                    Style="{StaticResource Deck.WindowControlButtonStyle}"
+                                    Content="—"
+                                    ToolTip="최소화" />
+                            <Button Click="OnMaximizeRestoreButtonClick"
+                                    Style="{StaticResource Deck.WindowControlButtonStyle}"
+                                    Content="□"
+                                    ToolTip="최대화/복원" />
+                            <Button Click="OnCloseButtonClick"
+                                    Style="{StaticResource Deck.CloseWindowControlButtonStyle}"
+                                    Content="×"
+                                    ToolTip="닫기" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Style="{StaticResource Deck.AppContentBorderStyle}">
+                    <ContentControl Content="{Binding CurrentViewModel}" />
+                </Border>
+            </Grid>
         </Border>
     </Grid>
 </Window>
