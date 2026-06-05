@@ -215,6 +215,17 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public ICommand ChooseLaunchFolderCommand { get; }
 
+    public void DropImageFiles(IReadOnlyList<string> sourcePaths)
+    {
+        if (sourcePaths.Count != 1)
+        {
+            ErrorMessage = "이미지는 하나만 드롭해 주세요.";
+            return;
+        }
+
+        ReplaceImageFromPath(sourcePaths[0]);
+    }
+
     private void Save()
     {
         if (string.IsNullOrWhiteSpace(SnippetTitle))
@@ -342,9 +353,14 @@ public sealed class SnippetEditViewModel : ObservableObject
             return;
         }
 
+        ReplaceImageFromPath(selectedPath);
+    }
+
+    private void ReplaceImageFromPath(string sourcePath)
+    {
         try
         {
-            _imageState.ReplaceWithStoredImage(selectedPath);
+            _imageState.ReplaceWithStoredImage(sourcePath);
             _slotImageMode = SlotImageMode.Custom;
             NotifyImageChanged();
             ErrorMessage = string.Empty;

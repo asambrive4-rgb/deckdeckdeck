@@ -136,6 +136,17 @@ public sealed class CategoryEditViewModel : ObservableObject
 
     public ICommand RemoveImageCommand { get; }
 
+    public void DropImageFiles(IReadOnlyList<string> sourcePaths)
+    {
+        if (sourcePaths.Count != 1)
+        {
+            ErrorMessage = "이미지는 하나만 드롭해 주세요.";
+            return;
+        }
+
+        ReplaceImageFromPath(sourcePaths[0]);
+    }
+
     private void Save()
     {
         var category = SaveCategory();
@@ -307,9 +318,14 @@ public sealed class CategoryEditViewModel : ObservableObject
             return;
         }
 
+        ReplaceImageFromPath(selectedPath);
+    }
+
+    private void ReplaceImageFromPath(string sourcePath)
+    {
         try
         {
-            _imageState.ReplaceWithStoredImage(selectedPath);
+            _imageState.ReplaceWithStoredImage(sourcePath);
             NotifyImageChanged();
             ErrorMessage = string.Empty;
         }

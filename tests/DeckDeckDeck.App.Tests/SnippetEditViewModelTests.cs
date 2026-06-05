@@ -209,6 +209,26 @@ public sealed class SnippetEditViewModelTests
         Assert.Equal(1, autoBackup.RequestCount);
     }
 
+    [Fact]
+    public void DroppingImageFileUsesCustomImagePreview()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var sourcePath = CreateTinyBmp(services.Storage.TempPath);
+        var viewModel = CreateViewModel(services, category, _ => { });
+
+        var thumbnailPath = RunInSta(() =>
+        {
+            viewModel.DropImageFiles([sourcePath]);
+            return viewModel.ThumbnailPath;
+        });
+
+        Assert.Equal(SlotImageMode.Custom, viewModel.SlotImageMode);
+        Assert.True(viewModel.HasImage);
+        Assert.NotNull(thumbnailPath);
+        Assert.True(File.Exists(thumbnailPath));
+    }
+
     private static SnippetEditViewModel CreateViewModel(
         TestServices services,
         Category category,

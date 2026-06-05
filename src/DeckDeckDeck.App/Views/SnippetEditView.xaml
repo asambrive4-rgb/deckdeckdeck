@@ -168,8 +168,12 @@
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="이미지" />
                     <DockPanel LastChildFill="False">
-                        <Border Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
+                        <Border AllowDrop="True"
+                                DragOver="ImageDropTarget_DragOver"
+                                Drop="ImageDropTarget_Drop"
+                                Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
                             <Image Source="{Binding ThumbnailPath}"
+                                   IsHitTestVisible="False"
                                    Stretch="Uniform" />
                         </Border>
                         <StackPanel Margin="12,0,0,0"

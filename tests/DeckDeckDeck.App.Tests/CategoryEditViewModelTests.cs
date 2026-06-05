@@ -111,6 +111,25 @@ public sealed class CategoryEditViewModelTests
         Assert.Equal(1, autoBackup.RequestCount);
     }
 
+    [Fact]
+    public void DroppingImageFileUpdatesThumbnailPreview()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad4, "Writing", null);
+        var sourcePath = CreateTinyBmp(services.Storage.TempPath);
+        var viewModel = CreateViewModel(services, category, new StubDialogService(), _ => { });
+
+        var thumbnailPath = RunInSta(() =>
+        {
+            viewModel.DropImageFiles([sourcePath]);
+            return viewModel.ThumbnailPath;
+        });
+
+        Assert.True(viewModel.HasImage);
+        Assert.NotNull(thumbnailPath);
+        Assert.True(File.Exists(thumbnailPath));
+    }
+
     private static CategoryEditViewModel CreateViewModel(
         TestServices services,
         Category category,
