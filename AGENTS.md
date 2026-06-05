@@ -185,9 +185,16 @@ Get-Process -Name DeckDeckDeck -ErrorAction SilentlyContinue | Stop-Process
 Copy-Item .\artifacts\publish\win-x64\DeckDeckDeck.App.exe .\DeckDeckDeck.exe -Force
 ```
 
-4. 최종 답변에서 `DeckDeckDeck.exe`를 더블클릭하면 된다고 알려주고, 테스트 결과와 exe 생성 여부를 함께 설명합니다.
+4. 복사까지 성공했다면 실행 파일을 한 번 실행해 사용자가 바로 확인할 수 있게 합니다.
+
+```powershell
+.\DeckDeckDeck.exe
+```
+
+5. 최종 답변에서 `DeckDeckDeck.exe`를 더블클릭하면 된다고 알려주고, 테스트 결과, exe 생성 여부, 실행 시도 여부를 함께 설명합니다.
 
 주의할 점:
 
 - 테스트가 실패했다면 실패 이유를 먼저 설명하고, `DeckDeckDeck.exe`를 최신 성공 빌드처럼 말하지 마세요.
+- 실행에 실패했다면 실패 이유를 설명하세요.
 - `DeckDeckDeck.exe`는 로컬 실행용 결과물이므로 Git에 커밋하지 마세요.
