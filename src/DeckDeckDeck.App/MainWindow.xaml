@@ -24,20 +24,44 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <Style x:Key="Deck.ViewTransitionContainerStyle" TargetType="{x:Type Border}">
+            <Setter Property="Opacity" Value="0" />
+            <Style.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                             To="1"
+                                             Duration="0:0:0.12" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Style.Triggers>
+        </Style>
         <DataTemplate DataType="{x:Type viewModels:HomeViewModel}">
-            <views:HomeView />
+            <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
+                <views:HomeView />
+            </Border>
         </DataTemplate>
         <DataTemplate DataType="{x:Type viewModels:CategoryViewModel}">
-            <views:CategoryView />
+            <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
+                <views:CategoryView />
+            </Border>
         </DataTemplate>
         <DataTemplate DataType="{x:Type viewModels:CategoryEditViewModel}">
-            <views:CategoryEditView />
+            <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
+                <views:CategoryEditView />
+            </Border>
         </DataTemplate>
         <DataTemplate DataType="{x:Type viewModels:SnippetEditViewModel}">
-            <views:SnippetEditView />
+            <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
+                <views:SnippetEditView />
+            </Border>
         </DataTemplate>
         <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
-            <views:SettingsView />
+            <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
+                <views:SettingsView />
+            </Border>
         </DataTemplate>
     </Window.Resources>
 
