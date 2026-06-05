@@ -61,6 +61,8 @@
                 <StackPanel>
                     <TextBlock Text="{Binding HomeHotkeyText}" />
                     <TextBlock Margin="0,6,0,0"
+                               Text="{Binding MinimizeHotkeyText}" />
+                    <TextBlock Margin="0,6,0,0"
                                Text="{Binding DirectCategoryHotkeysText}" />
                 </StackPanel>
             </Border>

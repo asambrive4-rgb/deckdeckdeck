@@ -38,6 +38,7 @@ public partial class MainWindow : Window
         Closing += OnClosing;
         Closed += OnClosed;
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
+        _hotkeyService.HotkeyLongPressed += OnHotkeyLongPressed;
         _numpadCaptureService.SlotCaptured += OnNumpadSlotCaptured;
     }
 
@@ -193,6 +194,17 @@ public partial class MainWindow : Window
         SelectCapturedSlot(e.SlotKey);
     }
 
+    private void OnHotkeyLongPressed(object? sender, HotkeyPressedEventArgs e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(() => HandleHotkeyLongPress(e.SlotKey));
+            return;
+        }
+
+        HandleHotkeyLongPress(e.SlotKey);
+    }
+
     private void HandleHotkey(SlotKey slotKey)
     {
         _lastPasteTargetWindowHandle = _windowFocusService.GetForegroundWindow();
@@ -211,6 +223,17 @@ public partial class MainWindow : Window
         }
 
         viewModel.OpenCategoryFromHotkey(slotKey);
+    }
+
+    private void HandleHotkeyLongPress(SlotKey slotKey)
+    {
+        if (slotKey != SlotKey.Numpad0)
+        {
+            return;
+        }
+
+        EndPasteSelection();
+        WindowState = WindowState.Minimized;
     }
 
     private void SelectCapturedSlot(SlotKey slotKey)

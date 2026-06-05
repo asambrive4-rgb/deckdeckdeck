@@ -9,17 +9,49 @@ public sealed class HotkeyService : IDisposable
 {
     private const int HotkeyIdBase = 1000;
     private const int ErrorHotkeyAlreadyRegistered = 1409;
+    private static readonly TimeSpan HomeLongPressThreshold = TimeSpan.FromMilliseconds(375);
+    private static readonly TimeSpan HomeLongPressPollInterval = TimeSpan.FromMilliseconds(25);
 
     private readonly Dictionary<int, SlotKey> _hotkeysById = new();
     private readonly Dictionary<uint, SlotKey> _hookFallbackHotkeysByVirtualKey = new();
     private readonly HashSet<uint> _hookFallbackKeysDown = [];
     private readonly HashSet<int> _registeredIds = [];
+    private readonly object _homeLongPressLock = new();
+    private readonly TimeSpan _homeLongPressThreshold;
+    private readonly TimeSpan _homeLongPressPollInterval;
+    private readonly Func<int, bool> _isKeyDown;
+    private readonly Func<TimeSpan, CancellationToken, Task> _delayAsync;
+    private CancellationTokenSource? _homeLongPressCancellation;
+    private bool _suppressHomeHotkeyUntilRelease;
     private User32.LowLevelKeyboardProc? _keyboardHookCallback;
     private IntPtr _keyboardHookHandle;
     private HwndSource? _source;
     private IntPtr _windowHandle;
 
+    public HotkeyService()
+        : this(
+            HomeLongPressThreshold,
+            HomeLongPressPollInterval,
+            IsKeyDown,
+            Task.Delay)
+    {
+    }
+
+    internal HotkeyService(
+        TimeSpan homeLongPressThreshold,
+        TimeSpan homeLongPressPollInterval,
+        Func<int, bool> isKeyDown,
+        Func<TimeSpan, CancellationToken, Task> delayAsync)
+    {
+        _homeLongPressThreshold = homeLongPressThreshold;
+        _homeLongPressPollInterval = homeLongPressPollInterval;
+        _isKeyDown = isKeyDown;
+        _delayAsync = delayAsync;
+    }
+
     public event EventHandler<HotkeyPressedEventArgs>? HotkeyPressed;
+
+    public event EventHandler<HotkeyPressedEventArgs>? HotkeyLongPressed;
 
     public IReadOnlyList<string> Start(IntPtr windowHandle)
     {
@@ -77,6 +109,7 @@ public sealed class HotkeyService : IDisposable
         _hotkeysById.Clear();
         _hookFallbackHotkeysByVirtualKey.Clear();
         _hookFallbackKeysDown.Clear();
+        CancelHomeLongPressTracking();
 
         if (_keyboardHookHandle != IntPtr.Zero)
         {
@@ -108,7 +141,7 @@ public sealed class HotkeyService : IDisposable
             return IntPtr.Zero;
         }
 
-        HotkeyPressed?.Invoke(this, new HotkeyPressedEventArgs(slotKey));
+        RaiseHotkeyPressed(slotKey);
         handled = true;
         return IntPtr.Zero;
     }
@@ -156,6 +189,11 @@ public sealed class HotkeyService : IDisposable
         if (message is Win32Constants.WmKeyup or Win32Constants.WmSyskeyup)
         {
             _hookFallbackKeysDown.Remove(virtualKey);
+            if (virtualKey is Win32Constants.VkControl or Win32Constants.VkNumpad0)
+            {
+                CancelHomeLongPressTracking();
+            }
+
             return User32.CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
         }
 
@@ -164,7 +202,7 @@ public sealed class HotkeyService : IDisposable
         {
             if (_hookFallbackKeysDown.Add(virtualKey))
             {
-                HotkeyPressed?.Invoke(this, new HotkeyPressedEventArgs(slotKey));
+                RaiseHotkeyPressed(slotKey);
             }
 
             return new IntPtr(1);
@@ -183,6 +221,135 @@ public sealed class HotkeyService : IDisposable
         return IsKeyDown(Win32Constants.VkControl)
             && !IsKeyDown(Win32Constants.VkShift)
             && !IsKeyDown(Win32Constants.VkMenu);
+    }
+
+    internal void RaiseHotkeyPressed(SlotKey slotKey)
+    {
+        if (slotKey == SlotKey.Numpad0 && ShouldSuppressHomeHotkeyPress())
+        {
+            return;
+        }
+
+        HotkeyPressed?.Invoke(this, new HotkeyPressedEventArgs(slotKey));
+
+        if (slotKey == SlotKey.Numpad0)
+        {
+            StartHomeLongPressTracking();
+        }
+    }
+
+    private void StartHomeLongPressTracking()
+    {
+        var cancellation = new CancellationTokenSource();
+        CancellationTokenSource? previousCancellation;
+
+        lock (_homeLongPressLock)
+        {
+            previousCancellation = _homeLongPressCancellation;
+            _homeLongPressCancellation = cancellation;
+        }
+
+        previousCancellation?.Cancel();
+        _ = TrackHomeLongPressAsync(cancellation);
+    }
+
+    private void CancelHomeLongPressTracking()
+    {
+        CancellationTokenSource? cancellation;
+
+        lock (_homeLongPressLock)
+        {
+            cancellation = _homeLongPressCancellation;
+            _homeLongPressCancellation = null;
+            _suppressHomeHotkeyUntilRelease = false;
+        }
+
+        cancellation?.Cancel();
+    }
+
+    private async Task TrackHomeLongPressAsync(CancellationTokenSource cancellation)
+    {
+        try
+        {
+            var elapsed = TimeSpan.Zero;
+            while (elapsed < _homeLongPressThreshold)
+            {
+                await _delayAsync(_homeLongPressPollInterval, cancellation.Token).ConfigureAwait(false);
+                elapsed += _homeLongPressPollInterval;
+
+                if (!IsHomeHotkeyStillPressed())
+                {
+                    return;
+                }
+            }
+
+            lock (_homeLongPressLock)
+            {
+                _suppressHomeHotkeyUntilRelease = true;
+            }
+
+            HotkeyLongPressed?.Invoke(this, new HotkeyPressedEventArgs(SlotKey.Numpad0));
+            await WaitForHomeHotkeyReleaseAsync(cancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            lock (_homeLongPressLock)
+            {
+                if (ReferenceEquals(_homeLongPressCancellation, cancellation))
+                {
+                    _homeLongPressCancellation = null;
+                }
+            }
+
+            cancellation.Dispose();
+        }
+    }
+
+    private bool ShouldSuppressHomeHotkeyPress()
+    {
+        lock (_homeLongPressLock)
+        {
+            if (!_suppressHomeHotkeyUntilRelease)
+            {
+                return false;
+            }
+        }
+
+        if (IsHomeHotkeyStillPressed())
+        {
+            return true;
+        }
+
+        lock (_homeLongPressLock)
+        {
+            _suppressHomeHotkeyUntilRelease = false;
+        }
+
+        return false;
+    }
+
+    private async Task WaitForHomeHotkeyReleaseAsync(CancellationToken cancellationToken)
+    {
+        while (IsHomeHotkeyStillPressed())
+        {
+            await _delayAsync(_homeLongPressPollInterval, cancellationToken).ConfigureAwait(false);
+        }
+
+        lock (_homeLongPressLock)
+        {
+            _suppressHomeHotkeyUntilRelease = false;
+        }
+    }
+
+    private bool IsHomeHotkeyStillPressed()
+    {
+        return _isKeyDown(Win32Constants.VkControl)
+            && _isKeyDown((int)Win32Constants.VkNumpad0)
+            && !_isKeyDown(Win32Constants.VkShift)
+            && !_isKeyDown(Win32Constants.VkMenu);
     }
 
     private static bool IsKeyDown(int virtualKey)

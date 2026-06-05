@@ -65,6 +65,8 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string HomeHotkeyText => $"홈: {HomeHotkey}";
 
+    public string MinimizeHotkeyText => "최소화: Ctrl + Numpad0 길게 누르기";
+
     public string DirectCategoryHotkeysText => $"카테고리 바로 열기: {DirectCategoryHotkeys}";
 
     public string AdminPermissionNotice =>
