@@ -5,7 +5,7 @@ namespace DeckDeckDeck.App.Services;
 internal sealed class PasteFlowService
 {
     private readonly IClipboardPasteService _clipboardPasteService;
-    private readonly Action _completePasteSelection;
+    private readonly Func<Action> _createPasteSelectionCompletion;
     private readonly IFileLaunchService _fileLaunchService;
     private readonly Func<IntPtr> _getPasteTargetWindowHandle;
     private readonly Action _hideWindowAfterPaste;
@@ -21,7 +21,7 @@ internal sealed class PasteFlowService
         SettingsService settingsService,
         Func<IntPtr> getPasteTargetWindowHandle,
         Action hideWindowAfterPaste,
-        Action completePasteSelection,
+        Func<Action> createPasteSelectionCompletion,
         Action<string> showStatus,
         LoggingService? loggingService)
     {
@@ -31,7 +31,7 @@ internal sealed class PasteFlowService
         _settingsService = settingsService;
         _getPasteTargetWindowHandle = getPasteTargetWindowHandle;
         _hideWindowAfterPaste = hideWindowAfterPaste;
-        _completePasteSelection = completePasteSelection;
+        _createPasteSelectionCompletion = createPasteSelectionCompletion;
         _showStatus = showStatus;
         _loggingService = loggingService;
     }
@@ -39,6 +39,7 @@ internal sealed class PasteFlowService
     public async Task PasteSnippetAsync(Snippet snippet)
     {
         var settings = _settingsService.Load();
+        var completePasteSelection = _createPasteSelectionCompletion();
 
         try
         {
@@ -76,7 +77,7 @@ internal sealed class PasteFlowService
         }
         finally
         {
-            _completePasteSelection();
+            completePasteSelection();
         }
     }
 

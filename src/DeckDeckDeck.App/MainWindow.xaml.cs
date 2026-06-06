@@ -16,6 +16,7 @@ public partial class MainWindow : Window
 {
     private readonly HotkeyService _hotkeyService = new();
     private readonly NumpadCaptureService _numpadCaptureService = new();
+    private readonly PasteSelectionSession _pasteSelectionSession = new();
     private readonly PaletteWindowService _paletteWindowService = new();
     private readonly WindowPlacementService _windowPlacementService = new();
     private readonly WindowFocusService _windowFocusService = new();
@@ -32,7 +33,8 @@ public partial class MainWindow : Window
             () => _lastPasteTargetWindowHandle,
             HideAfterPaste,
             EnterEditMode,
-            EndPasteSelection);
+            completePasteSelection: null,
+            createPasteSelectionCompletion: () => _pasteSelectionSession.CreateCompletion(EndPasteSelection));
         SourceInitialized += OnSourceInitialized;
         StateChanged += OnStateChanged;
         Closing += OnClosing;
@@ -246,6 +248,7 @@ public partial class MainWindow : Window
 
     private void EnterPasteMode()
     {
+        _pasteSelectionSession.Start();
         _numpadCaptureService.Start(_windowHandle);
     }
 

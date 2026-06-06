@@ -47,6 +47,7 @@ internal static class TestAppFactory
         Action? hideWindowAfterPaste = null,
         Action? enterEditMode = null,
         Action? completePasteSelection = null,
+        Func<Action>? createPasteSelectionCompletion = null,
         IFileLaunchService? fileLaunchService = null,
         IUrlLaunchService? urlLaunchService = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
@@ -62,6 +63,7 @@ internal static class TestAppFactory
             hideWindowAfterPaste,
             enterEditMode,
             completePasteSelection,
+            createPasteSelectionCompletion,
             loggingService: services.LoggingService,
             thumbnailService: services.ThumbnailService,
             fileLaunchService: fileLaunchService,

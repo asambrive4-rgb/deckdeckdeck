@@ -19,8 +19,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Func<IntPtr>? getPasteTargetWindowHandle = null,
         Action? hideWindowAfterPaste = null,
         Action? enterEditMode = null,
-        Action? completePasteSelection = null)
-        : this(AppServices.CreateDefault(), getPasteTargetWindowHandle, hideWindowAfterPaste, enterEditMode, completePasteSelection)
+        Action? completePasteSelection = null,
+        Func<Action>? createPasteSelectionCompletion = null)
+        : this(
+            AppServices.CreateDefault(),
+            getPasteTargetWindowHandle,
+            hideWindowAfterPaste,
+            enterEditMode,
+            completePasteSelection,
+            createPasteSelectionCompletion)
     {
     }
 
@@ -35,6 +42,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Action? hideWindowAfterPaste = null,
         Action? enterEditMode = null,
         Action? completePasteSelection = null,
+        Func<Action>? createPasteSelectionCompletion = null,
         LoggingService? loggingService = null,
         ThumbnailService? thumbnailService = null,
         IFileLaunchService? fileLaunchService = null,
@@ -70,6 +78,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             hideWindowAfterPaste,
             enterEditMode,
             completePasteSelection,
+            createPasteSelectionCompletion,
             autoBackupCoordinator);
     }
 
@@ -78,7 +87,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Func<IntPtr>? getPasteTargetWindowHandle,
         Action? hideWindowAfterPaste,
         Action? enterEditMode,
-        Action? completePasteSelection)
+        Action? completePasteSelection,
+        Func<Action>? createPasteSelectionCompletion)
     {
         Initialize(
             services,
@@ -86,6 +96,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             hideWindowAfterPaste,
             enterEditMode,
             completePasteSelection,
+            createPasteSelectionCompletion,
             autoBackupCoordinator: null);
     }
 
@@ -266,6 +277,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Action? hideWindowAfterPaste,
         Action? enterEditMode,
         Action? completePasteSelection,
+        Func<Action>? createPasteSelectionCompletion,
         IAutoBackupCoordinator? autoBackupCoordinator)
     {
         _categoryService = services.CategoryService;
@@ -287,7 +299,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             services.SettingsService,
             getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
             hideWindowAfterPaste ?? (() => { }),
-            completePasteSelection ?? (() => { }),
+            createPasteSelectionCompletion ?? (() => completePasteSelection ?? (() => { })),
             ShowStatus,
             services.LoggingService);
 
