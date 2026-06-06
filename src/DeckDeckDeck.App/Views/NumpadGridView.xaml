@@ -92,6 +92,10 @@
                                 </Border>
                                 <TextBlock x:Name="DisplayTextBlock"
                                            Style="{StaticResource Deck.SlotTitleTextStyle}"
+                                           LineHeight="20"
+                                           LineStackingStrategy="BlockLineHeight"
+                                           MaxHeight="40"
+                                           TextWrapping="Wrap"
                                            Text="{Binding DisplayText}" />
                             </Grid>
                         </Grid>
