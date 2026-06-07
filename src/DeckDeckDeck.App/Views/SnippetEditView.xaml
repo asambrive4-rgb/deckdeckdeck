@@ -107,6 +107,7 @@
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="붙여넣을 문구" />
                     <TextBox MinHeight="180"
+                             MaxHeight="280"
                              AcceptsReturn="True"
                              AcceptsTab="True"
                              Style="{StaticResource Deck.TextBoxStyle}"
