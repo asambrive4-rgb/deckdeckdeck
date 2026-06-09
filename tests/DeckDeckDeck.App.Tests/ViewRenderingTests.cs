@@ -66,6 +66,11 @@ public sealed class ViewRenderingTests
                     SlotKey.Numpad3,
                     snippet: null,
                     services.SnippetService,
+                    new SnippetTransferService(
+                        services.SnippetService,
+                        services.SettingsService,
+                        services.ThumbnailService,
+                        services.LoggingService),
                     new DialogService(),
                     () => { },
                     _ => { },

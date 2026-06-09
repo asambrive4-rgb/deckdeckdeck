@@ -56,6 +56,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             settingsService,
             thumbnailService,
             loggingService);
+        var snippetTransferService = new SnippetTransferService(
+            snippetService,
+            settingsService,
+            thumbnailService,
+            loggingService);
 
         var services = new AppServices(
             categoryService,
@@ -65,6 +70,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             settingsService,
             slotService,
             snippetService,
+            snippetTransferService,
             snippetImageService,
             clipboardPasteService ?? new ClipboardPasteService(),
             fileLaunchService ?? new FileLaunchService(),

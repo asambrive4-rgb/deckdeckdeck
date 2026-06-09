@@ -20,6 +20,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly Guid? _snippetId;
     private readonly SnippetImageService? _snippetImageService;
     private readonly SnippetService _snippetService;
+    private readonly SnippetTransferService _snippetTransferService;
     private readonly Action<string> _showStatus;
     private readonly ThumbnailService? _thumbnailService;
     private AutoIconCacheEntry? _autoIcon;
@@ -30,6 +31,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private bool _isSlotEnabled;
     private string _launchPath = string.Empty;
     private string _launchUrl = string.Empty;
+    private SnippetTransferTargetSlot? _selectedTransferTarget;
     private SlotImageMode _slotImageMode = SlotImageMode.Auto;
     private string _snippetTitle = string.Empty;
 
@@ -38,6 +40,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         SlotKey slotKey,
         Snippet? snippet,
         SnippetService snippetService,
+        SnippetTransferService snippetTransferService,
         DialogService dialogService,
         Action cancel,
         Action<Snippet> afterSave,
@@ -55,6 +58,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         KeyText = slotKey.GetDisplayText();
         _snippetId = snippet?.Id;
         _snippetService = snippetService;
+        _snippetTransferService = snippetTransferService;
         _dialogService = dialogService;
         _settingsService = settingsService;
         _loggingService = loggingService;
@@ -75,11 +79,15 @@ public sealed class SnippetEditViewModel : ObservableObject
         _slotImageMode = GetInitialSlotImageMode(snippet);
         _autoIcon = AutoIconCacheEntry.FromSnippet(snippet);
         _description = snippet?.Description ?? string.Empty;
+        TransferTargetSlots = BuildTransferTargetSlots();
+        _selectedTransferTarget = TransferTargetSlots.FirstOrDefault();
         _originalIsSlotEnabled = LoadSlotEnabledState();
         _isSlotEnabled = _originalIsSlotEnabled;
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
         DeleteCommand = new RelayCommand(Delete);
+        CopySnippetCommand = new RelayCommand(CopySnippet);
+        MoveSnippetCommand = new RelayCommand(MoveSnippet);
         ChooseImageCommand = new RelayCommand(ChooseImage);
         RemoveImageCommand = new RelayCommand(RemoveImage);
         ChooseLaunchFileCommand = new RelayCommand(ChooseLaunchFile);
@@ -99,6 +107,16 @@ public sealed class SnippetEditViewModel : ObservableObject
     public bool IsExisting => _snippetId.HasValue;
 
     public bool CanDelete => IsExisting;
+
+    public bool CanTransfer => IsExisting;
+
+    public IReadOnlyList<SnippetTransferTargetSlot> TransferTargetSlots { get; }
+
+    public SnippetTransferTargetSlot? SelectedTransferTarget
+    {
+        get => _selectedTransferTarget;
+        set => SetProperty(ref _selectedTransferTarget, value);
+    }
 
     public string SnippetTitle
     {
@@ -207,6 +225,10 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public ICommand DeleteCommand { get; }
 
+    public ICommand CopySnippetCommand { get; }
+
+    public ICommand MoveSnippetCommand { get; }
+
     public ICommand ChooseImageCommand { get; }
 
     public ICommand RemoveImageCommand { get; }
@@ -228,32 +250,44 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private void Save()
     {
+        var snippet = SaveSnippet();
+        if (snippet is null)
+        {
+            return;
+        }
+
+        _showStatus($"{snippet.Title} 저장됨.");
+        _afterSave(snippet);
+    }
+
+    private Snippet? SaveSnippet(bool requestAutoBackup = true)
+    {
         if (string.IsNullOrWhiteSpace(SnippetTitle))
         {
             if (TrySaveSlotOnly())
             {
-                return;
+                return null;
             }
 
             ErrorMessage = "슬롯 명을 입력해 주세요.";
-            return;
+            return null;
         }
 
         if (ActionType == SnippetActionType.PasteText && string.IsNullOrWhiteSpace(Content))
         {
             if (TrySaveSlotOnly())
             {
-                return;
+                return null;
             }
 
             ErrorMessage = "붙여넣을 문구를 입력해 주세요.";
-            return;
+            return null;
         }
 
         if (ActionType == SnippetActionType.LaunchFile && string.IsNullOrWhiteSpace(LaunchPath))
         {
             ErrorMessage = "실행할 파일, 폴더 또는 바로 가기를 선택해 주세요.";
-            return;
+            return null;
         }
 
         var launchUrl = LaunchUrl;
@@ -262,7 +296,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             if (!UrlAddress.TryNormalize(LaunchUrl, out launchUrl))
             {
                 ErrorMessage = "열 웹페이지 주소를 http 또는 https 주소로 입력해 주세요.";
-                return;
+                return null;
             }
 
             LaunchUrl = launchUrl;
@@ -270,7 +304,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 
         if (!SaveSlotEnabled())
         {
-            return;
+            return null;
         }
 
         var autoIcon = PrepareAutoIconForSave();
@@ -303,9 +337,14 @@ public sealed class SnippetEditViewModel : ObservableObject
 
         _imageState.DeleteOriginalImageIfReplaced();
         _imageState.MarkCurrentAsOriginal();
-        _autoBackupCoordinator?.RequestAutoBackup();
-        _showStatus($"{snippet.Title} 저장됨.");
-        _afterSave(snippet);
+        if (requestAutoBackup)
+        {
+            _autoBackupCoordinator?.RequestAutoBackup();
+        }
+
+        ErrorMessage = string.Empty;
+
+        return snippet;
     }
 
     private void Cancel()
@@ -337,6 +376,86 @@ public sealed class SnippetEditViewModel : ObservableObject
         _autoBackupCoordinator?.RequestAutoBackup();
         _showStatus("실행 항목을 삭제했습니다.");
         _afterDelete();
+    }
+
+    private void CopySnippet()
+    {
+        TransferSnippet(
+            "복사",
+            targetSlotKey => _snippetTransferService.CopySnippet(
+                _snippetId!.Value,
+                targetSlotKey,
+                IsSlotEnabled),
+            targetSlotKey => $"슬롯 {targetSlotKey.GetDisplayText()}에 실행 항목을 복사했습니다.");
+    }
+
+    private void MoveSnippet()
+    {
+        TransferSnippet(
+            "이동",
+            targetSlotKey => _snippetTransferService.MoveSnippet(
+                _snippetId!.Value,
+                SlotKey,
+                targetSlotKey,
+                IsSlotEnabled),
+            targetSlotKey => $"슬롯 {targetSlotKey.GetDisplayText()}로 실행 항목을 이동했습니다.");
+    }
+
+    private void TransferSnippet(
+        string actionText,
+        Func<SlotKey, Snippet> transfer,
+        Func<SlotKey, string> getStatusMessage)
+    {
+        if (!_snippetId.HasValue)
+        {
+            ErrorMessage = "저장된 실행 항목만 복사하거나 이동할 수 있습니다.";
+            return;
+        }
+
+        if (SelectedTransferTarget is null)
+        {
+            ErrorMessage = "대상 슬롯을 선택해 주세요.";
+            return;
+        }
+
+        var targetSlotKey = SelectedTransferTarget.SlotKey;
+        if (!ConfirmOverwriteIfNeeded(targetSlotKey, actionText))
+        {
+            return;
+        }
+
+        if (SaveSnippet(requestAutoBackup: false) is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var transferredSnippet = transfer(targetSlotKey);
+            _autoBackupCoordinator?.RequestAutoBackup();
+            _afterSave(transferredSnippet);
+            _showStatus(getStatusMessage(targetSlotKey));
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"실행 항목 {actionText}에 실패했습니다.";
+            _loggingService?.Log($"Snippet {actionText} failed for slot {SlotKey}.", ex);
+        }
+    }
+
+    private bool ConfirmOverwriteIfNeeded(SlotKey targetSlotKey, string actionText)
+    {
+        var targetSnippet = _snippetService
+            .GetByCategoryId(CategoryId)
+            .FirstOrDefault(snippet => snippet.SlotKey == targetSlotKey);
+        if (targetSnippet is null || targetSnippet.Id == _snippetId)
+        {
+            return true;
+        }
+
+        return _dialogService.Confirm(
+            $"실행 항목 {actionText}",
+            $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{targetSnippet.Title}' 실행 항목이 있습니다.\n기존 실행 항목을 덮어쓸까요?");
     }
 
     private void ChooseImage()
@@ -472,6 +591,35 @@ public sealed class SnippetEditViewModel : ObservableObject
             : snippet.SlotImageMode;
     }
 
+    private IReadOnlyList<SnippetTransferTargetSlot> BuildTransferTargetSlots()
+    {
+        var snippetsBySlot = _snippetService
+            .GetByCategoryId(CategoryId)
+            .Where(snippet => !_snippetId.HasValue || snippet.Id != _snippetId.Value)
+            .ToDictionary(snippet => snippet.SlotKey);
+
+        return SlotKeyCatalog.All
+            .Where(slotKey => slotKey != SlotKey)
+            .Select(slotKey =>
+            {
+                snippetsBySlot.TryGetValue(slotKey, out var snippet);
+
+                return new SnippetTransferTargetSlot(
+                    slotKey,
+                    FormatTransferTargetLabel(slotKey, snippet));
+            })
+            .ToList();
+    }
+
+    private static string FormatTransferTargetLabel(SlotKey slotKey, Snippet? snippet)
+    {
+        var prefix = $"슬롯 {slotKey.GetDisplayText()}";
+
+        return snippet is null
+            ? $"{prefix} - 비어 있음"
+            : $"{prefix} - {snippet.Title}";
+    }
+
     private bool LoadSlotEnabledState()
     {
         var settings = _settingsService?.Load();
@@ -523,4 +671,17 @@ public sealed class SnippetEditViewModel : ObservableObject
             return false;
         }
     }
+}
+
+public sealed class SnippetTransferTargetSlot
+{
+    public SnippetTransferTargetSlot(SlotKey slotKey, string label)
+    {
+        SlotKey = slotKey;
+        Label = label;
+    }
+
+    public SlotKey SlotKey { get; }
+
+    public string Label { get; }
 }

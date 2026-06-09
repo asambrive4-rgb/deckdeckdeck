@@ -229,29 +229,136 @@ public sealed class SnippetEditViewModelTests
         Assert.True(File.Exists(thumbnailPath));
     }
 
+    [Fact]
+    public void CopySnippetOverwritesTargetAfterConfirmAndCopiesSlotEnabled()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var source = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        services.SnippetService.Create(category.Id, SlotKey.Numpad5, "Old", "Bye", null);
+        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
+        var statusMessages = new List<string>();
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateViewModel(
+            services,
+            category,
+            _ => { },
+            snippet: source,
+            autoBackupCoordinator: autoBackup,
+            showStatus: statusMessages.Add);
+        viewModel.SelectedTransferTarget = GetTargetSlot(viewModel, SlotKey.Numpad5);
+
+        viewModel.CopySnippetCommand.Execute(null);
+
+        var snippets = services.SnippetService.GetByCategoryId(category.Id);
+        var copiedSnippet = snippets.Single(snippet => snippet.SlotKey == SlotKey.Numpad5);
+        var settings = services.SettingsService.Load();
+
+        Assert.Equal(2, snippets.Count);
+        Assert.NotEqual(source.Id, copiedSnippet.Id);
+        Assert.Equal("Paste", copiedSnippet.Title);
+        Assert.Equal("Hello", copiedSnippet.Content);
+        Assert.False(settings.EnabledSnippetSlotKeys[SlotKey.Numpad3]);
+        Assert.False(settings.EnabledSnippetSlotKeys[SlotKey.Numpad5]);
+        Assert.Equal(1, autoBackup.RequestCount);
+        Assert.Equal("슬롯 5에 실행 항목을 복사했습니다.", statusMessages.Last());
+    }
+
+    [Fact]
+    public void MoveSnippetMovesSlotEnabledAndResetsSourceSlot()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var source = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
+        var statusMessages = new List<string>();
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateViewModel(
+            services,
+            category,
+            _ => { },
+            snippet: source,
+            autoBackupCoordinator: autoBackup,
+            showStatus: statusMessages.Add);
+        viewModel.SelectedTransferTarget = GetTargetSlot(viewModel, SlotKey.Numpad5);
+
+        viewModel.MoveSnippetCommand.Execute(null);
+
+        var snippets = services.SnippetService.GetByCategoryId(category.Id);
+        var movedSnippet = Assert.Single(snippets);
+        var settings = services.SettingsService.Load();
+
+        Assert.Equal(source.Id, movedSnippet.Id);
+        Assert.Equal(SlotKey.Numpad5, movedSnippet.SlotKey);
+        Assert.False(settings.EnabledSnippetSlotKeys[SlotKey.Numpad5]);
+        Assert.True(settings.EnabledSnippetSlotKeys[SlotKey.Numpad3]);
+        Assert.Equal(1, autoBackup.RequestCount);
+        Assert.Equal("슬롯 5로 실행 항목을 이동했습니다.", statusMessages.Last());
+    }
+
+    [Fact]
+    public void SnippetTransferCancelDoesNotOverwriteTarget()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var source = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        services.SnippetService.Create(category.Id, SlotKey.Numpad5, "Old", "Bye", null);
+        var dialogService = new StubDialogService { ConfirmResult = false };
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateViewModel(
+            services,
+            category,
+            _ => { },
+            dialogService,
+            source,
+            autoBackup);
+        viewModel.SelectedTransferTarget = GetTargetSlot(viewModel, SlotKey.Numpad5);
+
+        viewModel.MoveSnippetCommand.Execute(null);
+
+        var snippets = services.SnippetService.GetByCategoryId(category.Id);
+
+        Assert.Equal("Paste", snippets.Single(snippet => snippet.SlotKey == SlotKey.Numpad3).Title);
+        Assert.Equal("Old", snippets.Single(snippet => snippet.SlotKey == SlotKey.Numpad5).Title);
+        Assert.Equal(0, autoBackup.RequestCount);
+    }
+
     private static SnippetEditViewModel CreateViewModel(
         TestServices services,
         Category category,
         Action<Snippet> afterSave,
         DialogService? dialogService = null,
         Snippet? snippet = null,
-        IAutoBackupCoordinator? autoBackupCoordinator = null)
+        IAutoBackupCoordinator? autoBackupCoordinator = null,
+        Action<string>? showStatus = null)
     {
         return new SnippetEditViewModel(
             category,
             SlotKey.Numpad3,
             snippet,
             services.SnippetService,
+            new SnippetTransferService(
+                services.SnippetService,
+                services.SettingsService,
+                services.ThumbnailService,
+                services.LoggingService),
             dialogService ?? new StubDialogService(),
             () => { },
             afterSave,
             () => { },
-            _ => { },
+            showStatus ?? (_ => { }),
             thumbnailService: services.ThumbnailService,
             settingsService: services.SettingsService,
             loggingService: services.LoggingService,
             snippetImageService: services.SnippetImageService,
             autoBackupCoordinator: autoBackupCoordinator);
+    }
+
+    private static SnippetTransferTargetSlot GetTargetSlot(
+        SnippetEditViewModel viewModel,
+        SlotKey slotKey)
+    {
+        return viewModel.TransferTargetSlots.First(targetSlot => targetSlot.SlotKey == slotKey);
     }
 
     private static string CreateLaunchFile(TestServices services, string fileName)

@@ -366,6 +366,99 @@ public sealed class DataPersistenceTests
             });
     }
 
+    [Fact]
+    public void CopyingSnippetToSlotOverwritesTargetAndPreservesFields()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        var autoIcon = new AutoIconCacheEntry(
+            "cache-icon.png",
+            @"C:\tools\app.exe",
+            new DateTime(2026, 6, 9, 0, 0, 0, DateTimeKind.Utc),
+            123);
+        var source = services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Open app",
+            "unused",
+            "Launch helper",
+            "source-snippet.png",
+            "source-snippet-thumbnail.png",
+            SnippetActionType.LaunchFile,
+            @"C:\tools\app.exe",
+            SlotImageMode.Custom,
+            autoIcon);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad5,
+            "Old",
+            "Bye",
+            null,
+            "old-snippet.png",
+            "old-snippet-thumbnail.png");
+
+        var result = services.SnippetService.CopyToSlot(
+            source.Id,
+            SlotKey.Numpad5,
+            imageFiles => new ImageFileSet(
+                imageFiles.ImagePath is null ? null : $"copy-{imageFiles.ImagePath}",
+                imageFiles.ThumbnailPath is null ? null : $"copy-{imageFiles.ThumbnailPath}"));
+
+        var snippets = services.SnippetService.GetByCategoryId(category.Id);
+        var copiedSnippet = snippets.Single(snippet => snippet.SlotKey == SlotKey.Numpad5);
+
+        Assert.Equal(2, snippets.Count);
+        Assert.NotEqual(source.Id, copiedSnippet.Id);
+        Assert.Equal("Open app", copiedSnippet.Title);
+        Assert.Equal(string.Empty, copiedSnippet.Content);
+        Assert.Equal("Launch helper", copiedSnippet.Description);
+        Assert.Equal(SnippetActionType.LaunchFile, copiedSnippet.ActionType);
+        Assert.Equal(@"C:\tools\app.exe", copiedSnippet.LaunchPath);
+        Assert.Equal(SlotImageMode.Custom, copiedSnippet.SlotImageMode);
+        Assert.Equal("copy-source-snippet.png", copiedSnippet.ImagePath);
+        Assert.Equal("copy-source-snippet-thumbnail.png", copiedSnippet.ThumbnailPath);
+        Assert.Equal(autoIcon.IconPath, copiedSnippet.AutoIconPath);
+        Assert.Equal(autoIcon.SourcePath, copiedSnippet.AutoIconSourcePath);
+        Assert.Collection(
+            result.OverwrittenImageFiles,
+            imageFiles =>
+            {
+                Assert.Equal("old-snippet.png", imageFiles.ImagePath);
+                Assert.Equal("old-snippet-thumbnail.png", imageFiles.ThumbnailPath);
+            });
+    }
+
+    [Fact]
+    public void MovingSnippetToSlotOverwritesTargetAndKeepsId()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var source = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad5,
+            "Old",
+            "Bye",
+            null,
+            "old-snippet.png",
+            "old-snippet-thumbnail.png");
+
+        var result = services.SnippetService.MoveToSlot(source.Id, SlotKey.Numpad5);
+
+        var movedSnippet = Assert.Single(services.SnippetService.GetByCategoryId(category.Id));
+
+        Assert.Equal(source.Id, movedSnippet.Id);
+        Assert.Equal(SlotKey.Numpad5, movedSnippet.SlotKey);
+        Assert.Equal("Paste", movedSnippet.Title);
+        Assert.Collection(
+            result.OverwrittenImageFiles,
+            imageFiles =>
+            {
+                Assert.Equal("old-snippet.png", imageFiles.ImagePath);
+                Assert.Equal("old-snippet-thumbnail.png", imageFiles.ThumbnailPath);
+            });
+    }
+
     private static void CreateLegacyDatabase(
         string databasePath,
         Guid categoryId,

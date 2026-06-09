@@ -116,6 +116,7 @@ internal sealed class MainViewModelNavigator
             slotKey,
             snippet,
             _services.SnippetService,
+            _services.SnippetTransferService,
             _services.DialogService,
             () => OpenCategoryById(category.Id),
             _ => OpenCategoryById(category.Id),

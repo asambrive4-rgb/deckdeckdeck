@@ -71,6 +71,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
@@ -191,7 +192,36 @@
                     </DockPanel>
                 </StackPanel>
 
-                <TextBlock Grid.Row="6"
+                <StackPanel Grid.Row="6"
+                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
+                            IsEnabled="{Binding CanTransfer}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                               Text="슬롯 복사/이동" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ComboBox ItemsSource="{Binding TransferTargetSlots}"
+                                  SelectedItem="{Binding SelectedTransferTarget}"
+                                  DisplayMemberPath="Label"
+                                  Style="{StaticResource Deck.ComboBoxStyle}" />
+                        <Button Grid.Column="1"
+                                Margin="12,0,0,0"
+                                Command="{Binding CopySnippetCommand}"
+                                Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                Content="슬롯 복사" />
+                        <Button Grid.Column="2"
+                                Margin="8,0,0,0"
+                                Command="{Binding MoveSnippetCommand}"
+                                Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                Content="슬롯 이동" />
+                    </Grid>
+                </StackPanel>
+
+                <TextBlock Grid.Row="7"
                            Margin="0,14,0,0"
                            Style="{StaticResource Deck.ErrorTextStyle}"
                            Text="{Binding ErrorMessage}"
