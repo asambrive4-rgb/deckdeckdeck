@@ -143,7 +143,9 @@ internal sealed class MainViewModelNavigator
             _services.LoggingService,
             _services.BackupService,
             _autoBackupCoordinator,
-            _services.DialogService));
+            _services.DialogService,
+            _services.SpotifyConnectionService,
+            _services.UrlLaunchService));
         _showStatus("설정");
     }
 }

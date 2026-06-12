@@ -155,12 +155,25 @@
                             Style="{StaticResource Deck.FieldGroupSpacedStyle}"
                             Visibility="{Binding IsMediaAction, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                               Text="제어 대상" />
+                    <ComboBox ItemsSource="{Binding MediaProviderOptions}"
+                              SelectedValue="{Binding SelectedMediaProvider, Mode=TwoWay}"
+                              SelectedValuePath="Provider"
+                              DisplayMemberPath="Label"
+                              Style="{StaticResource Deck.ComboBoxStyle}" />
+                    <TextBlock Margin="0,10,0,6"
+                               Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="미디어 명령" />
                     <ComboBox ItemsSource="{Binding MediaCommandOptions}"
                               SelectedValue="{Binding SelectedMediaCommand, Mode=TwoWay}"
                               SelectedValuePath="Command"
                               DisplayMemberPath="Label"
                               Style="{StaticResource Deck.ComboBoxStyle}" />
+                    <TextBlock Margin="0,8,0,0"
+                               Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                               Text="{Binding SpotifyMediaConnectionNotice}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding ShowSpotifyMediaConnectionNotice, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </StackPanel>
 
                 <StackPanel Grid.Row="3"

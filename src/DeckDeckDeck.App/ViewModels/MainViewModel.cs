@@ -48,10 +48,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         IFileLaunchService? fileLaunchService = null,
         IUrlLaunchService? urlLaunchService = null,
         IMediaActionService? mediaActionService = null,
+        ISpotifyConnectionService? spotifyConnectionService = null,
+        ISpotifyMediaActionService? spotifyMediaActionService = null,
         SnippetImageService? snippetImageService = null,
         BackupService? backupService = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
+        var effectiveUrlLaunchService = urlLaunchService ?? new UrlLaunchService();
         var transferService = new CategoryTransferService(
             categoryService,
             settingsService,
@@ -75,8 +78,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             snippetImageService,
             clipboardPasteService ?? new ClipboardPasteService(),
             fileLaunchService ?? new FileLaunchService(),
-            urlLaunchService ?? new UrlLaunchService(),
+            effectiveUrlLaunchService,
             mediaActionService ?? new MediaActionService(),
+            spotifyConnectionService ?? new SpotifyConnectionService(settingsService, effectiveUrlLaunchService),
+            spotifyMediaActionService ?? new SpotifyMediaActionService(settingsService),
             loggingService,
             thumbnailService);
 
@@ -301,6 +306,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             services.FileLaunchService,
             services.UrlLaunchService,
             services.MediaActionService,
+            services.SpotifyMediaActionService,
             services.SettingsService,
             getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
             hideWindowAfterPaste ?? (() => { }),

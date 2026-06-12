@@ -11,6 +11,11 @@ internal static class SettingsKeys
     public const string BackupFolderPath = "backupFolderPath";
     public const string AutoBackupRetentionCount = "autoBackupRetentionCount";
     public const string LastBackupCreatedAt = "lastBackupCreatedAt";
+    public const string SpotifyClientId = "spotifyClientId";
+    public const string SpotifyAccessToken = "spotifyAccessToken";
+    public const string SpotifyRefreshToken = "spotifyRefreshToken";
+    public const string SpotifyTokenExpiresAt = "spotifyTokenExpiresAt";
+    public const string SpotifyConnectedUserDisplayName = "spotifyConnectedUserDisplayName";
     public const string HomeHotkey = "homeHotkey";
     public const string DirectCategoryHotkeys = "directCategoryHotkeys";
     public const string LastWindowLeft = "lastWindowLeft";
@@ -29,6 +34,11 @@ internal static class SettingsKeys
         new(BackupFolderPath, string.Empty),
         new(AutoBackupRetentionCount, "10"),
         new(LastBackupCreatedAt, string.Empty),
+        new(SpotifyClientId, string.Empty),
+        new(SpotifyAccessToken, string.Empty),
+        new(SpotifyRefreshToken, string.Empty),
+        new(SpotifyTokenExpiresAt, string.Empty),
+        new(SpotifyConnectedUserDisplayName, string.Empty),
         new(HomeHotkey, "Ctrl + Numpad0"),
         new(DirectCategoryHotkeys, "Ctrl + Numpad1~9, /, *, -, +, ."),
         new(LastWindowLeft, string.Empty),

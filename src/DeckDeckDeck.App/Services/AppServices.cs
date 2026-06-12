@@ -16,6 +16,8 @@ internal sealed record AppServices(
     IFileLaunchService FileLaunchService,
     IUrlLaunchService UrlLaunchService,
     IMediaActionService MediaActionService,
+    ISpotifyConnectionService SpotifyConnectionService,
+    ISpotifyMediaActionService SpotifyMediaActionService,
     LoggingService? LoggingService,
     ThumbnailService? ThumbnailService)
 {
@@ -38,6 +40,8 @@ internal sealed record AppServices(
             new ShellFileIconExtractor(),
             loggingService);
         var snippetImageService = new SnippetImageService(fileIconCacheService);
+        var urlLaunchService = new UrlLaunchService();
+        var spotifyConnectionService = new SpotifyConnectionService(settingsService, urlLaunchService);
 
         return new AppServices(
             categoryService,
@@ -51,8 +55,10 @@ internal sealed record AppServices(
             snippetImageService,
             new ClipboardPasteService(),
             new FileLaunchService(),
-            new UrlLaunchService(),
+            urlLaunchService,
             new MediaActionService(),
+            spotifyConnectionService,
+            new SpotifyMediaActionService(settingsService),
             loggingService,
             thumbnailService);
     }

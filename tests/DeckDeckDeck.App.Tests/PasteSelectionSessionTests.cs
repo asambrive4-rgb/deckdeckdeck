@@ -42,6 +42,7 @@ public sealed class PasteSelectionSessionTests
             new RecordingFileLaunchService(),
             new RecordingUrlLaunchService(),
             new RecordingMediaActionService(),
+            new RecordingSpotifyMediaActionService(),
             services.SettingsService,
             () => new IntPtr(123),
             () => { },

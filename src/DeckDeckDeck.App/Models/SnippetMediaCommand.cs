@@ -8,5 +8,8 @@ public enum SnippetMediaCommand
     Stop,
     Mute,
     VolumeUp,
-    VolumeDown
+    VolumeDown,
+    ToggleShuffle,
+    CycleRepeat,
+    OpenSpotifyAndResume
 }

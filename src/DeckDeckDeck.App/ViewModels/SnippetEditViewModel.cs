@@ -32,6 +32,8 @@ public sealed class SnippetEditViewModel : ObservableObject
     private string _launchPath = string.Empty;
     private string _launchUrl = string.Empty;
     private SnippetMediaCommand _mediaCommand = SnippetMediaCommand.PlayPause;
+    private IReadOnlyList<SnippetMediaCommandOption> _mediaCommandOptions = SnippetMediaCommandOption.SystemCommands;
+    private SnippetMediaProvider _mediaProvider = SnippetMediaProvider.System;
     private SnippetTransferTargetSlot? _selectedTransferTarget;
     private SlotImageMode _slotImageMode = SlotImageMode.Auto;
     private string _snippetTitle = string.Empty;
@@ -77,7 +79,11 @@ public sealed class SnippetEditViewModel : ObservableObject
         _actionType = snippet?.ActionType ?? SnippetActionType.PasteText;
         _launchPath = snippet?.LaunchPath ?? string.Empty;
         _launchUrl = snippet?.LaunchUrl ?? string.Empty;
-        _mediaCommand = snippet?.MediaCommand ?? SnippetMediaCommand.PlayPause;
+        _mediaProvider = snippet?.MediaProvider ?? SnippetMediaProvider.System;
+        _mediaCommandOptions = SnippetMediaCommandOption.ForProvider(_mediaProvider);
+        _mediaCommand = SnippetMediaCommandOption.GetValidCommandForProvider(
+            _mediaProvider,
+            snippet?.MediaCommand ?? SnippetMediaCommand.PlayPause);
         _slotImageMode = GetInitialSlotImageMode(snippet);
         _autoIcon = AutoIconCacheEntry.FromSnippet(snippet);
         _description = snippet?.Description ?? string.Empty;
@@ -114,8 +120,14 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public IReadOnlyList<SnippetTransferTargetSlot> TransferTargetSlots { get; }
 
-    public IReadOnlyList<SnippetMediaCommandOption> MediaCommandOptions { get; } =
-        SnippetMediaCommandOption.All;
+    public IReadOnlyList<SnippetMediaProviderOption> MediaProviderOptions { get; } =
+        SnippetMediaProviderOption.All;
+
+    public IReadOnlyList<SnippetMediaCommandOption> MediaCommandOptions
+    {
+        get => _mediaCommandOptions;
+        private set => SetProperty(ref _mediaCommandOptions, value);
+    }
 
     public SnippetTransferTargetSlot? SelectedTransferTarget
     {
@@ -149,6 +161,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             OnPropertyChanged(nameof(IsLaunchFileAction));
             OnPropertyChanged(nameof(IsLaunchUrlAction));
             OnPropertyChanged(nameof(IsMediaAction));
+            OnPropertyChanged(nameof(ShowSpotifyMediaConnectionNotice));
             NotifyImageChanged();
         }
     }
@@ -213,6 +226,23 @@ public sealed class SnippetEditViewModel : ObservableObject
         set => SetProperty(ref _launchUrl, value);
     }
 
+    public SnippetMediaProvider SelectedMediaProvider
+    {
+        get => _mediaProvider;
+        set
+        {
+            if (!SetProperty(ref _mediaProvider, value))
+            {
+                return;
+            }
+
+            MediaCommandOptions = SnippetMediaCommandOption.ForProvider(value);
+            SelectedMediaCommand = SnippetMediaCommandOption.GetValidCommandForProvider(value, SelectedMediaCommand);
+            OnPropertyChanged(nameof(IsSpotifyMediaProvider));
+            OnPropertyChanged(nameof(ShowSpotifyMediaConnectionNotice));
+        }
+    }
+
     public SnippetMediaCommand SelectedMediaCommand
     {
         get => _mediaCommand;
@@ -224,6 +254,16 @@ public sealed class SnippetEditViewModel : ObservableObject
             }
         }
     }
+
+    public bool IsSpotifyMediaProvider => SelectedMediaProvider == SnippetMediaProvider.Spotify;
+
+    public bool ShowSpotifyMediaConnectionNotice =>
+        IsMediaAction
+        && IsSpotifyMediaProvider
+        && !IsSpotifyConnected();
+
+    public string SpotifyMediaConnectionNotice =>
+        "Spotify 연결 전에도 저장할 수 있습니다. 실행하려면 설정에서 Spotify를 연결해 주세요.";
 
     public string Description
     {
@@ -292,44 +332,9 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private Snippet? SaveSnippet(bool requestAutoBackup = true)
     {
-        if (string.IsNullOrWhiteSpace(SnippetTitle))
+        if (!TryPrepareSaveInput(out var input))
         {
-            if (TrySaveSlotOnly())
-            {
-                return null;
-            }
-
-            ErrorMessage = "슬롯 명을 입력해 주세요.";
             return null;
-        }
-
-        if (ActionType == SnippetActionType.PasteText && string.IsNullOrWhiteSpace(Content))
-        {
-            if (TrySaveSlotOnly())
-            {
-                return null;
-            }
-
-            ErrorMessage = "붙여넣을 문구를 입력해 주세요.";
-            return null;
-        }
-
-        if (ActionType == SnippetActionType.LaunchFile && string.IsNullOrWhiteSpace(LaunchPath))
-        {
-            ErrorMessage = "실행할 파일, 폴더 또는 바로 가기를 선택해 주세요.";
-            return null;
-        }
-
-        var launchUrl = LaunchUrl;
-        if (ActionType == SnippetActionType.LaunchUrl)
-        {
-            if (!UrlAddress.TryNormalize(LaunchUrl, out launchUrl))
-            {
-                ErrorMessage = "열 웹페이지 주소를 http 또는 https 주소로 입력해 주세요.";
-                return null;
-            }
-
-            LaunchUrl = launchUrl;
         }
 
         if (!SaveSlotEnabled())
@@ -338,42 +343,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         var autoIcon = PrepareAutoIconForSave();
-        var mediaProvider = ActionType == SnippetActionType.MediaAction
-            ? SnippetMediaProvider.System
-            : (SnippetMediaProvider?)null;
-        var mediaCommand = ActionType == SnippetActionType.MediaAction
-            ? SelectedMediaCommand
-            : (SnippetMediaCommand?)null;
-        var snippet = _snippetId.HasValue
-            ? _snippetService.Update(
-                _snippetId.Value,
-                SnippetTitle,
-                Content,
-                Description,
-                _imageState.ImagePath,
-                _imageState.ThumbnailPath,
-                ActionType,
-                LaunchPath,
-                _slotImageMode,
-                autoIcon,
-                launchUrl,
-                mediaProvider,
-                mediaCommand)
-            : _snippetService.Create(
-                CategoryId,
-                SlotKey,
-                SnippetTitle,
-                Content,
-                Description,
-                _imageState.ImagePath,
-                _imageState.ThumbnailPath,
-                ActionType,
-                LaunchPath,
-                _slotImageMode,
-                autoIcon,
-                launchUrl,
-                mediaProvider,
-                mediaCommand);
+        var snippet = SaveSnippetRecord(input, autoIcon);
 
         _imageState.DeleteOriginalImageIfReplaced();
         _imageState.MarkCurrentAsOriginal();
@@ -385,6 +355,106 @@ public sealed class SnippetEditViewModel : ObservableObject
         ErrorMessage = string.Empty;
 
         return snippet;
+    }
+
+    private bool TryPrepareSaveInput(
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out PreparedSnippetSave? input)
+    {
+        input = null;
+        if (string.IsNullOrWhiteSpace(SnippetTitle))
+        {
+            if (TrySaveSlotOnly())
+            {
+                return false;
+            }
+
+            ErrorMessage = "슬롯 명을 입력해 주세요.";
+            return false;
+        }
+
+        if (ActionType == SnippetActionType.PasteText && string.IsNullOrWhiteSpace(Content))
+        {
+            if (TrySaveSlotOnly())
+            {
+                return false;
+            }
+
+            ErrorMessage = "붙여넣을 문구를 입력해 주세요.";
+            return false;
+        }
+
+        if (ActionType == SnippetActionType.LaunchFile && string.IsNullOrWhiteSpace(LaunchPath))
+        {
+            ErrorMessage = "실행할 파일, 폴더 또는 바로 가기를 선택해 주세요.";
+            return false;
+        }
+
+        var launchUrl = LaunchUrl;
+        if (ActionType == SnippetActionType.LaunchUrl)
+        {
+            if (!UrlAddress.TryNormalize(LaunchUrl, out launchUrl))
+            {
+                ErrorMessage = "열 웹페이지 주소를 http 또는 https 주소로 입력해 주세요.";
+                return false;
+            }
+
+            LaunchUrl = launchUrl;
+        }
+
+        var mediaProvider = ActionType == SnippetActionType.MediaAction
+            ? SelectedMediaProvider
+            : (SnippetMediaProvider?)null;
+        var mediaCommand = ActionType == SnippetActionType.MediaAction
+            ? SelectedMediaCommand
+            : (SnippetMediaCommand?)null;
+        input = new PreparedSnippetSave(
+            SnippetTitle,
+            Content,
+            Description,
+            _imageState.ImagePath,
+            _imageState.ThumbnailPath,
+            ActionType,
+            LaunchPath,
+            _slotImageMode,
+            launchUrl,
+            mediaProvider,
+            mediaCommand);
+
+        return true;
+    }
+
+    private Snippet SaveSnippetRecord(PreparedSnippetSave input, AutoIconCacheEntry? autoIcon)
+    {
+        return _snippetId.HasValue
+            ? _snippetService.Update(
+                _snippetId.Value,
+                input.Title,
+                input.Content,
+                input.Description,
+                input.ImagePath,
+                input.ThumbnailPath,
+                input.ActionType,
+                input.LaunchPath,
+                input.SlotImageMode,
+                autoIcon,
+                input.LaunchUrl,
+                input.MediaProvider,
+                input.MediaCommand)
+            : _snippetService.Create(
+                CategoryId,
+                SlotKey,
+                input.Title,
+                input.Content,
+                input.Description,
+                input.ImagePath,
+                input.ThumbnailPath,
+                input.ActionType,
+                input.LaunchPath,
+                input.SlotImageMode,
+                autoIcon,
+                input.LaunchUrl,
+                input.MediaProvider,
+                input.MediaCommand);
     }
 
     private void Cancel()
@@ -713,6 +783,29 @@ public sealed class SnippetEditViewModel : ObservableObject
             return false;
         }
     }
+
+    private bool IsSpotifyConnected()
+    {
+        var settings = _settingsService?.Load();
+
+        return settings is not null
+            && !string.IsNullOrWhiteSpace(settings.SpotifyClientId)
+            && !string.IsNullOrWhiteSpace(settings.SpotifyAccessToken)
+            && !string.IsNullOrWhiteSpace(settings.SpotifyRefreshToken);
+    }
+
+    private sealed record PreparedSnippetSave(
+        string Title,
+        string Content,
+        string Description,
+        string? ImagePath,
+        string? ThumbnailPath,
+        SnippetActionType ActionType,
+        string LaunchPath,
+        SlotImageMode SlotImageMode,
+        string? LaunchUrl,
+        SnippetMediaProvider? MediaProvider,
+        SnippetMediaCommand? MediaCommand);
 }
 
 public sealed class SnippetTransferTargetSlot
@@ -730,7 +823,7 @@ public sealed class SnippetTransferTargetSlot
 
 public sealed class SnippetMediaCommandOption
 {
-    public static IReadOnlyList<SnippetMediaCommandOption> All { get; } =
+    public static IReadOnlyList<SnippetMediaCommandOption> SystemCommands { get; } =
     [
         new(SnippetMediaCommand.PlayPause, "재생/일시정지"),
         new(SnippetMediaCommand.PreviousTrack, "이전 곡"),
@@ -741,6 +834,38 @@ public sealed class SnippetMediaCommandOption
         new(SnippetMediaCommand.VolumeDown, "볼륨 감소")
     ];
 
+    public static IReadOnlyList<SnippetMediaCommandOption> SpotifyCommands { get; } =
+    [
+        new(SnippetMediaCommand.PlayPause, "재생/일시정지"),
+        new(SnippetMediaCommand.PreviousTrack, "이전 곡"),
+        new(SnippetMediaCommand.NextTrack, "다음 곡"),
+        new(SnippetMediaCommand.ToggleShuffle, "셔플 켜기/끄기"),
+        new(SnippetMediaCommand.CycleRepeat, "반복 모드 변경"),
+        new(SnippetMediaCommand.OpenSpotifyAndResume, "Spotify 앱 열고 재생 시도")
+    ];
+
+    public static IReadOnlyList<SnippetMediaCommandOption> All { get; } =
+        SystemCommands.Concat(SpotifyCommands)
+            .GroupBy(option => option.Command)
+            .Select(group => group.First())
+            .ToList();
+
+    public static IReadOnlyList<SnippetMediaCommandOption> ForProvider(SnippetMediaProvider provider)
+    {
+        return provider == SnippetMediaProvider.Spotify
+            ? SpotifyCommands
+            : SystemCommands;
+    }
+
+    public static SnippetMediaCommand GetValidCommandForProvider(
+        SnippetMediaProvider provider,
+        SnippetMediaCommand command)
+    {
+        return ForProvider(provider).Any(option => option.Command == command)
+            ? command
+            : SnippetMediaCommand.PlayPause;
+    }
+
     public SnippetMediaCommandOption(SnippetMediaCommand command, string label)
     {
         Command = command;
@@ -748,6 +873,25 @@ public sealed class SnippetMediaCommandOption
     }
 
     public SnippetMediaCommand Command { get; }
+
+    public string Label { get; }
+}
+
+public sealed class SnippetMediaProviderOption
+{
+    public static IReadOnlyList<SnippetMediaProviderOption> All { get; } =
+    [
+        new(SnippetMediaProvider.System, "Windows 기본 미디어 제어"),
+        new(SnippetMediaProvider.Spotify, "Spotify")
+    ];
+
+    public SnippetMediaProviderOption(SnippetMediaProvider provider, string label)
+    {
+        Provider = provider;
+        Label = label;
+    }
+
+    public SnippetMediaProvider Provider { get; }
 
     public string Label { get; }
 }

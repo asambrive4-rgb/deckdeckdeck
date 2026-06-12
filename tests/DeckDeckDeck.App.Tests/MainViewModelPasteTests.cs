@@ -218,6 +218,82 @@ public sealed class MainViewModelPasteTests
     }
 
     [Fact]
+    public void SpotifyMediaActionSnippetExecutesSpotifyInsteadOfSystemMediaKeys()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Shuffle",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.MediaAction,
+            mediaProvider: SnippetMediaProvider.Spotify,
+            mediaCommand: SnippetMediaCommand.ToggleShuffle);
+        var pasteService = new RecordingClipboardPasteService();
+        var mediaActionService = new RecordingMediaActionService();
+        var spotifyMediaActionService = new RecordingSpotifyMediaActionService();
+        var hidden = false;
+        var completedPasteSelection = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            pasteService,
+            () => new IntPtr(123),
+            () => hidden = true,
+            completePasteSelection: () => completedPasteSelection = true,
+            mediaActionService: mediaActionService,
+            spotifyMediaActionService: spotifyMediaActionService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        Assert.Empty(pasteService.Calls);
+        Assert.Empty(mediaActionService.Commands);
+        Assert.Equal([SnippetMediaCommand.ToggleShuffle], spotifyMediaActionService.Commands);
+        Assert.True(hidden);
+        Assert.True(completedPasteSelection);
+        Assert.Contains("Spotify 명령 실행됨", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void SpotifyMediaActionFailureShowsStatusAndKeepsWindowVisible()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Spotify next",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.MediaAction,
+            mediaProvider: SnippetMediaProvider.Spotify,
+            mediaCommand: SnippetMediaCommand.NextTrack);
+        var spotifyMediaActionService = new RecordingSpotifyMediaActionService
+        {
+            Result = new SpotifyMediaActionResult(false, "Spotify를 다시 연결해 주세요.")
+        };
+        var hidden = false;
+        var completedPasteSelection = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            new RecordingClipboardPasteService(),
+            () => new IntPtr(123),
+            () => hidden = true,
+            completePasteSelection: () => completedPasteSelection = true,
+            spotifyMediaActionService: spotifyMediaActionService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        Assert.False(hidden);
+        Assert.True(completedPasteSelection);
+        Assert.Contains("Spotify를 다시 연결해 주세요.", viewModel.StatusMessage);
+        Assert.Contains("Media action failed", File.ReadAllText(Path.Combine(services.Storage.LogsPath, "app.log")));
+    }
+
+    [Fact]
     public void MediaActionFailureShowsStatusAndKeepsWindowVisible()
     {
         var services = CreateServices();

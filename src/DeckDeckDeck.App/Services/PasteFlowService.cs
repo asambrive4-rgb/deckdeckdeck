@@ -11,6 +11,7 @@ internal sealed class PasteFlowService
     private readonly Action _hideWindowAfterPaste;
     private readonly LoggingService? _loggingService;
     private readonly IMediaActionService _mediaActionService;
+    private readonly ISpotifyMediaActionService _spotifyMediaActionService;
     private readonly SettingsService _settingsService;
     private readonly Action<string> _showStatus;
     private readonly IUrlLaunchService _urlLaunchService;
@@ -20,6 +21,7 @@ internal sealed class PasteFlowService
         IFileLaunchService fileLaunchService,
         IUrlLaunchService urlLaunchService,
         IMediaActionService mediaActionService,
+        ISpotifyMediaActionService spotifyMediaActionService,
         SettingsService settingsService,
         Func<IntPtr> getPasteTargetWindowHandle,
         Action hideWindowAfterPaste,
@@ -31,6 +33,7 @@ internal sealed class PasteFlowService
         _fileLaunchService = fileLaunchService;
         _urlLaunchService = urlLaunchService;
         _mediaActionService = mediaActionService;
+        _spotifyMediaActionService = spotifyMediaActionService;
         _settingsService = settingsService;
         _getPasteTargetWindowHandle = getPasteTargetWindowHandle;
         _hideWindowAfterPaste = hideWindowAfterPaste;
@@ -60,7 +63,7 @@ internal sealed class PasteFlowService
 
             if (snippet.ActionType == SnippetActionType.MediaAction)
             {
-                ExecuteMediaSnippet(snippet, settings);
+                await ExecuteMediaSnippetAsync(snippet, settings);
                 return;
             }
 
@@ -176,9 +179,15 @@ internal sealed class PasteFlowService
         _loggingService?.Log($"Launch URL failed for snippet {snippet.Id}: {message}", exception);
     }
 
-    private void ExecuteMediaSnippet(Snippet snippet, AppSettings settings)
+    private async Task ExecuteMediaSnippetAsync(Snippet snippet, AppSettings settings)
     {
         var provider = snippet.MediaProvider ?? SnippetMediaProvider.System;
+        if (provider is SnippetMediaProvider.Spotify)
+        {
+            await ExecuteSpotifyMediaSnippetAsync(snippet, settings);
+            return;
+        }
+
         if (provider is not SnippetMediaProvider.System)
         {
             ReportMediaActionFailure(snippet, "지원하지 않는 미디어 제공자입니다.");
@@ -206,6 +215,32 @@ internal sealed class PasteFlowService
         catch (Exception ex)
         {
             ReportMediaActionFailure(snippet, "미디어 명령을 실행하지 못했습니다.", ex);
+        }
+    }
+
+    private async Task ExecuteSpotifyMediaSnippetAsync(Snippet snippet, AppSettings settings)
+    {
+        var command = snippet.MediaCommand ?? SnippetMediaCommand.PlayPause;
+
+        try
+        {
+            var executed = await _spotifyMediaActionService.TryExecuteAsync(command);
+            if (!executed.Succeeded)
+            {
+                ReportMediaActionFailure(snippet, executed.ErrorMessage ?? "Spotify 명령을 실행하지 못했습니다.");
+                return;
+            }
+
+            if (settings.AutoHideAfterPaste)
+            {
+                _hideWindowAfterPaste();
+            }
+
+            _showStatus($"{snippet.Title} Spotify 명령 실행됨.");
+        }
+        catch (Exception ex)
+        {
+            ReportMediaActionFailure(snippet, "Spotify 명령을 실행하지 못했습니다.", ex);
         }
     }
 

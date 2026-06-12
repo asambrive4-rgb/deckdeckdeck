@@ -13,6 +13,8 @@ public static class MediaIconResources
     private const string MuteIcon = ResourcePrefix + "Deck.Icon.Media.Mute";
     private const string VolumeUpIcon = ResourcePrefix + "Deck.Icon.Media.VolumeUp";
     private const string VolumeDownIcon = ResourcePrefix + "Deck.Icon.Media.VolumeDown";
+    private const string ShuffleIcon = ResourcePrefix + "Deck.Icon.Media.Shuffle";
+    private const string RepeatIcon = ResourcePrefix + "Deck.Icon.Media.Repeat";
 
     private static readonly IReadOnlyDictionary<string, ImageSource> Images = CreateImages();
 
@@ -26,6 +28,9 @@ public static class MediaIconResources
             SnippetMediaCommand.Mute => MuteIcon,
             SnippetMediaCommand.VolumeUp => VolumeUpIcon,
             SnippetMediaCommand.VolumeDown => VolumeDownIcon,
+            SnippetMediaCommand.ToggleShuffle => ShuffleIcon,
+            SnippetMediaCommand.CycleRepeat => RepeatIcon,
+            SnippetMediaCommand.OpenSpotifyAndResume => PlayPauseIcon,
             _ => PlayPauseIcon
         };
     }
@@ -56,7 +61,17 @@ public static class MediaIconResources
                 "M18.5 5.5 C22.5 9.5 22.5 14.5 18.5 18.5"),
             [VolumeDownIcon] = CreateIcon(
                 "M11 5 L6 9 H2 V15 H6 L11 19 Z",
-                "M15.5 8.5 C17.5 10.5 17.5 13.5 15.5 15.5")
+                "M15.5 8.5 C17.5 10.5 17.5 13.5 15.5 15.5"),
+            [ShuffleIcon] = CreateIcon(
+                "M2 6 H5 C8 6 9 18 13 18 H16",
+                "M2 18 H5 C8 18 9 6 13 6 H16",
+                "M16 3 L21 6 L16 9",
+                "M16 15 L21 18 L16 21"),
+            [RepeatIcon] = CreateIcon(
+                "M17 2 L21 6 L17 10",
+                "M3 11 V10 C3 7.8 4.8 6 7 6 H21",
+                "M7 22 L3 18 L7 14",
+                "M21 13 V14 C21 16.2 19.2 18 17 18 H3")
         };
     }
 

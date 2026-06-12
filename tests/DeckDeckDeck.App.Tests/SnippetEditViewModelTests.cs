@@ -128,6 +128,84 @@ public sealed class SnippetEditViewModelTests
     }
 
     [Fact]
+    public void SpotifyMediaActionSavesEvenWhenDisconnected()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Shuffle";
+        viewModel.IsMediaAction = true;
+        viewModel.SelectedMediaProvider = SnippetMediaProvider.Spotify;
+        viewModel.SelectedMediaCommand = SnippetMediaCommand.ToggleShuffle;
+
+        Assert.True(viewModel.ShowSpotifyMediaConnectionNotice);
+        Assert.Contains(
+            viewModel.MediaCommandOptions,
+            option => option.Command == SnippetMediaCommand.ToggleShuffle);
+        Assert.Contains(
+            viewModel.MediaCommandOptions,
+            option => option.Command == SnippetMediaCommand.OpenSpotifyAndResume);
+        Assert.DoesNotContain(
+            viewModel.MediaCommandOptions,
+            option => option.Command == SnippetMediaCommand.Mute);
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal(SnippetActionType.MediaAction, savedSnippet.ActionType);
+        Assert.Equal(SnippetMediaProvider.Spotify, savedSnippet.MediaProvider);
+        Assert.Equal(SnippetMediaCommand.ToggleShuffle, savedSnippet.MediaCommand);
+    }
+
+    [Fact]
+    public void ChangingMediaProviderResetsUnsupportedCommand()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        var viewModel = CreateViewModel(services, category, _ => { });
+
+        viewModel.IsMediaAction = true;
+        viewModel.SelectedMediaProvider = SnippetMediaProvider.Spotify;
+        viewModel.SelectedMediaCommand = SnippetMediaCommand.CycleRepeat;
+        viewModel.SelectedMediaProvider = SnippetMediaProvider.System;
+
+        Assert.Equal(SnippetMediaCommand.PlayPause, viewModel.SelectedMediaCommand);
+        Assert.Contains(
+            viewModel.MediaCommandOptions,
+            option => option.Command == SnippetMediaCommand.VolumeDown);
+        Assert.DoesNotContain(
+            viewModel.MediaCommandOptions,
+            option => option.Command == SnippetMediaCommand.CycleRepeat);
+        Assert.DoesNotContain(
+            viewModel.MediaCommandOptions,
+            option => option.Command == SnippetMediaCommand.OpenSpotifyAndResume);
+    }
+
+    [Fact]
+    public void SpotifyOpenAndResumeCommandSavesWithPlayPauseIcon()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Open Spotify";
+        viewModel.IsMediaAction = true;
+        viewModel.SelectedMediaProvider = SnippetMediaProvider.Spotify;
+        viewModel.SelectedMediaCommand = SnippetMediaCommand.OpenSpotifyAndResume;
+
+        Assert.Equal(MediaIconResources.GetIconResourcePath(SnippetMediaCommand.PlayPause), viewModel.ThumbnailPath);
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal(SnippetMediaProvider.Spotify, savedSnippet.MediaProvider);
+        Assert.Equal(SnippetMediaCommand.OpenSpotifyAndResume, savedSnippet.MediaCommand);
+    }
+
+    [Fact]
     public void LaunchFileSavesAutoIconForExe()
     {
         var services = CreateServices();
@@ -216,6 +294,33 @@ public sealed class SnippetEditViewModelTests
 
         Assert.Equal(1, autoBackup.RequestCount);
         Assert.Single(services.SnippetService.GetByCategoryId(category.Id));
+    }
+
+    [Fact]
+    public void NewSnippetWithOnlySlotEnabledChangeSavesSlotSettingWithoutCreatingSnippet()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
+        Snippet? savedSnippet = null;
+        var statusMessages = new List<string>();
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateViewModel(
+            services,
+            category,
+            snippet => savedSnippet = snippet,
+            autoBackupCoordinator: autoBackup,
+            showStatus: statusMessages.Add);
+
+        viewModel.IsSlotEnabled = true;
+        viewModel.SaveCommand.Execute(null);
+
+        var settings = services.SettingsService.Load();
+        Assert.Null(savedSnippet);
+        Assert.Empty(services.SnippetService.GetByCategoryId(category.Id));
+        Assert.True(settings.EnabledSnippetSlotKeys[SlotKey.Numpad3]);
+        Assert.Equal(1, autoBackup.RequestCount);
+        Assert.Equal("슬롯 3 설정을 저장했습니다.", statusMessages.Last());
     }
 
     [Fact]

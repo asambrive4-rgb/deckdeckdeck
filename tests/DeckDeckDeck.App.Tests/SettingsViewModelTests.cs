@@ -3,6 +3,7 @@ using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Services;
 using DeckDeckDeck.App.ViewModels;
 using DeckDeckDeck.App.Views;
+using CommunityToolkit.Mvvm.Input;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
@@ -111,6 +112,168 @@ public sealed class SettingsViewModelTests
         Assert.Equal(backupFolder, viewModel.BackupFolderDisplay);
     }
 
+    [Fact]
+    public void SpotifyConnectionStatusStartsDisconnected()
+    {
+        var services = CreateServices();
+        var spotifyConnectionService = new StubSpotifyConnectionService(services.SettingsService);
+        var viewModel = CreateSettingsViewModel(services, spotifyConnectionService);
+
+        Assert.False(viewModel.IsSpotifyConnected);
+        Assert.True(viewModel.ShowSpotifyConnectButton);
+        Assert.False(viewModel.ShowSpotifyConnectionFields);
+        Assert.Equal("Spotify 연결되어 있지 않음", viewModel.SpotifyConnectionStatusText);
+    }
+
+    [Fact]
+    public void SpotifyConnectCommandShowsDashboardAndClientIdFields()
+    {
+        var services = CreateServices();
+        var urlLaunchService = new RecordingUrlLaunchService();
+        var spotifyConnectionService = new StubSpotifyConnectionService(services.SettingsService);
+        var viewModel = CreateSettingsViewModel(services, spotifyConnectionService, urlLaunchService);
+
+        viewModel.ShowSpotifyConnectionFieldsCommand.Execute(null);
+        viewModel.OpenSpotifyDeveloperDashboardCommand.Execute(null);
+
+        Assert.True(viewModel.ShowSpotifyConnectionFields);
+        Assert.False(viewModel.ShowSpotifyConnectButton);
+        Assert.Equal([spotifyConnectionService.DashboardUrl], urlLaunchService.Urls);
+    }
+
+    [Fact]
+    public void SpotifyRedirectUriCopyCommandCopiesCallbackAddress()
+    {
+        var services = CreateServices();
+        var status = string.Empty;
+        var clipboard = new FakeClipboardService(null);
+        var spotifyConnectionService = new StubSpotifyConnectionService(services.SettingsService);
+        var viewModel = CreateSettingsViewModel(
+            services,
+            spotifyConnectionService,
+            clipboardService: clipboard,
+            showStatus: message => status = message);
+
+        viewModel.CopySpotifyRedirectUriCommand.Execute(null);
+
+        Assert.Equal([spotifyConnectionService.RedirectUri], clipboard.SetTexts);
+        Assert.Equal("Spotify Redirect URI를 복사했습니다.", status);
+        Assert.Equal(string.Empty, viewModel.ErrorMessage);
+    }
+
+    [Fact]
+    public void SpotifyAppExampleCopyCommandsCopySuggestedValues()
+    {
+        var services = CreateServices();
+        var statusMessages = new List<string>();
+        var clipboard = new FakeClipboardService(null);
+        var spotifyConnectionService = new StubSpotifyConnectionService(services.SettingsService);
+        var viewModel = CreateSettingsViewModel(
+            services,
+            spotifyConnectionService,
+            clipboardService: clipboard,
+            showStatus: statusMessages.Add);
+
+        viewModel.CopySpotifyAppNameExampleCommand.Execute(null);
+        viewModel.CopySpotifyAppDescriptionExampleCommand.Execute(null);
+
+        Assert.Equal(
+            [viewModel.SpotifyAppNameExample, viewModel.SpotifyAppDescriptionExample],
+            clipboard.SetTexts);
+        Assert.Equal(
+            ["Spotify App name 예시를 복사했습니다.", "Spotify App description 예시를 복사했습니다."],
+            statusMessages);
+        Assert.Equal(string.Empty, viewModel.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task SpotifyStartConnectionRequiresClientId()
+    {
+        var services = CreateServices();
+        var spotifyConnectionService = new StubSpotifyConnectionService(services.SettingsService);
+        var viewModel = CreateSettingsViewModel(services, spotifyConnectionService);
+        var command = Assert.IsAssignableFrom<IAsyncRelayCommand>(viewModel.StartSpotifyConnectionCommand);
+
+        await command.ExecuteAsync(null);
+
+        Assert.Equal("Spotify Client ID를 입력해 주세요.", viewModel.ErrorMessage);
+        Assert.Empty(spotifyConnectionService.ClientIds);
+    }
+
+    [Fact]
+    public async Task SpotifyStartConnectionSavesConnectionAndHidesFields()
+    {
+        var services = CreateServices();
+        var status = string.Empty;
+        var spotifyConnectionService = new StubSpotifyConnectionService(services.SettingsService);
+        var viewModel = CreateSettingsViewModel(
+            services,
+            spotifyConnectionService,
+            showStatus: message => status = message);
+        var command = Assert.IsAssignableFrom<IAsyncRelayCommand>(viewModel.StartSpotifyConnectionCommand);
+        viewModel.ShowSpotifyConnectionFieldsCommand.Execute(null);
+        viewModel.SpotifyClientIdInput = "client-id";
+
+        await command.ExecuteAsync(null);
+
+        var settings = services.SettingsService.Load();
+        Assert.True(viewModel.IsSpotifyConnected);
+        Assert.False(viewModel.ShowSpotifyConnectionFields);
+        Assert.Equal(["client-id"], spotifyConnectionService.ClientIds);
+        Assert.Equal("client-id", settings.SpotifyClientId);
+        Assert.Equal("Spotify 연결됨.", status);
+    }
+
+    [Fact]
+    public void SpotifyDisconnectClearsStoredConnection()
+    {
+        var services = CreateServices();
+        var settings = services.SettingsService.Load();
+        settings.SpotifyClientId = "client-id";
+        settings.SpotifyAccessToken = "access-token";
+        settings.SpotifyRefreshToken = "refresh-token";
+        settings.SpotifyTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1);
+        settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
+        services.SettingsService.Save(settings);
+        var status = string.Empty;
+        var spotifyConnectionService = new StubSpotifyConnectionService(services.SettingsService);
+        var viewModel = CreateSettingsViewModel(
+            services,
+            spotifyConnectionService,
+            showStatus: message => status = message);
+
+        viewModel.DisconnectSpotifyCommand.Execute(null);
+
+        var reloaded = services.SettingsService.Load();
+        Assert.False(viewModel.IsSpotifyConnected);
+        Assert.Equal("Spotify 연결되어 있지 않음", viewModel.SpotifyConnectionStatusText);
+        Assert.Equal(string.Empty, reloaded.SpotifyClientId);
+        Assert.Equal(string.Empty, reloaded.SpotifyAccessToken);
+        Assert.Equal(string.Empty, reloaded.SpotifyRefreshToken);
+        Assert.Null(reloaded.SpotifyTokenExpiresAt);
+        Assert.Equal("Spotify 연결을 해제했습니다.", status);
+    }
+
+    private static SettingsViewModel CreateSettingsViewModel(
+        TestServices services,
+        ISpotifyConnectionService spotifyConnectionService,
+        IUrlLaunchService? urlLaunchService = null,
+        Action<string>? showStatus = null,
+        IClipboardService? clipboardService = null)
+    {
+        return new SettingsViewModel(
+            services.SettingsService,
+            () => { },
+            () => { },
+            showStatus ?? (_ => { }),
+            services.LoggingService,
+            services.BackupService,
+            dialogService: new StubDialogService(),
+            spotifyConnectionService: spotifyConnectionService,
+            urlLaunchService: urlLaunchService ?? new RecordingUrlLaunchService(),
+            clipboardService: clipboardService ?? new FakeClipboardService(null));
+    }
+
     private static string CreateTempBackupFolder()
     {
         var path = Path.Combine(Path.GetTempPath(), $"deckdeckdeck-backups-{Guid.NewGuid():N}");
@@ -126,6 +289,60 @@ public sealed class SettingsViewModelTests
         public override string? SelectBackupFolder()
         {
             return BackupFolder;
+        }
+    }
+
+    private sealed class StubSpotifyConnectionService : ISpotifyConnectionService
+    {
+        private readonly SettingsService _settingsService;
+
+        public StubSpotifyConnectionService(SettingsService settingsService)
+        {
+            _settingsService = settingsService;
+        }
+
+        public string DashboardUrl => "https://developer.spotify.com/dashboard";
+
+        public string RedirectUri => "http://127.0.0.1:53682/spotify-callback/";
+
+        public List<string> ClientIds { get; } = [];
+
+        public SpotifyConnectionResult ConnectResult { get; set; } = new(true);
+
+        public Task<SpotifyConnectionResult> ConnectAsync(
+            string clientId,
+            CancellationToken cancellationToken = default)
+        {
+            ClientIds.Add(clientId);
+            if (ConnectResult.Succeeded)
+            {
+                var settings = _settingsService.Load();
+                settings.SpotifyClientId = clientId;
+                settings.SpotifyAccessToken = "access-token";
+                settings.SpotifyRefreshToken = "refresh-token";
+                settings.SpotifyTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1);
+                settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
+                _settingsService.Save(settings);
+            }
+
+            return Task.FromResult(ConnectResult);
+        }
+
+        public Task<SpotifyConnectionCheckResult> CheckConnectionAsync(
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new SpotifyConnectionCheckResult(SpotifyConnectionCheckState.Connected));
+        }
+
+        public void Disconnect()
+        {
+            var settings = _settingsService.Load();
+            settings.SpotifyClientId = string.Empty;
+            settings.SpotifyAccessToken = string.Empty;
+            settings.SpotifyRefreshToken = string.Empty;
+            settings.SpotifyTokenExpiresAt = null;
+            settings.SpotifyConnectedUserDisplayName = string.Empty;
+            _settingsService.Save(settings);
         }
     }
 }

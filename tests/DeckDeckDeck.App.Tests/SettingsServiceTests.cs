@@ -3,6 +3,7 @@ using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Services;
 using DeckDeckDeck.App.ViewModels;
 using DeckDeckDeck.App.Views;
+using Microsoft.Data.Sqlite;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
@@ -134,6 +135,30 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
+    public void SettingsSavePersistsSpotifySettingsWithProtectedTokens()
+    {
+        var services = CreateServices();
+        var expiresAt = DateTimeOffset.UtcNow.AddHours(1);
+        var settings = services.SettingsService.Load();
+        settings.SpotifyClientId = "client-id";
+        settings.SpotifyAccessToken = "access-token";
+        settings.SpotifyRefreshToken = "refresh-token";
+        settings.SpotifyTokenExpiresAt = expiresAt;
+        settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
+
+        services.SettingsService.Save(settings);
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.Equal("client-id", reloaded.SpotifyClientId);
+        Assert.Equal("access-token", reloaded.SpotifyAccessToken);
+        Assert.Equal("refresh-token", reloaded.SpotifyRefreshToken);
+        Assert.Equal(expiresAt, reloaded.SpotifyTokenExpiresAt);
+        Assert.Equal("Spotify 계정", reloaded.SpotifyConnectedUserDisplayName);
+        Assert.NotEqual("access-token", ReadSettingValue(services.Storage.DatabasePath, "spotifyAccessToken"));
+        Assert.NotEqual("refresh-token", ReadSettingValue(services.Storage.DatabasePath, "spotifyRefreshToken"));
+    }
+
+    [Fact]
     public void SetLastBackupCreatedAtUpdatesOnlyBackupTimestamp()
     {
         var services = CreateServices();
@@ -149,5 +174,18 @@ public sealed class SettingsServiceTests
         Assert.True(reloaded.AutoBackupEnabled);
         Assert.Equal(@"C:\tmp\deckdeckdeck-backups", reloaded.BackupFolderPath);
         Assert.Equal(createdAt, reloaded.LastBackupCreatedAt);
+    }
+
+    private static string ReadSettingValue(string databasePath, string key)
+    {
+        SqliteConnection.ClearAllPools();
+        using var connection = new SqliteConnection($"Data Source={databasePath}");
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT Value FROM Settings WHERE Key = $key";
+        command.Parameters.AddWithValue("$key", key);
+
+        return Assert.IsType<string>(command.ExecuteScalar());
     }
 }

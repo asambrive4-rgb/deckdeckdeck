@@ -17,13 +17,21 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly LoggingService? _loggingService;
     private readonly SettingsService _settingsService;
     private readonly Action<string> _showStatus;
+    private readonly IClipboardService _clipboardService;
+    private readonly ISpotifyConnectionService _spotifyConnectionService;
+    private readonly IUrlLaunchService _urlLaunchService;
     private readonly AppSettings _settings;
     private bool _autoHideAfterPaste;
     private bool _autoBackupEnabled;
     private string _backupFolderPath = string.Empty;
     private bool _bringWindowToFrontOnHotkey;
     private string _errorMessage = string.Empty;
+    private bool _isSpotifyConnected;
+    private bool _isSpotifyConnectionBusy;
     private bool _restoreClipboardAfterPaste;
+    private bool _showSpotifyConnectionFields;
+    private string _spotifyClientIdInput = string.Empty;
+    private string _spotifyConnectionStatusText = string.Empty;
 
     public SettingsViewModel(
         SettingsService settingsService,
@@ -33,7 +41,10 @@ public sealed class SettingsViewModel : ObservableObject
         LoggingService? loggingService = null,
         BackupService? backupService = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null,
-        DialogService? dialogService = null)
+        DialogService? dialogService = null,
+        ISpotifyConnectionService? spotifyConnectionService = null,
+        IUrlLaunchService? urlLaunchService = null,
+        IClipboardService? clipboardService = null)
     {
         _settingsService = settingsService;
         _cancel = cancel;
@@ -43,6 +54,10 @@ public sealed class SettingsViewModel : ObservableObject
         _backupService = backupService;
         _autoBackupCoordinator = autoBackupCoordinator;
         _dialogService = dialogService ?? new DialogService();
+        _clipboardService = clipboardService ?? new WpfClipboardService();
+        _urlLaunchService = urlLaunchService ?? new UrlLaunchService();
+        _spotifyConnectionService = spotifyConnectionService
+            ?? new SpotifyConnectionService(settingsService, _urlLaunchService);
         _settings = settingsService.Load();
 
         _bringWindowToFrontOnHotkey = _settings.BringWindowToFrontOnHotkey;
@@ -50,11 +65,19 @@ public sealed class SettingsViewModel : ObservableObject
         _restoreClipboardAfterPaste = _settings.RestoreClipboardAfterPaste;
         _autoBackupEnabled = _settings.AutoBackupEnabled;
         _backupFolderPath = _settings.BackupFolderPath;
+        RefreshSpotifyConnectionState();
 
         SaveCommand = new RelayCommand(Save);
         BackCommand = new RelayCommand(_cancel);
         ChooseBackupFolderCommand = new RelayCommand(ChooseBackupFolder);
         CreateManualBackupCommand = new RelayCommand(CreateManualBackup);
+        ShowSpotifyConnectionFieldsCommand = new RelayCommand(RevealSpotifyConnectionFields);
+        OpenSpotifyDeveloperDashboardCommand = new RelayCommand(OpenSpotifyDeveloperDashboard);
+        CopySpotifyAppNameExampleCommand = new RelayCommand(CopySpotifyAppNameExample);
+        CopySpotifyAppDescriptionExampleCommand = new RelayCommand(CopySpotifyAppDescriptionExample);
+        CopySpotifyRedirectUriCommand = new RelayCommand(CopySpotifyRedirectUri);
+        StartSpotifyConnectionCommand = new AsyncRelayCommand(StartSpotifyConnectionAsync);
+        DisconnectSpotifyCommand = new RelayCommand(DisconnectSpotify);
     }
 
     public string Title => "설정";
@@ -114,6 +137,78 @@ public sealed class SettingsViewModel : ObservableObject
         ? "백업 폴더가 선택되지 않았습니다."
         : BackupFolderPath;
 
+    public string SpotifyConnectionStatusText
+    {
+        get => _spotifyConnectionStatusText;
+        private set => SetProperty(ref _spotifyConnectionStatusText, value);
+    }
+
+    public bool IsSpotifyConnected
+    {
+        get => _isSpotifyConnected;
+        private set
+        {
+            if (!SetProperty(ref _isSpotifyConnected, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsSpotifyDisconnected));
+            OnPropertyChanged(nameof(ShowSpotifyConnectButton));
+            OnPropertyChanged(nameof(ShowSpotifyConnectedActions));
+        }
+    }
+
+    public bool IsSpotifyDisconnected => !IsSpotifyConnected;
+
+    public bool ShowSpotifyConnectionFields
+    {
+        get => _showSpotifyConnectionFields;
+        private set
+        {
+            if (!SetProperty(ref _showSpotifyConnectionFields, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(ShowSpotifyConnectButton));
+        }
+    }
+
+    public bool ShowSpotifyConnectButton => IsSpotifyDisconnected && !ShowSpotifyConnectionFields;
+
+    public bool ShowSpotifyConnectedActions => IsSpotifyConnected;
+
+    public bool IsSpotifyConnectionBusy
+    {
+        get => _isSpotifyConnectionBusy;
+        private set => SetProperty(ref _isSpotifyConnectionBusy, value);
+    }
+
+    public string SpotifyClientIdInput
+    {
+        get => _spotifyClientIdInput;
+        set => SetProperty(ref _spotifyClientIdInput, value);
+    }
+
+    public string SpotifyRedirectUri => _spotifyConnectionService.RedirectUri;
+
+    public string SpotifyClientIdHelp =>
+        "Client Secret은 입력하지 않습니다. Spotify Developer Dashboard에서 Client ID만 복사해 주세요.";
+
+    public string SpotifySetupIntro =>
+        "Spotify 비밀번호나 Client Secret은 입력하지 않습니다. Dashboard에서 앱을 만들고 Client ID만 복사해 연결합니다.";
+
+    public string SpotifyAppNameExample => "DeckDeckDeck Local";
+
+    public string SpotifyAppDescriptionExample => "Local Spotify control app for personal playback";
+
+    public string SpotifyRedirectUriHelp =>
+        "Redirect URI는 Spotify 로그인이 끝난 뒤 DeckDeckDeck으로 돌아오기 위한 주소입니다. 아래 값을 그대로 등록해 주세요.";
+
+    public string SpotifyTroubleshootingText =>
+        "연결이 안 되면 Redirect URI가 한 글자도 틀리지 않았는지, Client ID를 제대로 복사했는지, Spotify 앱에서 음악을 한 번 재생했는지 확인해 주세요. 재생 제어는 Spotify Premium 계정이 필요할 수 있습니다.";
+
     public string ErrorMessage
     {
         get => _errorMessage;
@@ -128,6 +223,20 @@ public sealed class SettingsViewModel : ObservableObject
 
     public ICommand CreateManualBackupCommand { get; }
 
+    public ICommand ShowSpotifyConnectionFieldsCommand { get; }
+
+    public ICommand OpenSpotifyDeveloperDashboardCommand { get; }
+
+    public ICommand CopySpotifyAppNameExampleCommand { get; }
+
+    public ICommand CopySpotifyAppDescriptionExampleCommand { get; }
+
+    public ICommand CopySpotifyRedirectUriCommand { get; }
+
+    public ICommand StartSpotifyConnectionCommand { get; }
+
+    public ICommand DisconnectSpotifyCommand { get; }
+
     private void Save()
     {
         try
@@ -139,13 +248,13 @@ public sealed class SettingsViewModel : ObservableObject
                 return;
             }
 
-            _settings.BringWindowToFrontOnHotkey = BringWindowToFrontOnHotkey;
-            _settings.AutoHideAfterPaste = AutoHideAfterPaste;
-            _settings.RestoreClipboardAfterPaste = RestoreClipboardAfterPaste;
-            _settings.AutoBackupEnabled = AutoBackupEnabled;
-            _settings.BackupFolderPath = BackupFolderPath.Trim();
-            _settings.LastBackupCreatedAt = _settingsService.Load().LastBackupCreatedAt;
-            _settingsService.Save(_settings);
+            var latestSettings = _settingsService.Load();
+            latestSettings.BringWindowToFrontOnHotkey = BringWindowToFrontOnHotkey;
+            latestSettings.AutoHideAfterPaste = AutoHideAfterPaste;
+            latestSettings.RestoreClipboardAfterPaste = RestoreClipboardAfterPaste;
+            latestSettings.AutoBackupEnabled = AutoBackupEnabled;
+            latestSettings.BackupFolderPath = BackupFolderPath.Trim();
+            _settingsService.Save(latestSettings);
             _autoBackupCoordinator?.RequestAutoBackup();
             _showStatus("설정을 저장했습니다.");
             _afterSave();
@@ -197,6 +306,157 @@ public sealed class SettingsViewModel : ObservableObject
         _settings.LastBackupCreatedAt = _settingsService.Load().LastBackupCreatedAt;
         ErrorMessage = string.Empty;
         _showStatus($"백업을 만들었습니다: {Path.GetFileName(result.BackupPath)}");
+    }
+
+    private void RevealSpotifyConnectionFields()
+    {
+        SpotifyClientIdInput = _settingsService.Load().SpotifyClientId;
+        ShowSpotifyConnectionFields = true;
+        ErrorMessage = string.Empty;
+    }
+
+    private void OpenSpotifyDeveloperDashboard()
+    {
+        try
+        {
+            if (!_urlLaunchService.TryLaunch(_spotifyConnectionService.DashboardUrl))
+            {
+                ErrorMessage = "Spotify Developer Dashboard를 열지 못했습니다.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Spotify Developer Dashboard를 열지 못했습니다.";
+            _loggingService?.Log("Spotify Developer Dashboard launch failed.", ex);
+        }
+    }
+
+    private void CopySpotifyAppNameExample()
+    {
+        CopySpotifySetupValue(
+            SpotifyAppNameExample,
+            "Spotify App name 예시를 복사했습니다.",
+            "Spotify App name 예시를 복사하지 못했습니다. 예시를 직접 선택해서 복사해 주세요.",
+            "Spotify app name example copy failed.");
+    }
+
+    private void CopySpotifyAppDescriptionExample()
+    {
+        CopySpotifySetupValue(
+            SpotifyAppDescriptionExample,
+            "Spotify App description 예시를 복사했습니다.",
+            "Spotify App description 예시를 복사하지 못했습니다. 예시를 직접 선택해서 복사해 주세요.",
+            "Spotify app description example copy failed.");
+    }
+
+    private void CopySpotifyRedirectUri()
+    {
+        CopySpotifySetupValue(
+            SpotifyRedirectUri,
+            "Spotify Redirect URI를 복사했습니다.",
+            "Redirect URI를 복사하지 못했습니다. 주소를 직접 선택해서 복사해 주세요.",
+            "Spotify redirect URI copy failed.");
+    }
+
+    private void CopySpotifySetupValue(
+        string value,
+        string successMessage,
+        string failureMessage,
+        string logMessage)
+    {
+        try
+        {
+            _clipboardService.SetText(value);
+            ErrorMessage = string.Empty;
+            _showStatus(successMessage);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = failureMessage;
+            _loggingService?.Log(logMessage, ex);
+        }
+    }
+
+    private async Task StartSpotifyConnectionAsync()
+    {
+        if (IsSpotifyConnectionBusy)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(SpotifyClientIdInput))
+        {
+            ErrorMessage = "Spotify Client ID를 입력해 주세요.";
+            return;
+        }
+
+        try
+        {
+            IsSpotifyConnectionBusy = true;
+            ErrorMessage = string.Empty;
+            var result = await _spotifyConnectionService.ConnectAsync(SpotifyClientIdInput);
+            if (!result.Succeeded)
+            {
+                ErrorMessage = result.ErrorMessage ?? "Spotify 연결에 실패했습니다.";
+                _showStatus(ErrorMessage);
+                return;
+            }
+
+            RefreshSpotifyConnectionState();
+            ShowSpotifyConnectionFields = false;
+            _showStatus("Spotify 연결됨.");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Spotify 연결에 실패했습니다.";
+            _loggingService?.Log("Spotify connection failed.", ex);
+        }
+        finally
+        {
+            IsSpotifyConnectionBusy = false;
+        }
+    }
+
+    private void DisconnectSpotify()
+    {
+        try
+        {
+            _spotifyConnectionService.Disconnect();
+            SpotifyClientIdInput = string.Empty;
+            ShowSpotifyConnectionFields = false;
+            RefreshSpotifyConnectionState();
+            ErrorMessage = string.Empty;
+            _showStatus("Spotify 연결을 해제했습니다.");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Spotify 연결 해제에 실패했습니다.";
+            _loggingService?.Log("Spotify disconnect failed.", ex);
+        }
+    }
+
+    private void RefreshSpotifyConnectionState()
+    {
+        var latestSettings = _settingsService.Load();
+        var connected = IsSpotifySettingsConnected(latestSettings);
+        IsSpotifyConnected = connected;
+        SpotifyConnectionStatusText = connected
+            ? $"Spotify 연결되어 있음{FormatSpotifyDisplayName(latestSettings)}"
+            : "Spotify 연결되어 있지 않음";
+    }
+
+    private static bool IsSpotifySettingsConnected(AppSettings settings)
+    {
+        return !string.IsNullOrWhiteSpace(settings.SpotifyClientId)
+            && !string.IsNullOrWhiteSpace(settings.SpotifyAccessToken)
+            && !string.IsNullOrWhiteSpace(settings.SpotifyRefreshToken);
+    }
+
+    private static string FormatSpotifyDisplayName(AppSettings settings)
+    {
+        return string.IsNullOrWhiteSpace(settings.SpotifyConnectedUserDisplayName)
+            ? string.Empty
+            : $" ({settings.SpotifyConnectedUserDisplayName})";
     }
 
     private string? ValidateBackupSettings(bool requireFolder)

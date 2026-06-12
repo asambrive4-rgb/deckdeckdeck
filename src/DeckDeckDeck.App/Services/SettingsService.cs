@@ -96,6 +96,21 @@ public sealed class SettingsService
             new KeyValuePair<string, string>(
                 SettingsKeys.LastBackupCreatedAt,
                 SettingsValueParser.FormatNullableDateTimeOffset(settings.LastBackupCreatedAt)),
+            new KeyValuePair<string, string>(
+                SettingsKeys.SpotifyClientId,
+                settings.SpotifyClientId),
+            new KeyValuePair<string, string>(
+                SettingsKeys.SpotifyAccessToken,
+                ProtectedSettingValueService.Protect(settings.SpotifyAccessToken)),
+            new KeyValuePair<string, string>(
+                SettingsKeys.SpotifyRefreshToken,
+                ProtectedSettingValueService.Protect(settings.SpotifyRefreshToken)),
+            new KeyValuePair<string, string>(
+                SettingsKeys.SpotifyTokenExpiresAt,
+                SettingsValueParser.FormatNullableDateTimeOffset(settings.SpotifyTokenExpiresAt)),
+            new KeyValuePair<string, string>(
+                SettingsKeys.SpotifyConnectedUserDisplayName,
+                settings.SpotifyConnectedUserDisplayName),
             new KeyValuePair<string, string>(SettingsKeys.HomeHotkey, settings.HomeHotkey),
             new KeyValuePair<string, string>(SettingsKeys.DirectCategoryHotkeys, settings.DirectCategoryHotkeys),
             new KeyValuePair<string, string>(
@@ -194,6 +209,25 @@ public sealed class SettingsService
             LastBackupCreatedAt = SettingsValueParser.ReadNullableDateTimeOffset(
                 entries,
                 SettingsKeys.LastBackupCreatedAt),
+            SpotifyClientId = SettingsValueParser.ReadString(
+                entries,
+                SettingsKeys.SpotifyClientId,
+                string.Empty),
+            SpotifyAccessToken = ProtectedSettingValueService.Unprotect(SettingsValueParser.ReadString(
+                entries,
+                SettingsKeys.SpotifyAccessToken,
+                string.Empty)),
+            SpotifyRefreshToken = ProtectedSettingValueService.Unprotect(SettingsValueParser.ReadString(
+                entries,
+                SettingsKeys.SpotifyRefreshToken,
+                string.Empty)),
+            SpotifyTokenExpiresAt = SettingsValueParser.ReadNullableDateTimeOffset(
+                entries,
+                SettingsKeys.SpotifyTokenExpiresAt),
+            SpotifyConnectedUserDisplayName = SettingsValueParser.ReadString(
+                entries,
+                SettingsKeys.SpotifyConnectedUserDisplayName,
+                string.Empty),
             HomeHotkey = SettingsValueParser.ReadString(
                 entries,
                 SettingsKeys.HomeHotkey,
@@ -223,6 +257,11 @@ public sealed class SettingsService
             BackupFolderPath = settings.BackupFolderPath,
             AutoBackupRetentionCount = settings.AutoBackupRetentionCount,
             LastBackupCreatedAt = settings.LastBackupCreatedAt,
+            SpotifyClientId = settings.SpotifyClientId,
+            SpotifyAccessToken = settings.SpotifyAccessToken,
+            SpotifyRefreshToken = settings.SpotifyRefreshToken,
+            SpotifyTokenExpiresAt = settings.SpotifyTokenExpiresAt,
+            SpotifyConnectedUserDisplayName = settings.SpotifyConnectedUserDisplayName,
             EnabledCategorySlotKeys = new Dictionary<SlotKey, bool>(settings.EnabledCategorySlotKeys),
             EnabledSnippetSlotKeys = new Dictionary<SlotKey, bool>(settings.EnabledSnippetSlotKeys),
             HomeHotkey = settings.HomeHotkey,

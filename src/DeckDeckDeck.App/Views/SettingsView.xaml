@@ -6,6 +6,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/DeckDeckDeck.App;component/Resources/Theme.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -29,6 +30,126 @@
                       Content="붙여넣은 후 클립보드 복원"
                       Style="{StaticResource Deck.CheckBoxStyle}"
                       IsChecked="{Binding RestoreClipboardAfterPaste}" />
+
+            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                       Text="Spotify 연결" />
+            <Border Margin="0,0,0,18"
+                    Style="{StaticResource Deck.InfoPanelBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="{Binding SpotifyConnectionStatusText}"
+                               TextWrapping="Wrap" />
+                    <StackPanel Margin="0,10,0,0"
+                                Visibility="{Binding ShowSpotifyConnectButton, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Button Command="{Binding ShowSpotifyConnectionFieldsCommand}"
+                                Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                Content="Spotify 연결" />
+                    </StackPanel>
+                    <StackPanel Margin="0,10,0,0"
+                                Visibility="{Binding ShowSpotifyConnectionFields, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Margin="0,0,0,10"
+                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                   Text="{Binding SpotifySetupIntro}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                   Text="1. Spotify Developer Dashboard를 엽니다." />
+                        <Button HorizontalAlignment="Left"
+                                Command="{Binding OpenSpotifyDeveloperDashboardCommand}"
+                                Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                Content="Spotify Developer Dashboard 열기" />
+                        <TextBlock Margin="0,12,0,6"
+                                   Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                   Text="2. Dashboard에서 새 앱을 만듭니다." />
+                        <TextBlock Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                   Text="App name 예시"
+                                   TextWrapping="Wrap" />
+                        <Grid Margin="0,4,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Height="36"
+                                     IsReadOnly="True"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding SpotifyAppNameExample, Mode=OneWay}" />
+                            <Button Grid.Column="1"
+                                    Margin="8,0,0,0"
+                                    Command="{Binding CopySpotifyAppNameExampleCommand}"
+                                    Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                    Content="복사" />
+                        </Grid>
+                        <TextBlock Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                   Text="App description 예시"
+                                   TextWrapping="Wrap" />
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Height="36"
+                                     IsReadOnly="True"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding SpotifyAppDescriptionExample, Mode=OneWay}" />
+                            <Button Grid.Column="1"
+                                    Margin="8,0,0,0"
+                                    Command="{Binding CopySpotifyAppDescriptionExampleCommand}"
+                                    Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                    Content="복사" />
+                        </Grid>
+                        <TextBlock Margin="0,12,0,6"
+                                   Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                   Text="3. Redirect URI를 등록하고 저장합니다." />
+                        <TextBlock Margin="0,10,0,6"
+                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                   Text="{Binding SpotifyRedirectUriHelp}"
+                                   TextWrapping="Wrap" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Height="36"
+                                     IsReadOnly="True"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding SpotifyRedirectUri, Mode=OneWay}" />
+                            <Button Grid.Column="1"
+                                    Margin="8,0,0,0"
+                                    Command="{Binding CopySpotifyRedirectUriCommand}"
+                                    Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                    Content="복사" />
+                        </Grid>
+                        <TextBlock Margin="0,12,0,6"
+                                   Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                   Text="4. Spotify 앱 화면에서 Client ID를 복사합니다." />
+                        <TextBlock Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                   Text="{Binding SpotifyClientIdHelp}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="0,12,0,6"
+                                   Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                   Text="5. Client ID를 붙여넣고 연결을 시작합니다." />
+                        <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                   Text="Spotify Client ID" />
+                        <TextBox Height="36"
+                                 Style="{StaticResource Deck.TextBoxStyle}"
+                                 Text="{Binding SpotifyClientIdInput, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button Margin="0,10,0,0"
+                                HorizontalAlignment="Left"
+                                Command="{Binding StartSpotifyConnectionCommand}"
+                                Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                Content="연결 시작" />
+                        <Border Margin="0,12,0,0"
+                                Style="{StaticResource Deck.WarningPanelBorderStyle}">
+                            <TextBlock Style="{StaticResource Deck.WarningTextStyle}"
+                                       Text="{Binding SpotifyTroubleshootingText}" />
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Margin="0,10,0,0"
+                                Visibility="{Binding ShowSpotifyConnectedActions, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Button Command="{Binding DisconnectSpotifyCommand}"
+                                Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                Content="연결 해제" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
 
             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                        Text="자동 백업" />

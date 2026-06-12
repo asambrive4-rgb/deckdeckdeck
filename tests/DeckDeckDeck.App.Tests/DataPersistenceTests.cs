@@ -130,6 +130,52 @@ public sealed class DataPersistenceTests
     }
 
     [Fact]
+    public void SpotifyMediaActionSnippetPersistsAcrossDbContexts()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Shuffle",
+            "unused",
+            null,
+            actionType: SnippetActionType.MediaAction,
+            mediaProvider: SnippetMediaProvider.Spotify,
+            mediaCommand: SnippetMediaCommand.ToggleShuffle);
+
+        var reloadedServices = CreateServices(services.Storage.AppDataPath);
+        var snippet = Assert.Single(reloadedServices.SnippetService.GetByCategoryId(category.Id));
+
+        Assert.Equal(SnippetActionType.MediaAction, snippet.ActionType);
+        Assert.Equal(SnippetMediaProvider.Spotify, snippet.MediaProvider);
+        Assert.Equal(SnippetMediaCommand.ToggleShuffle, snippet.MediaCommand);
+    }
+
+    [Fact]
+    public void SpotifyOpenAndResumeSnippetPersistsAcrossDbContexts()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Open Spotify",
+            "unused",
+            null,
+            actionType: SnippetActionType.MediaAction,
+            mediaProvider: SnippetMediaProvider.Spotify,
+            mediaCommand: SnippetMediaCommand.OpenSpotifyAndResume);
+
+        var reloadedServices = CreateServices(services.Storage.AppDataPath);
+        var snippet = Assert.Single(reloadedServices.SnippetService.GetByCategoryId(category.Id));
+
+        Assert.Equal(SnippetActionType.MediaAction, snippet.ActionType);
+        Assert.Equal(SnippetMediaProvider.Spotify, snippet.MediaProvider);
+        Assert.Equal(SnippetMediaCommand.OpenSpotifyAndResume, snippet.MediaCommand);
+    }
+
+    [Fact]
     public void ExistingDatabaseWithoutActionColumnsIsPreservedAndBackfilled()
     {
         var storage = new FileStorageService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
@@ -517,6 +563,29 @@ public sealed class DataPersistenceTests
         Assert.Null(result.Snippet.LaunchUrl);
         Assert.Equal(SnippetMediaProvider.System, result.Snippet.MediaProvider);
         Assert.Equal(SnippetMediaCommand.VolumeUp, result.Snippet.MediaCommand);
+    }
+
+    [Fact]
+    public void CopyingSnippetToSlotPreservesSpotifyOpenAndResumeCommand()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        var source = services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Open Spotify",
+            "unused",
+            null,
+            actionType: SnippetActionType.MediaAction,
+            mediaProvider: SnippetMediaProvider.Spotify,
+            mediaCommand: SnippetMediaCommand.OpenSpotifyAndResume);
+
+        var result = services.SnippetService.CopyToSlot(source.Id, SlotKey.Numpad5, imageFiles => imageFiles);
+
+        Assert.Equal(SlotKey.Numpad5, result.Snippet.SlotKey);
+        Assert.Equal(SnippetActionType.MediaAction, result.Snippet.ActionType);
+        Assert.Equal(SnippetMediaProvider.Spotify, result.Snippet.MediaProvider);
+        Assert.Equal(SnippetMediaCommand.OpenSpotifyAndResume, result.Snippet.MediaCommand);
     }
 
     [Fact]

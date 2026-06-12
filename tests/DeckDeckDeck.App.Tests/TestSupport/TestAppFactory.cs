@@ -51,6 +51,8 @@ internal static class TestAppFactory
         IFileLaunchService? fileLaunchService = null,
         IUrlLaunchService? urlLaunchService = null,
         IMediaActionService? mediaActionService = null,
+        ISpotifyConnectionService? spotifyConnectionService = null,
+        ISpotifyMediaActionService? spotifyMediaActionService = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         return new MainViewModel(
@@ -70,6 +72,8 @@ internal static class TestAppFactory
             fileLaunchService: fileLaunchService,
             urlLaunchService: urlLaunchService,
             mediaActionService: mediaActionService,
+            spotifyConnectionService: spotifyConnectionService,
+            spotifyMediaActionService: spotifyMediaActionService,
             snippetImageService: services.SnippetImageService,
             backupService: services.BackupService,
             autoBackupCoordinator: autoBackupCoordinator);
@@ -308,6 +312,28 @@ internal sealed class RecordingMediaActionService : IMediaActionService
 
         Commands.Add(command);
         return Result;
+    }
+}
+
+internal sealed class RecordingSpotifyMediaActionService : ISpotifyMediaActionService
+{
+    public SpotifyMediaActionResult Result { get; set; } = new(true);
+
+    public Exception? Exception { get; set; }
+
+    public List<SnippetMediaCommand> Commands { get; } = [];
+
+    public Task<SpotifyMediaActionResult> TryExecuteAsync(
+        SnippetMediaCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        if (Exception is not null)
+        {
+            throw Exception;
+        }
+
+        Commands.Add(command);
+        return Task.FromResult(Result);
     }
 }
 

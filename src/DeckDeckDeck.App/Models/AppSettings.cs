@@ -16,6 +16,16 @@ public sealed class AppSettings
 
     public DateTimeOffset? LastBackupCreatedAt { get; set; }
 
+    public string SpotifyClientId { get; set; } = string.Empty;
+
+    public string SpotifyAccessToken { get; set; } = string.Empty;
+
+    public string SpotifyRefreshToken { get; set; } = string.Empty;
+
+    public DateTimeOffset? SpotifyTokenExpiresAt { get; set; }
+
+    public string SpotifyConnectedUserDisplayName { get; set; } = string.Empty;
+
     public Dictionary<SlotKey, bool> EnabledCategorySlotKeys { get; set; } =
         SlotKeyCatalog.All.ToDictionary(slotKey => slotKey, _ => true);
 
