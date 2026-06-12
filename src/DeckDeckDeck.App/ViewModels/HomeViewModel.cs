@@ -14,7 +14,7 @@ public sealed class HomeViewModel
     public HomeViewModel(
         CategoryService categoryService,
         SettingsService settingsService,
-        SlotService slotService,
+        SlotGridViewModelFactory slotGridViewModelFactory,
         Action<Category> openCategory,
         Action<Category> editCategory,
         Action<SlotKey> createCategory,
@@ -27,7 +27,11 @@ public sealed class HomeViewModel
 
         var categories = categoryService.GetAll();
         var settings = settingsService.Load();
-        NumpadGrid = slotService.BuildCategoryGrid(categories, settings, SelectCategorySlot, EditCategorySlot);
+        NumpadGrid = slotGridViewModelFactory.BuildCategoryGrid(
+            categories,
+            settings,
+            SelectCategorySlot,
+            EditCategorySlot);
     }
 
     public string Title => "DeckDeckDeck";

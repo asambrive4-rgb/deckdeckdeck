@@ -1,5 +1,6 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.UseCases;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -33,7 +34,7 @@ internal sealed class MainViewModelNavigator
         _showViewModel(new HomeViewModel(
             _services.CategoryService,
             _services.SettingsService,
-            _services.SlotService,
+            _services.SlotGridViewModelFactory,
             OpenCategory,
             EditCategory,
             CreateCategory,
@@ -48,7 +49,9 @@ internal sealed class MainViewModelNavigator
             slotKey,
             category: null,
             _services.CategoryService,
-            _services.CategoryTransferService,
+            CreateSaveCategoryUseCase(),
+            CreateDeleteCategoryUseCase(),
+            CreateTransferCategoryUseCase(),
             _services.DialogService,
             ShowHome,
             _ => ShowHome(),
@@ -68,7 +71,9 @@ internal sealed class MainViewModelNavigator
             category.SlotKey,
             category,
             _services.CategoryService,
-            _services.CategoryTransferService,
+            CreateSaveCategoryUseCase(),
+            CreateDeleteCategoryUseCase(),
+            CreateTransferCategoryUseCase(),
             _services.DialogService,
             ShowHome,
             _ => ShowHome(),
@@ -87,7 +92,7 @@ internal sealed class MainViewModelNavigator
             category,
             _services.SnippetService,
             _services.SettingsService,
-            _services.SlotService,
+            _services.SlotGridViewModelFactory,
             ShowHome,
             () => ShowSettings(() => OpenCategoryById(category.Id)),
             EditSnippet,
@@ -116,7 +121,9 @@ internal sealed class MainViewModelNavigator
             slotKey,
             snippet,
             _services.SnippetService,
-            _services.SnippetTransferService,
+            CreateSaveSnippetUseCase(),
+            CreateDeleteSnippetUseCase(),
+            CreateTransferSnippetUseCase(),
             _services.DialogService,
             () => OpenCategoryById(category.Id),
             _ => OpenCategoryById(category.Id),
@@ -130,6 +137,58 @@ internal sealed class MainViewModelNavigator
         _showStatus(snippet is null
             ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
             : $"{snippet.Title} 편집");
+    }
+
+    private SaveCategoryUseCase CreateSaveCategoryUseCase()
+    {
+        return new SaveCategoryUseCase(
+            _services.CategoryService,
+            _services.SettingsService,
+            _autoBackupCoordinator);
+    }
+
+    private DeleteCategoryUseCase CreateDeleteCategoryUseCase()
+    {
+        return new DeleteCategoryUseCase(
+            _services.CategoryService,
+            _services.ThumbnailService,
+            _autoBackupCoordinator);
+    }
+
+    private TransferCategoryUseCase CreateTransferCategoryUseCase()
+    {
+        return new TransferCategoryUseCase(
+            _services.CategoryService,
+            _services.SettingsService,
+            CreateSaveCategoryUseCase(),
+            _services.ThumbnailService,
+            _autoBackupCoordinator);
+    }
+
+    private SaveSnippetUseCase CreateSaveSnippetUseCase()
+    {
+        return new SaveSnippetUseCase(
+            _services.SnippetService,
+            _services.SettingsService,
+            _autoBackupCoordinator);
+    }
+
+    private DeleteSnippetUseCase CreateDeleteSnippetUseCase()
+    {
+        return new DeleteSnippetUseCase(
+            _services.SnippetService,
+            _services.ThumbnailService,
+            _autoBackupCoordinator);
+    }
+
+    private TransferSnippetUseCase CreateTransferSnippetUseCase()
+    {
+        return new TransferSnippetUseCase(
+            _services.SnippetService,
+            _services.SettingsService,
+            CreateSaveSnippetUseCase(),
+            _services.ThumbnailService,
+            _autoBackupCoordinator);
     }
 
     private void ShowSettings(Action returnTo)

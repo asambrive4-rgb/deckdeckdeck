@@ -1,9 +1,10 @@
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.ViewModels;
+using DeckDeckDeck.App.Services;
 
-namespace DeckDeckDeck.App.Services;
+namespace DeckDeckDeck.App.ViewModels;
 
-public sealed class SlotService
+public sealed class SlotGridViewModelFactory
 {
     public NumpadGridViewModel BuildCategoryGrid(
         IEnumerable<Category> categories,
@@ -20,7 +21,7 @@ public sealed class SlotService
                 slotKey,
                 category?.Name,
                 category?.ThumbnailPath,
-                IsEnabled(slotKey, settings.EnabledCategorySlotKeys),
+                SlotRules.IsEnabled(slotKey, settings.EnabledCategorySlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, category),
                 selectedSlotKey => onEdit(selectedSlotKey, category));
         }));
@@ -42,14 +43,9 @@ public sealed class SlotService
                 slotKey,
                 snippet?.Title,
                 thumbnailPath,
-                IsEnabled(slotKey, settings.EnabledSnippetSlotKeys),
+                SlotRules.IsEnabled(slotKey, settings.EnabledSnippetSlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, snippet),
                 selectedSlotKey => onEdit(selectedSlotKey, snippet));
         }));
-    }
-
-    private static bool IsEnabled(SlotKey slotKey, IReadOnlyDictionary<SlotKey, bool> enabledSlotKeys)
-    {
-        return !enabledSlotKeys.TryGetValue(slotKey, out var enabled) || enabled;
     }
 }

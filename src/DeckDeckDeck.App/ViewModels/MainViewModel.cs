@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.UseCases;
 using System.Windows.Input;
 
 namespace DeckDeckDeck.App.ViewModels;
@@ -35,7 +36,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         CategoryService categoryService,
         DialogService dialogService,
         SettingsService settingsService,
-        SlotService slotService,
+        SlotGridViewModelFactory slotGridViewModelFactory,
         SnippetService snippetService,
         IClipboardPasteService? clipboardPasteService = null,
         Func<IntPtr>? getPasteTargetWindowHandle = null,
@@ -55,26 +56,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         var effectiveUrlLaunchService = urlLaunchService ?? new UrlLaunchService();
-        var transferService = new CategoryTransferService(
-            categoryService,
-            settingsService,
-            thumbnailService,
-            loggingService);
-        var snippetTransferService = new SnippetTransferService(
-            snippetService,
-            settingsService,
-            thumbnailService,
-            loggingService);
-
         var services = new AppServices(
             categoryService,
-            transferService,
             backupService,
             dialogService,
             settingsService,
-            slotService,
             snippetService,
-            snippetTransferService,
             snippetImageService,
             clipboardPasteService ?? new ClipboardPasteService(),
             fileLaunchService ?? new FileLaunchService(),
@@ -83,7 +70,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             spotifyConnectionService ?? new SpotifyConnectionService(settingsService, effectiveUrlLaunchService),
             spotifyMediaActionService ?? new SpotifyMediaActionService(settingsService),
             loggingService,
-            thumbnailService);
+            thumbnailService,
+            slotGridViewModelFactory);
 
         Initialize(
             services,
@@ -301,28 +289,81 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                     ShowStatus,
                     services.LoggingService));
 
-        var pasteFlowService = new PasteFlowService(
+        var executeSnippetActionUseCase = new ExecuteSnippetActionUseCase(
             services.ClipboardPasteService,
             services.FileLaunchService,
             services.UrlLaunchService,
             services.MediaActionService,
-            services.SpotifyMediaActionService,
-            services.SettingsService,
-            getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
-            hideWindowAfterPaste ?? (() => { }),
-            createPasteSelectionCompletion ?? (() => completePasteSelection ?? (() => { })),
-            ShowStatus,
-            services.LoggingService);
+            new SpotifyMediaActionGatewayAdapter(services.SpotifyMediaActionService));
 
         _navigator = new MainViewModelNavigator(
             services,
             viewModel => CurrentViewModel = viewModel,
             ShowStatus,
             enterEditMode ?? (() => { }),
-            pasteFlowService.PasteSnippetAsync,
+            snippet => ExecuteSnippetActionAsync(
+                snippet,
+                executeSnippetActionUseCase,
+                getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
+                hideWindowAfterPaste ?? (() => { }),
+                createPasteSelectionCompletion ?? (() => completePasteSelection ?? (() => { }))),
             _autoBackupCoordinator);
         _settingsService.EnsureDefaults();
 
         ShowHome();
+    }
+
+    private async Task ExecuteSnippetActionAsync(
+        Snippet snippet,
+        ExecuteSnippetActionUseCase executeSnippetActionUseCase,
+        Func<IntPtr> getPasteTargetWindowHandle,
+        Action hideWindowAfterPaste,
+        Func<Action> createPasteSelectionCompletion)
+    {
+        var settings = _settingsService.Load();
+        var completePasteSelection = createPasteSelectionCompletion();
+
+        try
+        {
+            if (snippet.ActionType == SnippetActionType.PasteText && settings.AutoHideAfterPaste)
+            {
+                hideWindowAfterPaste();
+            }
+
+            var result = await executeSnippetActionUseCase.ExecuteAsync(
+                new ExecuteSnippetActionRequest(snippet, settings, getPasteTargetWindowHandle()));
+
+            if (result.ShouldHideWindow)
+            {
+                hideWindowAfterPaste();
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.StatusMessage))
+            {
+                ShowStatus(result.StatusMessage);
+            }
+
+            LogSnippetActionResult(result);
+        }
+        finally
+        {
+            completePasteSelection();
+        }
+    }
+
+    private void LogSnippetActionResult(ExecuteSnippetActionResult result)
+    {
+        if (string.IsNullOrWhiteSpace(result.LogMessage))
+        {
+            return;
+        }
+
+        if (result.Exception is null)
+        {
+            _loggingService?.Log(result.LogMessage);
+            return;
+        }
+
+        _loggingService?.Log(result.LogMessage, result.Exception);
     }
 }

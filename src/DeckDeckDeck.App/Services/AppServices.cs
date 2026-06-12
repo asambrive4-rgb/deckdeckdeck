@@ -1,16 +1,14 @@
 using DeckDeckDeck.App.Data;
+using DeckDeckDeck.App.ViewModels;
 
 namespace DeckDeckDeck.App.Services;
 
 internal sealed record AppServices(
     CategoryService CategoryService,
-    CategoryTransferService CategoryTransferService,
     BackupService? BackupService,
     DialogService DialogService,
     SettingsService SettingsService,
-    SlotService SlotService,
     SnippetService SnippetService,
-    SnippetTransferService SnippetTransferService,
     SnippetImageService? SnippetImageService,
     IClipboardPasteService ClipboardPasteService,
     IFileLaunchService FileLaunchService,
@@ -19,7 +17,8 @@ internal sealed record AppServices(
     ISpotifyConnectionService SpotifyConnectionService,
     ISpotifyMediaActionService SpotifyMediaActionService,
     LoggingService? LoggingService,
-    ThumbnailService? ThumbnailService)
+    ThumbnailService? ThumbnailService,
+    SlotGridViewModelFactory SlotGridViewModelFactory)
 {
     public static AppServices CreateDefault()
     {
@@ -45,13 +44,10 @@ internal sealed record AppServices(
 
         return new AppServices(
             categoryService,
-            new CategoryTransferService(categoryService, settingsService, thumbnailService, loggingService),
             backupService,
             new DialogService(),
             settingsService,
-            new SlotService(),
             snippetService,
-            new SnippetTransferService(snippetService, settingsService, thumbnailService, loggingService),
             snippetImageService,
             new ClipboardPasteService(),
             new FileLaunchService(),
@@ -60,6 +56,7 @@ internal sealed record AppServices(
             spotifyConnectionService,
             new SpotifyMediaActionService(settingsService),
             loggingService,
-            thumbnailService);
+            thumbnailService,
+            new SlotGridViewModelFactory());
     }
 }

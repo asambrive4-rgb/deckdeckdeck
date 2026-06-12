@@ -1,5 +1,6 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.ViewModels;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 
@@ -137,17 +138,28 @@ public sealed class CategoryEditViewModelTests
         Action<string> showStatus,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
-        var transferService = new CategoryTransferService(
+        var saveCategoryUseCase = new SaveCategoryUseCase(
             services.CategoryService,
             services.SettingsService,
+            autoBackupCoordinator);
+        var deleteCategoryUseCase = new DeleteCategoryUseCase(
+            services.CategoryService,
             services.ThumbnailService,
-            services.LoggingService);
+            autoBackupCoordinator);
+        var transferCategoryUseCase = new TransferCategoryUseCase(
+            services.CategoryService,
+            services.SettingsService,
+            saveCategoryUseCase,
+            services.ThumbnailService,
+            autoBackupCoordinator);
 
         return new CategoryEditViewModel(
             category.SlotKey,
             category,
             services.CategoryService,
-            transferService,
+            saveCategoryUseCase,
+            deleteCategoryUseCase,
+            transferCategoryUseCase,
             dialogService,
             () => { },
             _ => { },

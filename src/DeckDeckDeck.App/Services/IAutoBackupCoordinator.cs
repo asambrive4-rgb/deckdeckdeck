@@ -1,6 +1,7 @@
+using DeckDeckDeck.App.UseCases.Ports;
+
 namespace DeckDeckDeck.App.Services;
 
-public interface IAutoBackupCoordinator
+public interface IAutoBackupCoordinator : IAutoBackupRequester
 {
-    void RequestAutoBackup();
 }

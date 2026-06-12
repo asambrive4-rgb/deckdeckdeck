@@ -1,8 +1,8 @@
 using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.Services;
 
-public interface IClipboardPasteService
+public interface IClipboardPasteService : IClipboardPasteGateway
 {
-    Task<bool> PasteSnippetAsync(Snippet snippet, IntPtr targetWindowHandle, AppSettings settings);
 }

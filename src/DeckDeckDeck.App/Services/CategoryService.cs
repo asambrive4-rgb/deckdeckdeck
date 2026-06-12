@@ -1,12 +1,14 @@
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.UseCases.Ports;
 using Microsoft.EntityFrameworkCore;
+using UseCaseImageFileReference = DeckDeckDeck.App.UseCases.Ports.ImageFileReference;
 
 namespace DeckDeckDeck.App.Services;
 
 public sealed record CategoryTransferResult(Category Category, IReadOnlyList<ImageFileSet> OverwrittenImageFiles);
 
-public sealed class CategoryService
+public sealed class CategoryService : ICategoryRepository
 {
     private readonly AppDbContextFactory _dbContextFactory;
 
@@ -255,5 +257,45 @@ public sealed class CategoryService
         category.Name = name.Trim();
         category.Description = NormalizeOptionalText(description);
         category.UpdatedAt = DateTime.UtcNow;
+    }
+
+    IReadOnlyList<UseCaseImageFileReference> ICategoryRepository.Delete(Guid id)
+    {
+        return Delete(id).Select(ToUseCaseImageFileReference).ToList();
+    }
+
+    CategoryTransferRepositoryResult ICategoryRepository.CopyToSlot(
+        Guid sourceId,
+        SlotKey targetSlotKey,
+        Func<UseCaseImageFileReference, UseCaseImageFileReference> copyImageFiles)
+    {
+        var result = CopyToSlot(
+            sourceId,
+            targetSlotKey,
+            imageFiles =>
+            {
+                var copied = copyImageFiles(ToUseCaseImageFileReference(imageFiles));
+                return new ImageFileSet(copied.ImagePath, copied.ThumbnailPath);
+            });
+
+        return new CategoryTransferRepositoryResult(
+            result.Category,
+            result.OverwrittenImageFiles.Select(ToUseCaseImageFileReference).ToList());
+    }
+
+    CategoryTransferRepositoryResult ICategoryRepository.MoveToSlot(
+        Guid sourceId,
+        SlotKey targetSlotKey)
+    {
+        var result = MoveToSlot(sourceId, targetSlotKey);
+
+        return new CategoryTransferRepositoryResult(
+            result.Category,
+            result.OverwrittenImageFiles.Select(ToUseCaseImageFileReference).ToList());
+    }
+
+    private static UseCaseImageFileReference ToUseCaseImageFileReference(ImageFileSet imageFiles)
+    {
+        return new UseCaseImageFileReference(imageFiles.ImagePath, imageFiles.ThumbnailPath);
     }
 }

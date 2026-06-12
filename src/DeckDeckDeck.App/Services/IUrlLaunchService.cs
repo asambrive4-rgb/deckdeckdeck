@@ -1,6 +1,7 @@
+using DeckDeckDeck.App.UseCases.Ports;
+
 namespace DeckDeckDeck.App.Services;
 
-public interface IUrlLaunchService
+public interface IUrlLaunchService : IUrlLaunchGateway
 {
-    bool TryLaunch(string url);
 }

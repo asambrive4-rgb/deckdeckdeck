@@ -59,7 +59,7 @@ internal static class TestAppFactory
             services.CategoryService,
             new DialogService(),
             services.SettingsService,
-            new SlotService(),
+            new SlotGridViewModelFactory(),
             services.SnippetService,
             clipboardPasteService,
             getPasteTargetWindowHandle,

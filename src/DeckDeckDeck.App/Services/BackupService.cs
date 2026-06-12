@@ -1,11 +1,12 @@
 using System.IO;
 using System.IO.Compression;
 using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.UseCases.Ports;
 using Microsoft.Data.Sqlite;
 
 namespace DeckDeckDeck.App.Services;
 
-public sealed class BackupService
+public sealed class BackupService : IBackupGateway
 {
     private const string AutomaticBackupSearchPattern = "DeckDeckDeck-auto-*.zip";
     private readonly FileStorageService _fileStorageService;
@@ -232,5 +233,11 @@ public sealed class BackupService
         {
             // Temporary backup files should not interrupt the app flow.
         }
+    }
+
+    BackupGatewayResult IBackupGateway.CreateManualBackup(string backupFolderPath)
+    {
+        var result = CreateManualBackup(backupFolderPath);
+        return new BackupGatewayResult(result.Succeeded, result.BackupPath, result.ErrorMessage);
     }
 }

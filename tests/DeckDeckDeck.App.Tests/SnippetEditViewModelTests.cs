@@ -1,5 +1,6 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.ViewModels;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 
@@ -471,18 +472,30 @@ public sealed class SnippetEditViewModelTests
             SlotKey.Numpad3,
             snippet,
             services.SnippetService,
-            new SnippetTransferService(
+            new SaveSnippetUseCase(
                 services.SnippetService,
                 services.SettingsService,
+                autoBackupCoordinator),
+            new DeleteSnippetUseCase(
+                services.SnippetService,
                 services.ThumbnailService,
-                services.LoggingService),
+                autoBackupCoordinator),
+            new TransferSnippetUseCase(
+                services.SnippetService,
+                services.SettingsService,
+                new SaveSnippetUseCase(
+                    services.SnippetService,
+                    services.SettingsService,
+                    autoBackupCoordinator),
+                services.ThumbnailService,
+                autoBackupCoordinator),
             dialogService ?? new StubDialogService(),
             () => { },
             afterSave,
             () => { },
             showStatus ?? (_ => { }),
             thumbnailService: services.ThumbnailService,
-            settingsService: services.SettingsService,
+            settingsStore: services.SettingsService,
             loggingService: services.LoggingService,
             snippetImageService: services.SnippetImageService,
             autoBackupCoordinator: autoBackupCoordinator);

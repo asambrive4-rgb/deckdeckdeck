@@ -1,12 +1,14 @@
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.UseCases.Ports;
 using Microsoft.EntityFrameworkCore;
+using UseCaseImageFileReference = DeckDeckDeck.App.UseCases.Ports.ImageFileReference;
 
 namespace DeckDeckDeck.App.Services;
 
 public sealed record SnippetTransferResult(Snippet Snippet, IReadOnlyList<ImageFileSet> OverwrittenImageFiles);
 
-public sealed class SnippetService
+public sealed class SnippetService : ISnippetRepository
 {
     private readonly AppDbContextFactory _dbContextFactory;
 
@@ -334,5 +336,45 @@ public sealed class SnippetService
         snippet.MediaCommand = GetStoredMediaCommand(actionType, mediaCommand);
         snippet.Description = NormalizeOptionalText(description);
         snippet.UpdatedAt = DateTime.UtcNow;
+    }
+
+    UseCaseImageFileReference ISnippetRepository.Delete(Guid id)
+    {
+        return ToUseCaseImageFileReference(Delete(id));
+    }
+
+    SnippetTransferRepositoryResult ISnippetRepository.CopyToSlot(
+        Guid sourceId,
+        SlotKey targetSlotKey,
+        Func<UseCaseImageFileReference, UseCaseImageFileReference> copyImageFiles)
+    {
+        var result = CopyToSlot(
+            sourceId,
+            targetSlotKey,
+            imageFiles =>
+            {
+                var copied = copyImageFiles(ToUseCaseImageFileReference(imageFiles));
+                return new ImageFileSet(copied.ImagePath, copied.ThumbnailPath);
+            });
+
+        return new SnippetTransferRepositoryResult(
+            result.Snippet,
+            result.OverwrittenImageFiles.Select(ToUseCaseImageFileReference).ToList());
+    }
+
+    SnippetTransferRepositoryResult ISnippetRepository.MoveToSlot(
+        Guid sourceId,
+        SlotKey targetSlotKey)
+    {
+        var result = MoveToSlot(sourceId, targetSlotKey);
+
+        return new SnippetTransferRepositoryResult(
+            result.Snippet,
+            result.OverwrittenImageFiles.Select(ToUseCaseImageFileReference).ToList());
+    }
+
+    private static UseCaseImageFileReference ToUseCaseImageFileReference(ImageFileSet imageFiles)
+    {
+        return new UseCaseImageFileReference(imageFiles.ImagePath, imageFiles.ThumbnailPath);
     }
 }

@@ -1,6 +1,7 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.ViewModels;
 using DeckDeckDeck.App.Views;
 using System.Runtime.InteropServices;
@@ -66,11 +67,18 @@ public sealed class ViewRenderingTests
                     SlotKey.Numpad3,
                     snippet: null,
                     services.SnippetService,
-                    new SnippetTransferService(
+                    new SaveSnippetUseCase(
                         services.SnippetService,
                         services.SettingsService,
-                        services.ThumbnailService,
-                        services.LoggingService),
+                        autoBackupRequester: null),
+                    new DeleteSnippetUseCase(
+                        services.SnippetService,
+                        services.ThumbnailService),
+                    new TransferSnippetUseCase(
+                        services.SnippetService,
+                        services.SettingsService,
+                        new SaveSnippetUseCase(services.SnippetService, services.SettingsService),
+                        services.ThumbnailService),
                     new DialogService(),
                     () => { },
                     _ => { },

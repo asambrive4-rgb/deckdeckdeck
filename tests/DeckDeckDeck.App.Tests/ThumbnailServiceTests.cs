@@ -90,7 +90,7 @@ public sealed class ThumbnailServiceTests
             AutoIconPath = autoIconPath
         };
 
-        var grid = new SlotService().BuildSnippetGrid(
+        var grid = new SlotGridViewModelFactory().BuildSnippetGrid(
             [snippet],
             new AppSettings(),
             (_, _) => { },
@@ -114,7 +114,7 @@ public sealed class ThumbnailServiceTests
             AutoIconPath = autoIconPath
         };
 
-        var grid = new SlotService().BuildSnippetGrid(
+        var grid = new SlotGridViewModelFactory().BuildSnippetGrid(
             [snippet],
             new AppSettings(),
             (_, _) => { },
@@ -136,7 +136,7 @@ public sealed class ThumbnailServiceTests
             SlotImageMode = SlotImageMode.Auto
         };
 
-        var grid = new SlotService().BuildSnippetGrid(
+        var grid = new SlotGridViewModelFactory().BuildSnippetGrid(
             [snippet],
             new AppSettings(),
             (_, _) => { },
@@ -172,7 +172,7 @@ public sealed class ThumbnailServiceTests
             SlotImageMode = SlotImageMode.None
         };
 
-        var grid = new SlotService().BuildSnippetGrid(
+        var grid = new SlotGridViewModelFactory().BuildSnippetGrid(
             [snippet],
             new AppSettings(),
             (_, _) => { },

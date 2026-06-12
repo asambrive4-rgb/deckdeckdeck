@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.UseCases;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -13,6 +14,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Action _afterSave;
     private readonly IAutoBackupCoordinator? _autoBackupCoordinator;
     private readonly BackupService? _backupService;
+    private readonly CreateManualBackupUseCase _createManualBackupUseCase;
     private readonly DialogService _dialogService;
     private readonly LoggingService? _loggingService;
     private readonly SettingsService _settingsService;
@@ -20,6 +22,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly IClipboardService _clipboardService;
     private readonly ISpotifyConnectionService _spotifyConnectionService;
     private readonly IUrlLaunchService _urlLaunchService;
+    private readonly SaveSettingsUseCase _saveSettingsUseCase;
     private readonly AppSettings _settings;
     private bool _autoHideAfterPaste;
     private bool _autoBackupEnabled;
@@ -53,6 +56,8 @@ public sealed class SettingsViewModel : ObservableObject
         _loggingService = loggingService;
         _backupService = backupService;
         _autoBackupCoordinator = autoBackupCoordinator;
+        _saveSettingsUseCase = new SaveSettingsUseCase(settingsService, backupService, autoBackupCoordinator);
+        _createManualBackupUseCase = new CreateManualBackupUseCase(backupService);
         _dialogService = dialogService ?? new DialogService();
         _clipboardService = clipboardService ?? new WpfClipboardService();
         _urlLaunchService = urlLaunchService ?? new UrlLaunchService();
@@ -241,21 +246,18 @@ public sealed class SettingsViewModel : ObservableObject
     {
         try
         {
-            var validationError = ValidateBackupSettings(requireFolder: AutoBackupEnabled);
-            if (validationError is not null)
+            var result = _saveSettingsUseCase.Execute(new SaveSettingsRequest(
+                BringWindowToFrontOnHotkey,
+                AutoHideAfterPaste,
+                RestoreClipboardAfterPaste,
+                AutoBackupEnabled,
+                BackupFolderPath));
+            if (!result.Succeeded)
             {
-                ErrorMessage = validationError;
+                ErrorMessage = result.ErrorMessage ?? string.Empty;
                 return;
             }
 
-            var latestSettings = _settingsService.Load();
-            latestSettings.BringWindowToFrontOnHotkey = BringWindowToFrontOnHotkey;
-            latestSettings.AutoHideAfterPaste = AutoHideAfterPaste;
-            latestSettings.RestoreClipboardAfterPaste = RestoreClipboardAfterPaste;
-            latestSettings.AutoBackupEnabled = AutoBackupEnabled;
-            latestSettings.BackupFolderPath = BackupFolderPath.Trim();
-            _settingsService.Save(latestSettings);
-            _autoBackupCoordinator?.RequestAutoBackup();
             _showStatus("설정을 저장했습니다.");
             _afterSave();
         }
@@ -280,14 +282,6 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void CreateManualBackup()
     {
-        var validationError = ValidateBackupSettings(requireFolder: true);
-        if (validationError is not null)
-        {
-            ErrorMessage = validationError;
-            _showStatus(validationError);
-            return;
-        }
-
         if (_backupService is null)
         {
             ErrorMessage = "백업 서비스가 준비되지 않았습니다.";
@@ -295,7 +289,7 @@ public sealed class SettingsViewModel : ObservableObject
             return;
         }
 
-        var result = _backupService.CreateManualBackup(BackupFolderPath);
+        var result = _createManualBackupUseCase.Execute(BackupFolderPath);
         if (!result.Succeeded)
         {
             ErrorMessage = result.ErrorMessage ?? "백업을 만들지 못했습니다.";

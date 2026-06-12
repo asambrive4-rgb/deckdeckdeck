@@ -1,9 +1,10 @@
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.Services;
 
-public sealed class SettingsService
+public sealed class SettingsService : ISettingsStore
 {
     private readonly SettingEntryStore _entryStore;
     private readonly object _settingsLock = new();

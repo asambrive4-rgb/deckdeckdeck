@@ -1,7 +1,6 @@
 using System.IO;
-using DeckDeckDeck.App.Models;
 
-namespace DeckDeckDeck.App.Services;
+namespace DeckDeckDeck.App.Models;
 
 public sealed record AutoIconCacheEntry(
     string IconPath,

@@ -15,7 +15,7 @@ public sealed class CategoryViewModel
         Category category,
         SnippetService snippetService,
         SettingsService settingsService,
-        SlotService slotService,
+        SlotGridViewModelFactory slotGridViewModelFactory,
         Action showHome,
         Action showSettings,
         Action<Category, SlotKey, Snippet?> editSnippet,
@@ -32,7 +32,11 @@ public sealed class CategoryViewModel
 
         var snippets = snippetService.GetByCategoryId(category.Id);
         var settings = settingsService.Load();
-        NumpadGrid = slotService.BuildSnippetGrid(snippets, settings, SelectSnippetSlot, EditSnippetSlot);
+        NumpadGrid = slotGridViewModelFactory.BuildSnippetGrid(
+            snippets,
+            settings,
+            SelectSnippetSlot,
+            EditSnippetSlot);
     }
 
     public string Title { get; }

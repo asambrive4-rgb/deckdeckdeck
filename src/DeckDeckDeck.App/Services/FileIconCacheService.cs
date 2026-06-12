@@ -1,6 +1,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.Services;
 

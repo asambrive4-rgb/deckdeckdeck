@@ -1,6 +1,7 @@
+using DeckDeckDeck.App.UseCases.Ports;
+
 namespace DeckDeckDeck.App.Services;
 
-public interface IFileLaunchService
+public interface IFileLaunchService : IFileLaunchGateway
 {
-    bool TryLaunch(string path);
 }

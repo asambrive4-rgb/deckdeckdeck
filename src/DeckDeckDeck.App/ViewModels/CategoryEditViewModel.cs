@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -12,16 +14,18 @@ public sealed class CategoryEditViewModel : ObservableObject
     private readonly Action<Category> _afterSave;
     private readonly IAutoBackupCoordinator? _autoBackupCoordinator;
     private readonly Action _cancel;
-    private readonly CategoryService _categoryService;
-    private readonly CategoryTransferService _categoryTransferService;
+    private readonly ICategoryRepository _categoryRepository;
+    private readonly DeleteCategoryUseCase _deleteCategoryUseCase;
     private readonly DialogService _dialogService;
     private readonly EditableImageState _imageState;
     private readonly LoggingService? _loggingService;
     private readonly Guid? _categoryId;
     private bool _originalIsSlotEnabled;
-    private readonly SettingsService? _settingsService;
+    private readonly SaveCategoryUseCase _saveCategoryUseCase;
+    private readonly ISettingsStore? _settingsStore;
     private readonly Action<string> _showStatus;
     private readonly ThumbnailService? _thumbnailService;
+    private readonly TransferCategoryUseCase _transferCategoryUseCase;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
     private bool _isSlotEnabled;
@@ -31,25 +35,29 @@ public sealed class CategoryEditViewModel : ObservableObject
     public CategoryEditViewModel(
         SlotKey slotKey,
         Category? category,
-        CategoryService categoryService,
-        CategoryTransferService categoryTransferService,
+        ICategoryRepository categoryRepository,
+        SaveCategoryUseCase saveCategoryUseCase,
+        DeleteCategoryUseCase deleteCategoryUseCase,
+        TransferCategoryUseCase transferCategoryUseCase,
         DialogService dialogService,
         Action cancel,
         Action<Category> afterSave,
         Action afterDelete,
         Action<string> showStatus,
         ThumbnailService? thumbnailService = null,
-        SettingsService? settingsService = null,
+        ISettingsStore? settingsStore = null,
         LoggingService? loggingService = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         SlotKey = slotKey;
         KeyText = slotKey.GetDisplayText();
         _categoryId = category?.Id;
-        _categoryService = categoryService;
-        _categoryTransferService = categoryTransferService;
+        _categoryRepository = categoryRepository;
+        _saveCategoryUseCase = saveCategoryUseCase;
+        _deleteCategoryUseCase = deleteCategoryUseCase;
+        _transferCategoryUseCase = transferCategoryUseCase;
         _dialogService = dialogService;
-        _settingsService = settingsService;
+        _settingsStore = settingsStore;
         _loggingService = loggingService;
         _autoBackupCoordinator = autoBackupCoordinator;
         _cancel = cancel;
@@ -161,32 +169,43 @@ public sealed class CategoryEditViewModel : ObservableObject
 
     private Category? SaveCategory()
     {
-        if (string.IsNullOrWhiteSpace(Name))
+        var result = _saveCategoryUseCase.Execute(BuildSaveRequest());
+        if (!result.Succeeded)
         {
-            if (TrySaveSlotOnly())
-            {
-                return null;
-            }
-
             ErrorMessage = "카테고리 이름을 입력해 주세요.";
             return null;
         }
 
-        if (!SaveSlotEnabled())
+        if (result.SavedSlotOnly)
         {
+            _originalIsSlotEnabled = IsSlotEnabled;
+            _imageState.DeleteCurrentUnsavedImage();
+            _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
+            _cancel();
             return null;
         }
 
-        var category = _categoryId.HasValue
-            ? _categoryService.Update(_categoryId.Value, Name, Description, _imageState.ImagePath, _imageState.ThumbnailPath)
-            : _categoryService.Create(SlotKey, Name, Description, _imageState.ImagePath, _imageState.ThumbnailPath);
+        var category = result.Category!;
 
         _imageState.DeleteOriginalImageIfReplaced();
         _imageState.MarkCurrentAsOriginal();
-        _autoBackupCoordinator?.RequestAutoBackup();
+        _originalIsSlotEnabled = IsSlotEnabled;
         ErrorMessage = string.Empty;
 
         return category;
+    }
+
+    private SaveCategoryRequest BuildSaveRequest()
+    {
+        return new SaveCategoryRequest(
+            SlotKey,
+            _categoryId,
+            Name,
+            Description,
+            _imageState.ImagePath,
+            _imageState.ThumbnailPath,
+            IsSlotEnabled,
+            _originalIsSlotEnabled);
     }
 
     private void Cancel()
@@ -212,17 +231,9 @@ public sealed class CategoryEditViewModel : ObservableObject
         }
 
         _imageState.DeleteCurrentUnsavedImage();
-        var deletedImageFiles = _categoryService.Delete(_categoryId.Value);
-        if (_thumbnailService is not null)
-        {
-            foreach (var imageFiles in deletedImageFiles)
-            {
-                _thumbnailService.DeleteImageFiles(imageFiles);
-            }
-        }
+        _deleteCategoryUseCase.Execute(_categoryId.Value);
 
         _showStatus("카테고리를 삭제했습니다.");
-        _autoBackupCoordinator?.RequestAutoBackup();
         _afterDelete();
     }
 
@@ -230,10 +241,7 @@ public sealed class CategoryEditViewModel : ObservableObject
     {
         TransferCategory(
             "복사",
-            targetSlotKey => _categoryTransferService.CopyCategory(
-                _categoryId!.Value,
-                targetSlotKey,
-                IsSlotEnabled),
+            CategoryTransferOperation.Copy,
             targetSlotKey => $"슬롯 {targetSlotKey.GetDisplayText()}에 카테고리를 복사했습니다.");
     }
 
@@ -241,17 +249,13 @@ public sealed class CategoryEditViewModel : ObservableObject
     {
         TransferCategory(
             "이동",
-            targetSlotKey => _categoryTransferService.MoveCategory(
-                _categoryId!.Value,
-                SlotKey,
-                targetSlotKey,
-                IsSlotEnabled),
+            CategoryTransferOperation.Move,
             targetSlotKey => $"슬롯 {targetSlotKey.GetDisplayText()}로 카테고리를 이동했습니다.");
     }
 
     private void TransferCategory(
         string actionText,
-        Func<SlotKey, Category> transfer,
+        CategoryTransferOperation operation,
         Func<SlotKey, string> getStatusMessage)
     {
         if (!_categoryId.HasValue)
@@ -267,20 +271,32 @@ public sealed class CategoryEditViewModel : ObservableObject
         }
 
         var targetSlotKey = SelectedTransferTarget.SlotKey;
-        if (!ConfirmOverwriteIfNeeded(targetSlotKey, actionText))
-        {
-            return;
-        }
-
-        if (SaveCategory() is null)
-        {
-            return;
-        }
-
         try
         {
-            var transferredCategory = transfer(targetSlotKey);
-            _autoBackupCoordinator?.RequestAutoBackup();
+            var result = ExecuteTransferCategory(operation, targetSlotKey, overwriteConfirmed: false);
+            if (result.NeedsOverwriteConfirmation)
+            {
+                var confirmed = _dialogService.Confirm(
+                    $"移댄뀒怨좊━ {actionText}",
+                    $"?щ’ {targetSlotKey.GetDisplayText()}???대? '{result.ExistingTargetName}' 移댄뀒怨좊━媛 ?덉뒿?덈떎.\n湲곗〈 移댄뀒怨좊━? ?덉쓽 ?ㅽ뻾 ??ぉ????뼱?멸퉴??");
+                if (!confirmed)
+                {
+                    return;
+                }
+
+                result = ExecuteTransferCategory(operation, targetSlotKey, overwriteConfirmed: true);
+            }
+
+            if (!result.Succeeded)
+            {
+                ErrorMessage = result.ErrorMessage ?? string.Empty;
+                return;
+            }
+
+            var transferredCategory = result.Category!;
+            _imageState.DeleteOriginalImageIfReplaced();
+            _imageState.MarkCurrentAsOriginal();
+            _originalIsSlotEnabled = IsSlotEnabled;
             _afterSave(transferredCategory);
             _showStatus(getStatusMessage(targetSlotKey));
         }
@@ -291,14 +307,24 @@ public sealed class CategoryEditViewModel : ObservableObject
         }
     }
 
+    private TransferCategoryResult ExecuteTransferCategory(
+        CategoryTransferOperation operation,
+        SlotKey targetSlotKey,
+        bool overwriteConfirmed)
+    {
+        return _transferCategoryUseCase.Execute(new TransferCategoryRequest(
+            _categoryId,
+            SlotKey,
+            targetSlotKey,
+            IsSlotEnabled,
+            operation,
+            BuildSaveRequest(),
+            overwriteConfirmed));
+    }
+
     private bool ConfirmOverwriteIfNeeded(SlotKey targetSlotKey, string actionText)
     {
-        var targetCategory = _categoryService.GetBySlotKey(targetSlotKey);
-        if (targetCategory is null || targetCategory.Id == _categoryId)
-        {
-            return true;
-        }
-
+        var targetCategory = new Category();
         return _dialogService.Confirm(
             $"카테고리 {actionText}",
             $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{targetCategory.Name}' 카테고리가 있습니다.\n기존 카테고리와 안의 실행 항목을 덮어쓸까요?");
@@ -350,7 +376,7 @@ public sealed class CategoryEditViewModel : ObservableObject
 
     private IReadOnlyList<CategoryTransferTargetSlot> BuildTransferTargetSlots()
     {
-        var categoriesBySlot = _categoryService
+        var categoriesBySlot = _categoryRepository
             .GetAll()
             .Where(category => !_categoryId.HasValue || category.Id != _categoryId.Value)
             .ToDictionary(category => category.SlotKey);
@@ -379,7 +405,7 @@ public sealed class CategoryEditViewModel : ObservableObject
 
     private bool LoadSlotEnabledState()
     {
-        var settings = _settingsService?.Load();
+        var settings = _settingsStore?.Load();
 
         return settings is null
             || !settings.EnabledCategorySlotKeys.TryGetValue(SlotKey, out var enabled)
@@ -408,14 +434,14 @@ public sealed class CategoryEditViewModel : ObservableObject
 
     private bool SaveSlotEnabled()
     {
-        if (_settingsService is null || IsSlotEnabled == _originalIsSlotEnabled)
+        if (_settingsStore is null || IsSlotEnabled == _originalIsSlotEnabled)
         {
             return true;
         }
 
         try
         {
-            _settingsService.SetCategorySlotEnabled(SlotKey, IsSlotEnabled);
+            _settingsStore.SetCategorySlotEnabled(SlotKey, IsSlotEnabled);
             _originalIsSlotEnabled = IsSlotEnabled;
 
             return true;
