@@ -60,7 +60,7 @@
                             DragOver="ImageDropTarget_DragOver"
                             Drop="ImageDropTarget_Drop"
                             Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
-                        <Image Source="{Binding ThumbnailPath}"
+                        <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=96}"
                                IsHitTestVisible="False"
                                Stretch="Uniform" />
                     </Border>

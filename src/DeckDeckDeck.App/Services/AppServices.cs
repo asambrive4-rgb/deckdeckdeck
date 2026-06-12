@@ -15,6 +15,7 @@ internal sealed record AppServices(
     IClipboardPasteService ClipboardPasteService,
     IFileLaunchService FileLaunchService,
     IUrlLaunchService UrlLaunchService,
+    IMediaActionService MediaActionService,
     LoggingService? LoggingService,
     ThumbnailService? ThumbnailService)
 {
@@ -36,7 +37,7 @@ internal sealed record AppServices(
             fileStorageService,
             new ShellFileIconExtractor(),
             loggingService);
-        var snippetImageService = new SnippetImageService(snippetService, fileIconCacheService);
+        var snippetImageService = new SnippetImageService(fileIconCacheService);
 
         return new AppServices(
             categoryService,
@@ -44,13 +45,14 @@ internal sealed record AppServices(
             backupService,
             new DialogService(),
             settingsService,
-            new SlotService(snippetImageService),
+            new SlotService(),
             snippetService,
             new SnippetTransferService(snippetService, settingsService, thumbnailService, loggingService),
             snippetImageService,
             new ClipboardPasteService(),
             new FileLaunchService(),
             new UrlLaunchService(),
+            new MediaActionService(),
             loggingService,
             thumbnailService);
     }

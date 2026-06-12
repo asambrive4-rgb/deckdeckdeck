@@ -11,6 +11,8 @@ using static DeckDeckDeck.App.Tests.TestAppFactory;
 namespace DeckDeckDeck.App.Tests;
 public sealed class HotkeyMappingTests
 {
+    private const int AsyncEventTimeoutMilliseconds = 5000;
+
     [Fact]
     public void HotkeyServiceRegistersDirectCategorySymbolHotkeys()
     {
@@ -44,6 +46,9 @@ public sealed class HotkeyMappingTests
 
         service.RaiseHotkeyPressed(SlotKey.Numpad0);
 
+        Assert.True(SpinWait.SpinUntil(
+            () => !keysDown.Contains((int)Win32Constants.VkNumpad0),
+            AsyncEventTimeoutMilliseconds));
         Assert.Equal(["pressed:Numpad0"], events);
     }
 
@@ -67,7 +72,39 @@ public sealed class HotkeyMappingTests
 
         service.RaiseHotkeyPressed(SlotKey.Numpad0);
 
+        Assert.True(SpinWait.SpinUntil(() => events.Count == 2, AsyncEventTimeoutMilliseconds));
         Assert.Equal(["pressed:Numpad0", "long:Numpad0"], events);
+    }
+
+    [Fact]
+    public void HomeHotkeyLongPressTrackingStartsBeforePressedHandlerReturns()
+    {
+        var keysDown = new HashSet<int>
+        {
+            Win32Constants.VkControl,
+            (int)Win32Constants.VkNumpad0
+        };
+        var delayStarted = false;
+        using var service = CreateTestHotkeyService(
+            keysDown,
+            (_, cancellationToken) =>
+            {
+                delayStarted = true;
+                return Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            });
+        var trackingStartedBeforeHandlerReturned = false;
+
+        service.HotkeyPressed += (_, _) =>
+        {
+            trackingStartedBeforeHandlerReturned = SpinWait.SpinUntil(
+                () => delayStarted,
+                AsyncEventTimeoutMilliseconds);
+            keysDown.Remove((int)Win32Constants.VkNumpad0);
+        };
+
+        service.RaiseHotkeyPressed(SlotKey.Numpad0);
+
+        Assert.True(trackingStartedBeforeHandlerReturned);
     }
 
     [Fact]
@@ -90,8 +127,10 @@ public sealed class HotkeyMappingTests
         };
 
         service.RaiseHotkeyPressed(SlotKey.Numpad0);
+        Assert.True(SpinWait.SpinUntil(() => events.Count == 2, AsyncEventTimeoutMilliseconds));
         keysDown.Add((int)Win32Constants.VkNumpad0);
         service.RaiseHotkeyPressed(SlotKey.Numpad0);
+        Assert.True(SpinWait.SpinUntil(() => events.Count == 4, AsyncEventTimeoutMilliseconds));
 
         Assert.Equal(
             ["pressed:Numpad0", "long:Numpad0", "pressed:Numpad0", "long:Numpad0"],
@@ -128,9 +167,9 @@ public sealed class HotkeyMappingTests
             delayAsync ?? CompleteDelay);
     }
 
-    private static Task CompleteDelay(TimeSpan delay, CancellationToken cancellationToken)
+    private static async Task CompleteDelay(TimeSpan delay, CancellationToken cancellationToken)
     {
+        await Task.Yield();
         cancellationToken.ThrowIfCancellationRequested();
-        return Task.CompletedTask;
     }
 }

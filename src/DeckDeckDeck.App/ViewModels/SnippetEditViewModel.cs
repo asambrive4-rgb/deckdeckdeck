@@ -31,6 +31,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private bool _isSlotEnabled;
     private string _launchPath = string.Empty;
     private string _launchUrl = string.Empty;
+    private SnippetMediaCommand _mediaCommand = SnippetMediaCommand.PlayPause;
     private SnippetTransferTargetSlot? _selectedTransferTarget;
     private SlotImageMode _slotImageMode = SlotImageMode.Auto;
     private string _snippetTitle = string.Empty;
@@ -76,6 +77,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         _actionType = snippet?.ActionType ?? SnippetActionType.PasteText;
         _launchPath = snippet?.LaunchPath ?? string.Empty;
         _launchUrl = snippet?.LaunchUrl ?? string.Empty;
+        _mediaCommand = snippet?.MediaCommand ?? SnippetMediaCommand.PlayPause;
         _slotImageMode = GetInitialSlotImageMode(snippet);
         _autoIcon = AutoIconCacheEntry.FromSnippet(snippet);
         _description = snippet?.Description ?? string.Empty;
@@ -112,6 +114,9 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public IReadOnlyList<SnippetTransferTargetSlot> TransferTargetSlots { get; }
 
+    public IReadOnlyList<SnippetMediaCommandOption> MediaCommandOptions { get; } =
+        SnippetMediaCommandOption.All;
+
     public SnippetTransferTargetSlot? SelectedTransferTarget
     {
         get => _selectedTransferTarget;
@@ -143,6 +148,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             OnPropertyChanged(nameof(IsPasteTextAction));
             OnPropertyChanged(nameof(IsLaunchFileAction));
             OnPropertyChanged(nameof(IsLaunchUrlAction));
+            OnPropertyChanged(nameof(IsMediaAction));
             NotifyImageChanged();
         }
     }
@@ -183,6 +189,18 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
     }
 
+    public bool IsMediaAction
+    {
+        get => ActionType == SnippetActionType.MediaAction;
+        set
+        {
+            if (value)
+            {
+                ActionType = SnippetActionType.MediaAction;
+            }
+        }
+    }
+
     public string LaunchPath
     {
         get => _launchPath;
@@ -193,6 +211,18 @@ public sealed class SnippetEditViewModel : ObservableObject
     {
         get => _launchUrl;
         set => SetProperty(ref _launchUrl, value);
+    }
+
+    public SnippetMediaCommand SelectedMediaCommand
+    {
+        get => _mediaCommand;
+        set
+        {
+            if (SetProperty(ref _mediaCommand, value))
+            {
+                NotifyImageChanged();
+            }
+        }
     }
 
     public string Description
@@ -308,6 +338,12 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         var autoIcon = PrepareAutoIconForSave();
+        var mediaProvider = ActionType == SnippetActionType.MediaAction
+            ? SnippetMediaProvider.System
+            : (SnippetMediaProvider?)null;
+        var mediaCommand = ActionType == SnippetActionType.MediaAction
+            ? SelectedMediaCommand
+            : (SnippetMediaCommand?)null;
         var snippet = _snippetId.HasValue
             ? _snippetService.Update(
                 _snippetId.Value,
@@ -320,7 +356,9 @@ public sealed class SnippetEditViewModel : ObservableObject
                 LaunchPath,
                 _slotImageMode,
                 autoIcon,
-                launchUrl)
+                launchUrl,
+                mediaProvider,
+                mediaCommand)
             : _snippetService.Create(
                 CategoryId,
                 SlotKey,
@@ -333,7 +371,9 @@ public sealed class SnippetEditViewModel : ObservableObject
                 LaunchPath,
                 _slotImageMode,
                 autoIcon,
-                launchUrl);
+                launchUrl,
+                mediaProvider,
+                mediaCommand);
 
         _imageState.DeleteOriginalImageIfReplaced();
         _imageState.MarkCurrentAsOriginal();
@@ -539,6 +579,8 @@ public sealed class SnippetEditViewModel : ObservableObject
         {
             SlotImageMode.Custom => _imageState.ThumbnailPath,
             SlotImageMode.Auto when ActionType == SnippetActionType.LaunchFile => _autoIcon?.IconPath,
+            SlotImageMode.Auto when ActionType == SnippetActionType.MediaAction =>
+                MediaIconResources.GetIconResourcePath(SelectedMediaCommand),
             _ => null
         };
     }
@@ -682,6 +724,30 @@ public sealed class SnippetTransferTargetSlot
     }
 
     public SlotKey SlotKey { get; }
+
+    public string Label { get; }
+}
+
+public sealed class SnippetMediaCommandOption
+{
+    public static IReadOnlyList<SnippetMediaCommandOption> All { get; } =
+    [
+        new(SnippetMediaCommand.PlayPause, "재생/일시정지"),
+        new(SnippetMediaCommand.PreviousTrack, "이전 곡"),
+        new(SnippetMediaCommand.NextTrack, "다음 곡"),
+        new(SnippetMediaCommand.Stop, "정지"),
+        new(SnippetMediaCommand.Mute, "음소거"),
+        new(SnippetMediaCommand.VolumeUp, "볼륨 증가"),
+        new(SnippetMediaCommand.VolumeDown, "볼륨 감소")
+    ];
+
+    public SnippetMediaCommandOption(SnippetMediaCommand command, string label)
+    {
+        Command = command;
+        Label = label;
+    }
+
+    public SnippetMediaCommand Command { get; }
 
     public string Label { get; }
 }

@@ -20,6 +20,10 @@ public sealed class Snippet
 
     public string? LaunchUrl { get; set; }
 
+    public SnippetMediaProvider? MediaProvider { get; set; }
+
+    public SnippetMediaCommand? MediaCommand { get; set; }
+
     public SlotImageMode SlotImageMode { get; set; } = SlotImageMode.Auto;
 
     public string? Description { get; set; }

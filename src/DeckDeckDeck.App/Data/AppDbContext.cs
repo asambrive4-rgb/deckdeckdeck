@@ -37,6 +37,8 @@ public sealed class AppDbContext : DbContext
             entity.Property(snippet => snippet.CategoryId).HasConversion<string>();
             entity.Property(snippet => snippet.SlotKey).HasConversion<string>().IsRequired();
             entity.Property(snippet => snippet.ActionType).HasConversion<string>().IsRequired();
+            entity.Property(snippet => snippet.MediaProvider).HasConversion<string>();
+            entity.Property(snippet => snippet.MediaCommand).HasConversion<string>();
             entity.Property(snippet => snippet.SlotImageMode).HasConversion<string>().IsRequired();
             entity.Property(snippet => snippet.Title).IsRequired();
             entity.Property(snippet => snippet.Content).IsRequired();

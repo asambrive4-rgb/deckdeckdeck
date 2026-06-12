@@ -99,6 +99,35 @@ public sealed class SnippetEditViewModelTests
     }
 
     [Fact]
+    public void MediaActionSavesWithSelectedCommandAndDefaultIcon()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Volume down";
+        viewModel.Content = "unused";
+        viewModel.LaunchPath = @"C:\unused";
+        viewModel.LaunchUrl = "https://example.com";
+        viewModel.IsMediaAction = true;
+        viewModel.SelectedMediaCommand = SnippetMediaCommand.VolumeDown;
+
+        Assert.Equal(MediaIconResources.GetIconResourcePath(SnippetMediaCommand.VolumeDown), viewModel.ThumbnailPath);
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal(SnippetActionType.MediaAction, savedSnippet.ActionType);
+        Assert.Equal(string.Empty, savedSnippet.Content);
+        Assert.Null(savedSnippet.LaunchPath);
+        Assert.Null(savedSnippet.LaunchUrl);
+        Assert.Equal(SnippetMediaProvider.System, savedSnippet.MediaProvider);
+        Assert.Equal(SnippetMediaCommand.VolumeDown, savedSnippet.MediaCommand);
+        Assert.Equal(SlotImageMode.Auto, savedSnippet.SlotImageMode);
+    }
+
+    [Fact]
     public void LaunchFileSavesAutoIconForExe()
     {
         var services = CreateServices();

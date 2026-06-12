@@ -183,6 +183,75 @@ public sealed class MainViewModelPasteTests
     }
 
     [Fact]
+    public void MediaActionSnippetExecutesInsteadOfPasting()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Next track",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.MediaAction,
+            mediaProvider: SnippetMediaProvider.System,
+            mediaCommand: SnippetMediaCommand.NextTrack);
+        var pasteService = new RecordingClipboardPasteService();
+        var mediaActionService = new RecordingMediaActionService();
+        var hidden = false;
+        var completedPasteSelection = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            pasteService,
+            () => new IntPtr(123),
+            () => hidden = true,
+            completePasteSelection: () => completedPasteSelection = true,
+            mediaActionService: mediaActionService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        Assert.Empty(pasteService.Calls);
+        Assert.Equal([SnippetMediaCommand.NextTrack], mediaActionService.Commands);
+        Assert.True(hidden);
+        Assert.True(completedPasteSelection);
+    }
+
+    [Fact]
+    public void MediaActionFailureShowsStatusAndKeepsWindowVisible()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Mute",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.MediaAction,
+            mediaProvider: SnippetMediaProvider.System,
+            mediaCommand: SnippetMediaCommand.Mute);
+        var mediaActionService = new RecordingMediaActionService { Result = false };
+        var hidden = false;
+        var completedPasteSelection = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            new RecordingClipboardPasteService(),
+            () => new IntPtr(123),
+            () => hidden = true,
+            completePasteSelection: () => completedPasteSelection = true,
+            mediaActionService: mediaActionService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        Assert.False(hidden);
+        Assert.True(completedPasteSelection);
+        Assert.Contains("미디어 제어 실패", viewModel.StatusMessage);
+        Assert.Contains("Media action failed", File.ReadAllText(Path.Combine(services.Storage.LogsPath, "app.log")));
+    }
+
+    [Fact]
     public void LaunchUrlFailureShowsStatusAndKeepsWindowVisible()
     {
         var services = CreateServices();

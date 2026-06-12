@@ -6,7 +6,10 @@ namespace DeckDeckDeck.App.Services;
 public sealed class SettingsService
 {
     private readonly SettingEntryStore _entryStore;
+    private readonly object _settingsLock = new();
     private readonly SlotSettingsService _slotSettingsService;
+    private bool _defaultsEnsured;
+    private AppSettings? _settingsCache;
 
     public SettingsService(AppDbContextFactory dbContextFactory)
     {
@@ -16,8 +19,150 @@ public sealed class SettingsService
 
     public AppSettings Load()
     {
-        EnsureDefaults();
+        lock (_settingsLock)
+        {
+            EnsureDefaultsLocked();
+            _settingsCache ??= LoadFromStore();
 
+            return Clone(_settingsCache);
+        }
+    }
+
+    public void EnsureDefaults()
+    {
+        lock (_settingsLock)
+        {
+            EnsureDefaultsLocked();
+        }
+    }
+
+    public void SetCategorySlotEnabled(SlotKey slotKey, bool enabled)
+    {
+        lock (_settingsLock)
+        {
+            EnsureDefaultsLocked();
+            _slotSettingsService.SetCategorySlotEnabled(slotKey, enabled);
+            _settingsCache?.EnabledCategorySlotKeys[slotKey] = enabled;
+        }
+    }
+
+    public void SetSnippetSlotEnabled(SlotKey slotKey, bool enabled)
+    {
+        lock (_settingsLock)
+        {
+            EnsureDefaultsLocked();
+            _slotSettingsService.SetSnippetSlotEnabled(slotKey, enabled);
+            _settingsCache?.EnabledSnippetSlotKeys[slotKey] = enabled;
+        }
+    }
+
+    public void SetLastBackupCreatedAt(DateTimeOffset createdAt)
+    {
+        lock (_settingsLock)
+        {
+            EnsureDefaultsLocked();
+            _entryStore.Upsert(
+                SettingsKeys.LastBackupCreatedAt,
+                SettingsValueParser.FormatNullableDateTimeOffset(createdAt));
+            if (_settingsCache is not null)
+            {
+                _settingsCache.LastBackupCreatedAt = createdAt;
+            }
+        }
+    }
+
+    public void Save(AppSettings settings)
+    {
+        var values = new[]
+        {
+            new KeyValuePair<string, string>(
+                SettingsKeys.BringWindowToFrontOnHotkey,
+                settings.BringWindowToFrontOnHotkey.ToString()),
+            new KeyValuePair<string, string>(
+                SettingsKeys.AutoHideAfterPaste,
+                settings.AutoHideAfterPaste.ToString()),
+            new KeyValuePair<string, string>(
+                SettingsKeys.RestoreClipboardAfterPaste,
+                settings.RestoreClipboardAfterPaste.ToString()),
+            new KeyValuePair<string, string>(
+                SettingsKeys.AutoBackupEnabled,
+                settings.AutoBackupEnabled.ToString()),
+            new KeyValuePair<string, string>(
+                SettingsKeys.BackupFolderPath,
+                settings.BackupFolderPath),
+            new KeyValuePair<string, string>(
+                SettingsKeys.AutoBackupRetentionCount,
+                settings.AutoBackupRetentionCount.ToString()),
+            new KeyValuePair<string, string>(
+                SettingsKeys.LastBackupCreatedAt,
+                SettingsValueParser.FormatNullableDateTimeOffset(settings.LastBackupCreatedAt)),
+            new KeyValuePair<string, string>(SettingsKeys.HomeHotkey, settings.HomeHotkey),
+            new KeyValuePair<string, string>(SettingsKeys.DirectCategoryHotkeys, settings.DirectCategoryHotkeys),
+            new KeyValuePair<string, string>(
+                SettingsKeys.LastWindowLeft,
+                SettingsValueParser.FormatNullableDouble(settings.LastWindowLeft)),
+            new KeyValuePair<string, string>(
+                SettingsKeys.LastWindowTop,
+                SettingsValueParser.FormatNullableDouble(settings.LastWindowTop)),
+            new KeyValuePair<string, string>(
+                SettingsKeys.LastWindowScreenDeviceName,
+                settings.LastWindowScreenDeviceName ?? string.Empty)
+        };
+
+        lock (_settingsLock)
+        {
+            EnsureDefaultsLocked();
+            _entryStore.UpsertMany(values.Concat(_slotSettingsService.ToSettingEntries(settings)));
+            _settingsCache = Clone(settings);
+        }
+    }
+
+    public void SaveWindowPlacement(double left, double top, string screenDeviceName)
+    {
+        lock (_settingsLock)
+        {
+            EnsureDefaultsLocked();
+            _settingsCache ??= LoadFromStore();
+
+            if (_settingsCache.LastWindowLeft == left
+                && _settingsCache.LastWindowTop == top
+                && _settingsCache.LastWindowScreenDeviceName == screenDeviceName)
+            {
+                return;
+            }
+
+            _entryStore.UpsertMany(
+            [
+                new KeyValuePair<string, string>(
+                    SettingsKeys.LastWindowLeft,
+                    SettingsValueParser.FormatNullableDouble(left)),
+                new KeyValuePair<string, string>(
+                    SettingsKeys.LastWindowTop,
+                    SettingsValueParser.FormatNullableDouble(top)),
+                new KeyValuePair<string, string>(
+                    SettingsKeys.LastWindowScreenDeviceName,
+                    screenDeviceName)
+            ]);
+
+            _settingsCache.LastWindowLeft = left;
+            _settingsCache.LastWindowTop = top;
+            _settingsCache.LastWindowScreenDeviceName = screenDeviceName;
+        }
+    }
+
+    private void EnsureDefaultsLocked()
+    {
+        if (_defaultsEnsured)
+        {
+            return;
+        }
+
+        _entryStore.EnsureDefaults(SettingsKeys.Defaults.Concat(_slotSettingsService.GetDefaultEntries()));
+        _defaultsEnsured = true;
+    }
+
+    private AppSettings LoadFromStore()
+    {
         var entries = _entryStore.LoadAll();
 
         return new AppSettings
@@ -67,66 +212,24 @@ public sealed class SettingsService
         };
     }
 
-    public void EnsureDefaults()
+    private static AppSettings Clone(AppSettings settings)
     {
-        _entryStore.EnsureDefaults(SettingsKeys.Defaults.Concat(_slotSettingsService.GetDefaultEntries()));
-    }
-
-    public void SetCategorySlotEnabled(SlotKey slotKey, bool enabled)
-    {
-        _slotSettingsService.SetCategorySlotEnabled(slotKey, enabled);
-    }
-
-    public void SetSnippetSlotEnabled(SlotKey slotKey, bool enabled)
-    {
-        _slotSettingsService.SetSnippetSlotEnabled(slotKey, enabled);
-    }
-
-    public void SetLastBackupCreatedAt(DateTimeOffset createdAt)
-    {
-        _entryStore.Upsert(
-            SettingsKeys.LastBackupCreatedAt,
-            SettingsValueParser.FormatNullableDateTimeOffset(createdAt));
-    }
-
-    public void Save(AppSettings settings)
-    {
-        var values = new[]
+        return new AppSettings
         {
-            new KeyValuePair<string, string>(
-                SettingsKeys.BringWindowToFrontOnHotkey,
-                settings.BringWindowToFrontOnHotkey.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.AutoHideAfterPaste,
-                settings.AutoHideAfterPaste.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.RestoreClipboardAfterPaste,
-                settings.RestoreClipboardAfterPaste.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.AutoBackupEnabled,
-                settings.AutoBackupEnabled.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.BackupFolderPath,
-                settings.BackupFolderPath),
-            new KeyValuePair<string, string>(
-                SettingsKeys.AutoBackupRetentionCount,
-                settings.AutoBackupRetentionCount.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.LastBackupCreatedAt,
-                SettingsValueParser.FormatNullableDateTimeOffset(settings.LastBackupCreatedAt)),
-            new KeyValuePair<string, string>(SettingsKeys.HomeHotkey, settings.HomeHotkey),
-            new KeyValuePair<string, string>(SettingsKeys.DirectCategoryHotkeys, settings.DirectCategoryHotkeys),
-            new KeyValuePair<string, string>(
-                SettingsKeys.LastWindowLeft,
-                SettingsValueParser.FormatNullableDouble(settings.LastWindowLeft)),
-            new KeyValuePair<string, string>(
-                SettingsKeys.LastWindowTop,
-                SettingsValueParser.FormatNullableDouble(settings.LastWindowTop)),
-            new KeyValuePair<string, string>(
-                SettingsKeys.LastWindowScreenDeviceName,
-                settings.LastWindowScreenDeviceName ?? string.Empty)
+            BringWindowToFrontOnHotkey = settings.BringWindowToFrontOnHotkey,
+            AutoHideAfterPaste = settings.AutoHideAfterPaste,
+            RestoreClipboardAfterPaste = settings.RestoreClipboardAfterPaste,
+            AutoBackupEnabled = settings.AutoBackupEnabled,
+            BackupFolderPath = settings.BackupFolderPath,
+            AutoBackupRetentionCount = settings.AutoBackupRetentionCount,
+            LastBackupCreatedAt = settings.LastBackupCreatedAt,
+            EnabledCategorySlotKeys = new Dictionary<SlotKey, bool>(settings.EnabledCategorySlotKeys),
+            EnabledSnippetSlotKeys = new Dictionary<SlotKey, bool>(settings.EnabledSnippetSlotKeys),
+            HomeHotkey = settings.HomeHotkey,
+            DirectCategoryHotkeys = settings.DirectCategoryHotkeys,
+            LastWindowLeft = settings.LastWindowLeft,
+            LastWindowTop = settings.LastWindowTop,
+            LastWindowScreenDeviceName = settings.LastWindowScreenDeviceName
         };
-
-        _entryStore.UpsertMany(values.Concat(_slotSettingsService.ToSettingEntries(settings)));
     }
 }

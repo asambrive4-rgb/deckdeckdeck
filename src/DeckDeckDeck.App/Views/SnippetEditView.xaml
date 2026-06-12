@@ -86,7 +86,7 @@
                             Style="{StaticResource Deck.FieldGroupSpacedStyle}">
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="실행 타입" />
-                    <UniformGrid Columns="3">
+                    <UniformGrid Columns="2">
                         <RadioButton Content="문구 붙여넣기"
                                      GroupName="SnippetActionType"
                                      IsChecked="{Binding IsPasteTextAction, Mode=TwoWay}"
@@ -98,6 +98,10 @@
                         <RadioButton Content="웹 주소 열기"
                                      GroupName="SnippetActionType"
                                      IsChecked="{Binding IsLaunchUrlAction, Mode=TwoWay}"
+                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                        <RadioButton Content="음악/미디어 제어"
+                                     GroupName="SnippetActionType"
+                                     IsChecked="{Binding IsMediaAction, Mode=TwoWay}"
                                      Style="{StaticResource Deck.ActionTypeToggleStyle}" />
                     </UniformGrid>
                 </StackPanel>
@@ -147,6 +151,18 @@
                              Text="{Binding LaunchUrl, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
 
+                <StackPanel Grid.Row="2"
+                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
+                            Visibility="{Binding IsMediaAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                               Text="미디어 명령" />
+                    <ComboBox ItemsSource="{Binding MediaCommandOptions}"
+                              SelectedValue="{Binding SelectedMediaCommand, Mode=TwoWay}"
+                              SelectedValuePath="Command"
+                              DisplayMemberPath="Label"
+                              Style="{StaticResource Deck.ComboBoxStyle}" />
+                </StackPanel>
+
                 <StackPanel Grid.Row="3"
                             Style="{StaticResource Deck.FieldGroupSpacedStyle}">
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
@@ -174,7 +190,7 @@
                                 DragOver="ImageDropTarget_DragOver"
                                 Drop="ImageDropTarget_Drop"
                                 Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
-                            <Image Source="{Binding ThumbnailPath}"
+                            <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=96}"
                                    IsHitTestVisible="False"
                                    Stretch="Uniform" />
                         </Border>

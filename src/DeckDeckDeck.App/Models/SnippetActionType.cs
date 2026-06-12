@@ -4,5 +4,6 @@ public enum SnippetActionType
 {
     PasteText,
     LaunchFile,
-    LaunchUrl
+    LaunchUrl,
+    MediaAction
 }

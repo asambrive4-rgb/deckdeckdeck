@@ -230,12 +230,12 @@ public sealed class HotkeyService : IDisposable
             return;
         }
 
-        HotkeyPressed?.Invoke(this, new HotkeyPressedEventArgs(slotKey));
-
         if (slotKey == SlotKey.Numpad0)
         {
             StartHomeLongPressTracking();
         }
+
+        HotkeyPressed?.Invoke(this, new HotkeyPressedEventArgs(slotKey));
     }
 
     private void StartHomeLongPressTracking()
@@ -250,7 +250,13 @@ public sealed class HotkeyService : IDisposable
         }
 
         previousCancellation?.Cancel();
-        _ = TrackHomeLongPressAsync(cancellation);
+        _ = Task.Factory
+            .StartNew(
+                () => TrackHomeLongPressAsync(cancellation),
+                CancellationToken.None,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default)
+            .Unwrap();
     }
 
     private void CancelHomeLongPressTracking()

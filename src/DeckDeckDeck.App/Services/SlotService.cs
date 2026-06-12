@@ -5,13 +5,6 @@ namespace DeckDeckDeck.App.Services;
 
 public sealed class SlotService
 {
-    private readonly SnippetImageService? _snippetImageService;
-
-    public SlotService(SnippetImageService? snippetImageService = null)
-    {
-        _snippetImageService = snippetImageService;
-    }
-
     public NumpadGridViewModel BuildCategoryGrid(
         IEnumerable<Category> categories,
         AppSettings settings,
@@ -44,9 +37,7 @@ public sealed class SlotService
         return new NumpadGridViewModel(SlotKeyCatalog.All.Select(slotKey =>
         {
             snippetsBySlot.TryGetValue(slotKey, out var snippet);
-            var thumbnailPath = _snippetImageService is null
-                ? SnippetImageService.GetStoredDisplayImagePath(snippet)
-                : _snippetImageService.GetDisplayImagePath(snippet);
+            var thumbnailPath = SnippetImageService.GetStoredDisplayImagePath(snippet);
             return new SlotViewModel(
                 slotKey,
                 snippet?.Title,

@@ -26,7 +26,7 @@ internal static class TestAppFactory
             storage,
             new StubFileIconExtractor(),
             loggingService);
-        var snippetImageService = new SnippetImageService(snippetService, fileIconCacheService);
+        var snippetImageService = new SnippetImageService(fileIconCacheService);
 
         return new TestServices(
             storage,
@@ -50,13 +50,14 @@ internal static class TestAppFactory
         Func<Action>? createPasteSelectionCompletion = null,
         IFileLaunchService? fileLaunchService = null,
         IUrlLaunchService? urlLaunchService = null,
+        IMediaActionService? mediaActionService = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         return new MainViewModel(
             services.CategoryService,
             new DialogService(),
             services.SettingsService,
-            new SlotService(services.SnippetImageService),
+            new SlotService(),
             services.SnippetService,
             clipboardPasteService,
             getPasteTargetWindowHandle,
@@ -68,6 +69,7 @@ internal static class TestAppFactory
             thumbnailService: services.ThumbnailService,
             fileLaunchService: fileLaunchService,
             urlLaunchService: urlLaunchService,
+            mediaActionService: mediaActionService,
             snippetImageService: services.SnippetImageService,
             backupService: services.BackupService,
             autoBackupCoordinator: autoBackupCoordinator);
@@ -285,6 +287,26 @@ internal sealed class RecordingUrlLaunchService : IUrlLaunchService
         }
 
         Urls.Add(url);
+        return Result;
+    }
+}
+
+internal sealed class RecordingMediaActionService : IMediaActionService
+{
+    public bool Result { get; set; } = true;
+
+    public Exception? Exception { get; set; }
+
+    public List<SnippetMediaCommand> Commands { get; } = [];
+
+    public bool TryExecute(SnippetMediaCommand command)
+    {
+        if (Exception is not null)
+        {
+            throw Exception;
+        }
+
+        Commands.Add(command);
         return Result;
     }
 }

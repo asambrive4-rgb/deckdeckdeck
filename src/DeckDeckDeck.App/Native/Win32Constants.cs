@@ -46,6 +46,20 @@ public static class Win32Constants
 
     public const ushort VkV = 0x56;
 
+    public const ushort VkVolumeMute = 0xAD;
+
+    public const ushort VkVolumeDown = 0xAE;
+
+    public const ushort VkVolumeUp = 0xAF;
+
+    public const ushort VkMediaNextTrack = 0xB0;
+
+    public const ushort VkMediaPreviousTrack = 0xB1;
+
+    public const ushort VkMediaStop = 0xB2;
+
+    public const ushort VkMediaPlayPause = 0xB3;
+
     public const uint VkNumpad0 = 0x60;
 
     public const uint VkMultiply = 0x6A;

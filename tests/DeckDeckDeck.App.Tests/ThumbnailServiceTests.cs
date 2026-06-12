@@ -3,8 +3,11 @@ using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Services;
 using DeckDeckDeck.App.ViewModels;
 using DeckDeckDeck.App.Views;
+using DeckDeckDeck.App.Views.Converters;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 
@@ -118,6 +121,43 @@ public sealed class ThumbnailServiceTests
             (_, _) => { });
 
         Assert.Equal(autoIconPath, grid.Numpad1.ThumbnailPath);
+    }
+
+    [Fact]
+    public void SlotServiceUsesMediaDefaultIconWhenCustomImageIsMissing()
+    {
+        var snippet = new Snippet
+        {
+            SlotKey = SlotKey.Numpad1,
+            Title = "Mute",
+            ActionType = SnippetActionType.MediaAction,
+            MediaProvider = SnippetMediaProvider.System,
+            MediaCommand = SnippetMediaCommand.Mute,
+            SlotImageMode = SlotImageMode.Auto
+        };
+
+        var grid = new SlotService().BuildSnippetGrid(
+            [snippet],
+            new AppSettings(),
+            (_, _) => { },
+            (_, _) => { });
+
+        Assert.Equal(MediaIconResources.GetIconResourcePath(SnippetMediaCommand.Mute), grid.Numpad1.ThumbnailPath);
+        Assert.True(grid.Numpad1.HasThumbnail);
+    }
+
+    [Fact]
+    public void CachedImageSourceConverterLoadsMediaDefaultIcon()
+    {
+        var converter = new CachedImageSourceConverter();
+
+        var image = converter.Convert(
+            MediaIconResources.GetIconResourcePath(SnippetMediaCommand.PlayPause),
+            typeof(ImageSource),
+            parameter: null,
+            CultureInfo.InvariantCulture);
+
+        Assert.IsAssignableFrom<ImageSource>(image);
     }
 
     [Fact]

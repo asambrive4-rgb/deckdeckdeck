@@ -10,6 +10,7 @@ internal sealed class PasteFlowService
     private readonly Func<IntPtr> _getPasteTargetWindowHandle;
     private readonly Action _hideWindowAfterPaste;
     private readonly LoggingService? _loggingService;
+    private readonly IMediaActionService _mediaActionService;
     private readonly SettingsService _settingsService;
     private readonly Action<string> _showStatus;
     private readonly IUrlLaunchService _urlLaunchService;
@@ -18,6 +19,7 @@ internal sealed class PasteFlowService
         IClipboardPasteService clipboardPasteService,
         IFileLaunchService fileLaunchService,
         IUrlLaunchService urlLaunchService,
+        IMediaActionService mediaActionService,
         SettingsService settingsService,
         Func<IntPtr> getPasteTargetWindowHandle,
         Action hideWindowAfterPaste,
@@ -28,6 +30,7 @@ internal sealed class PasteFlowService
         _clipboardPasteService = clipboardPasteService;
         _fileLaunchService = fileLaunchService;
         _urlLaunchService = urlLaunchService;
+        _mediaActionService = mediaActionService;
         _settingsService = settingsService;
         _getPasteTargetWindowHandle = getPasteTargetWindowHandle;
         _hideWindowAfterPaste = hideWindowAfterPaste;
@@ -52,6 +55,12 @@ internal sealed class PasteFlowService
             if (snippet.ActionType == SnippetActionType.LaunchUrl)
             {
                 LaunchUrlSnippet(snippet, settings);
+                return;
+            }
+
+            if (snippet.ActionType == SnippetActionType.MediaAction)
+            {
+                ExecuteMediaSnippet(snippet, settings);
                 return;
             }
 
@@ -165,5 +174,51 @@ internal sealed class PasteFlowService
         }
 
         _loggingService?.Log($"Launch URL failed for snippet {snippet.Id}: {message}", exception);
+    }
+
+    private void ExecuteMediaSnippet(Snippet snippet, AppSettings settings)
+    {
+        var provider = snippet.MediaProvider ?? SnippetMediaProvider.System;
+        if (provider is not SnippetMediaProvider.System)
+        {
+            ReportMediaActionFailure(snippet, "지원하지 않는 미디어 제공자입니다.");
+            return;
+        }
+
+        var command = snippet.MediaCommand ?? SnippetMediaCommand.PlayPause;
+
+        try
+        {
+            var executed = _mediaActionService.TryExecute(command);
+            if (!executed)
+            {
+                ReportMediaActionFailure(snippet, "Windows 미디어 키 입력을 보내지 못했습니다.");
+                return;
+            }
+
+            if (settings.AutoHideAfterPaste)
+            {
+                _hideWindowAfterPaste();
+            }
+
+            _showStatus($"{snippet.Title} 미디어 명령 실행됨.");
+        }
+        catch (Exception ex)
+        {
+            ReportMediaActionFailure(snippet, "미디어 명령을 실행하지 못했습니다.", ex);
+        }
+    }
+
+    private void ReportMediaActionFailure(Snippet snippet, string message, Exception? exception = null)
+    {
+        _showStatus($"{snippet.Title} 미디어 제어 실패: {message}");
+
+        if (exception is null)
+        {
+            _loggingService?.Log($"Media action failed for snippet {snippet.Id}: {message}");
+            return;
+        }
+
+        _loggingService?.Log($"Media action failed for snippet {snippet.Id}: {message}", exception);
     }
 }

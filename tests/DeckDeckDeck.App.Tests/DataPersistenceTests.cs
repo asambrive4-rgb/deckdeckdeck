@@ -32,6 +32,8 @@ public sealed class DataPersistenceTests
         Assert.Equal(SnippetActionType.PasteText, snippets[0].ActionType);
         Assert.Null(snippets[0].LaunchPath);
         Assert.Null(snippets[0].LaunchUrl);
+        Assert.Null(snippets[0].MediaProvider);
+        Assert.Null(snippets[0].MediaCommand);
         Assert.Equal(SlotImageMode.Auto, snippets[0].SlotImageMode);
     }
 
@@ -62,6 +64,8 @@ public sealed class DataPersistenceTests
         Assert.Equal(string.Empty, snippet.Content);
         Assert.Equal(@"C:\notes", snippet.LaunchPath);
         Assert.Null(snippet.LaunchUrl);
+        Assert.Null(snippet.MediaProvider);
+        Assert.Null(snippet.MediaCommand);
         Assert.Equal(SlotImageMode.Auto, snippet.SlotImageMode);
         Assert.Equal(autoIcon.IconPath, snippet.AutoIconPath);
         Assert.Equal(autoIcon.SourcePath, snippet.AutoIconSourcePath);
@@ -91,6 +95,37 @@ public sealed class DataPersistenceTests
         Assert.Equal(string.Empty, snippet.Content);
         Assert.Null(snippet.LaunchPath);
         Assert.Equal("https://example.com/docs", snippet.LaunchUrl);
+        Assert.Null(snippet.MediaProvider);
+        Assert.Null(snippet.MediaCommand);
+        Assert.Null(snippet.AutoIconPath);
+    }
+
+    [Fact]
+    public void MediaActionSnippetPersistsAcrossDbContexts()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Next",
+            "unused",
+            null,
+            actionType: SnippetActionType.MediaAction,
+            launchPath: @"C:\unused",
+            launchUrl: "https://example.com",
+            mediaProvider: SnippetMediaProvider.System,
+            mediaCommand: SnippetMediaCommand.NextTrack);
+
+        var reloadedServices = CreateServices(services.Storage.AppDataPath);
+        var snippet = Assert.Single(reloadedServices.SnippetService.GetByCategoryId(category.Id));
+
+        Assert.Equal(SnippetActionType.MediaAction, snippet.ActionType);
+        Assert.Equal(string.Empty, snippet.Content);
+        Assert.Null(snippet.LaunchPath);
+        Assert.Null(snippet.LaunchUrl);
+        Assert.Equal(SnippetMediaProvider.System, snippet.MediaProvider);
+        Assert.Equal(SnippetMediaCommand.NextTrack, snippet.MediaCommand);
         Assert.Null(snippet.AutoIconPath);
     }
 
@@ -114,6 +149,8 @@ public sealed class DataPersistenceTests
         Assert.Equal(SnippetActionType.PasteText, snippet.ActionType);
         Assert.Null(snippet.LaunchPath);
         Assert.Null(snippet.LaunchUrl);
+        Assert.Null(snippet.MediaProvider);
+        Assert.Null(snippet.MediaCommand);
         Assert.Equal(SlotImageMode.Auto, snippet.SlotImageMode);
     }
 
@@ -341,6 +378,34 @@ public sealed class DataPersistenceTests
     }
 
     [Fact]
+    public void CopyingCategoryPreservesMediaActionSnippets()
+    {
+        var services = CreateServices();
+        var source = services.CategoryService.Create(SlotKey.Numpad4, "Media", null);
+        services.SnippetService.Create(
+            source.Id,
+            SlotKey.Numpad3,
+            "Mute",
+            "unused",
+            null,
+            actionType: SnippetActionType.MediaAction,
+            mediaProvider: SnippetMediaProvider.System,
+            mediaCommand: SnippetMediaCommand.Mute);
+
+        services.CategoryService.CopyToSlot(source.Id, SlotKey.Numpad5, imageFiles => imageFiles);
+
+        var copiedCategory = services.CategoryService.GetBySlotKey(SlotKey.Numpad5);
+        var copiedSnippet = Assert.Single(services.SnippetService.GetByCategoryId(copiedCategory!.Id));
+
+        Assert.Equal(SnippetActionType.MediaAction, copiedSnippet.ActionType);
+        Assert.Equal(string.Empty, copiedSnippet.Content);
+        Assert.Null(copiedSnippet.LaunchPath);
+        Assert.Null(copiedSnippet.LaunchUrl);
+        Assert.Equal(SnippetMediaProvider.System, copiedSnippet.MediaProvider);
+        Assert.Equal(SnippetMediaCommand.Mute, copiedSnippet.MediaCommand);
+    }
+
+    [Fact]
     public void MovingCategoryToSlotOverwritesTargetAndKeepsSnippets()
     {
         var services = CreateServices();
@@ -426,6 +491,32 @@ public sealed class DataPersistenceTests
                 Assert.Equal("old-snippet.png", imageFiles.ImagePath);
                 Assert.Equal("old-snippet-thumbnail.png", imageFiles.ThumbnailPath);
             });
+    }
+
+    [Fact]
+    public void CopyingSnippetToSlotPreservesMediaActionFields()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        var source = services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Volume up",
+            "unused",
+            null,
+            actionType: SnippetActionType.MediaAction,
+            mediaProvider: SnippetMediaProvider.System,
+            mediaCommand: SnippetMediaCommand.VolumeUp);
+
+        var result = services.SnippetService.CopyToSlot(source.Id, SlotKey.Numpad5, imageFiles => imageFiles);
+
+        Assert.Equal(SlotKey.Numpad5, result.Snippet.SlotKey);
+        Assert.Equal(SnippetActionType.MediaAction, result.Snippet.ActionType);
+        Assert.Equal(string.Empty, result.Snippet.Content);
+        Assert.Null(result.Snippet.LaunchPath);
+        Assert.Null(result.Snippet.LaunchUrl);
+        Assert.Equal(SnippetMediaProvider.System, result.Snippet.MediaProvider);
+        Assert.Equal(SnippetMediaCommand.VolumeUp, result.Snippet.MediaCommand);
     }
 
     [Fact]

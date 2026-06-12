@@ -171,6 +171,8 @@ public sealed class CategoryService
                 ActionType = sourceSnippet.ActionType,
                 LaunchPath = sourceSnippet.LaunchPath,
                 LaunchUrl = sourceSnippet.LaunchUrl,
+                MediaProvider = sourceSnippet.MediaProvider,
+                MediaCommand = sourceSnippet.MediaCommand,
                 SlotImageMode = sourceSnippet.SlotImageMode,
                 Description = sourceSnippet.Description,
                 ImagePath = snippetImageFiles.ImagePath,

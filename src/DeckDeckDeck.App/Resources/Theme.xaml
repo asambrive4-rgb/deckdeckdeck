@@ -1,5 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:DeckDeckDeck.App.Views.Converters">
+    <converters:CachedImageSourceConverter x:Key="Deck.CachedImageSourceConverter" />
+
     <!-- Fonts -->
     <FontFamily x:Key="Deck.Font.Outfit">pack://application:,,,/DeckDeckDeck.App;component/Resources/Fonts/#Outfit</FontFamily>
     <FontFamily x:Key="Deck.Font.SUIT">pack://application:,,,/DeckDeckDeck.App;component/Resources/Fonts/#SUIT</FontFamily>

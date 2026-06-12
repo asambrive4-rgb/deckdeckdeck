@@ -48,7 +48,9 @@ public sealed class SnippetService
         string? launchPath = null,
         SlotImageMode slotImageMode = SlotImageMode.Auto,
         AutoIconCacheEntry? autoIcon = null,
-        string? launchUrl = null)
+        string? launchUrl = null,
+        SnippetMediaProvider? mediaProvider = null,
+        SnippetMediaCommand? mediaCommand = null)
     {
         using var dbContext = _dbContextFactory.Create();
 
@@ -64,6 +66,8 @@ public sealed class SnippetService
             ActionType = actionType,
             LaunchPath = GetStoredLaunchPath(actionType, launchPath),
             LaunchUrl = GetStoredLaunchUrl(actionType, launchUrl),
+            MediaProvider = GetStoredMediaProvider(actionType, mediaProvider),
+            MediaCommand = GetStoredMediaCommand(actionType, mediaCommand),
             SlotImageMode = storedImageMode,
             Description = NormalizeOptionalText(description),
             ImagePath = imagePath,
@@ -105,12 +109,14 @@ public sealed class SnippetService
         string? launchPath = null,
         SlotImageMode slotImageMode = SlotImageMode.Auto,
         AutoIconCacheEntry? autoIcon = null,
-        string? launchUrl = null)
+        string? launchUrl = null,
+        SnippetMediaProvider? mediaProvider = null,
+        SnippetMediaCommand? mediaCommand = null)
     {
         using var dbContext = _dbContextFactory.Create();
 
         var snippet = dbContext.Snippets.First(item => item.Id == id);
-        UpdateText(snippet, title, content, description, actionType, launchPath, launchUrl);
+        UpdateText(snippet, title, content, description, actionType, launchPath, launchUrl, mediaProvider, mediaCommand);
         var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
         var storedAutoIcon = GetStoredAutoIcon(actionType, storedImageMode, autoIcon);
         snippet.SlotImageMode = storedImageMode;
@@ -210,6 +216,8 @@ public sealed class SnippetService
             ActionType = source.ActionType,
             LaunchPath = source.LaunchPath,
             LaunchUrl = source.LaunchUrl,
+            MediaProvider = source.MediaProvider,
+            MediaCommand = source.MediaCommand,
             SlotImageMode = source.SlotImageMode,
             Description = source.Description,
             ImagePath = imageFiles.ImagePath,
@@ -263,6 +271,24 @@ public sealed class SnippetService
         return actionType == SnippetActionType.LaunchUrl ? NormalizeOptionalText(launchUrl) : null;
     }
 
+    private static SnippetMediaProvider? GetStoredMediaProvider(
+        SnippetActionType actionType,
+        SnippetMediaProvider? mediaProvider)
+    {
+        return actionType == SnippetActionType.MediaAction
+            ? mediaProvider ?? SnippetMediaProvider.System
+            : null;
+    }
+
+    private static SnippetMediaCommand? GetStoredMediaCommand(
+        SnippetActionType actionType,
+        SnippetMediaCommand? mediaCommand)
+    {
+        return actionType == SnippetActionType.MediaAction
+            ? mediaCommand ?? SnippetMediaCommand.PlayPause
+            : null;
+    }
+
     private static SlotImageMode GetStoredSlotImageMode(SlotImageMode slotImageMode, string? imagePath)
     {
         return slotImageMode == SlotImageMode.Auto && !string.IsNullOrWhiteSpace(imagePath)
@@ -295,13 +321,17 @@ public sealed class SnippetService
         string? description,
         SnippetActionType actionType,
         string? launchPath,
-        string? launchUrl)
+        string? launchUrl,
+        SnippetMediaProvider? mediaProvider = null,
+        SnippetMediaCommand? mediaCommand = null)
     {
         snippet.Title = title.Trim();
         snippet.Content = GetStoredContent(actionType, content);
         snippet.ActionType = actionType;
         snippet.LaunchPath = GetStoredLaunchPath(actionType, launchPath);
         snippet.LaunchUrl = GetStoredLaunchUrl(actionType, launchUrl);
+        snippet.MediaProvider = GetStoredMediaProvider(actionType, mediaProvider);
+        snippet.MediaCommand = GetStoredMediaCommand(actionType, mediaCommand);
         snippet.Description = NormalizeOptionalText(description);
         snippet.UpdatedAt = DateTime.UtcNow;
     }

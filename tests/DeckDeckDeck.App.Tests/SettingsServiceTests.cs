@@ -83,6 +83,37 @@ public sealed class SettingsServiceTests
     }
 
     [Fact]
+    public void LoadReturnsCopyIsolatedFromCachedSettings()
+    {
+        var services = CreateServices();
+        var settings = services.SettingsService.Load();
+        settings.AutoHideAfterPaste = false;
+        settings.EnabledCategorySlotKeys[SlotKey.Numpad1] = false;
+
+        var reloaded = services.SettingsService.Load();
+
+        Assert.True(reloaded.AutoHideAfterPaste);
+        Assert.True(reloaded.EnabledCategorySlotKeys[SlotKey.Numpad1]);
+    }
+
+    [Fact]
+    public void SaveWindowPlacementPreservesOtherSettings()
+    {
+        var services = CreateServices();
+        var settings = services.SettingsService.Load();
+        settings.AutoHideAfterPaste = false;
+        services.SettingsService.Save(settings);
+
+        services.SettingsService.SaveWindowPlacement(10, 20, "Monitor1");
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsService.Load();
+        Assert.False(reloaded.AutoHideAfterPaste);
+        Assert.Equal(10, reloaded.LastWindowLeft);
+        Assert.Equal(20, reloaded.LastWindowTop);
+        Assert.Equal("Monitor1", reloaded.LastWindowScreenDeviceName);
+    }
+
+    [Fact]
     public void SettingsSavePersistsBackupSettings()
     {
         var services = CreateServices();

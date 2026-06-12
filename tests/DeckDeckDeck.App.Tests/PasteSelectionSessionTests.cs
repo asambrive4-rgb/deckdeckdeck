@@ -41,6 +41,7 @@ public sealed class PasteSelectionSessionTests
             pasteService,
             new RecordingFileLaunchService(),
             new RecordingUrlLaunchService(),
+            new RecordingMediaActionService(),
             services.SettingsService,
             () => new IntPtr(123),
             () => { },

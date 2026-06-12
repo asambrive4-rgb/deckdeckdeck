@@ -49,6 +49,16 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "LaunchUrl",
                 "ALTER TABLE Snippets ADD COLUMN LaunchUrl TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "MediaProvider",
+                "ALTER TABLE Snippets ADD COLUMN MediaProvider TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "MediaCommand",
+                "ALTER TABLE Snippets ADD COLUMN MediaCommand TEXT NULL");
             var addedSlotImageMode = AddColumnIfMissing(
                 dbContext,
                 existingColumns,

@@ -47,6 +47,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ThumbnailService? thumbnailService = null,
         IFileLaunchService? fileLaunchService = null,
         IUrlLaunchService? urlLaunchService = null,
+        IMediaActionService? mediaActionService = null,
         SnippetImageService? snippetImageService = null,
         BackupService? backupService = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
@@ -75,6 +76,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             clipboardPasteService ?? new ClipboardPasteService(),
             fileLaunchService ?? new FileLaunchService(),
             urlLaunchService ?? new UrlLaunchService(),
+            mediaActionService ?? new MediaActionService(),
             loggingService,
             thumbnailService);
 
@@ -185,11 +187,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            var settings = _settingsService.Load();
-            settings.LastWindowLeft = left;
-            settings.LastWindowTop = top;
-            settings.LastWindowScreenDeviceName = screenDeviceName;
-            _settingsService.Save(settings);
+            _settingsService.SaveWindowPlacement(left, top, screenDeviceName);
         }
         catch (Exception ex)
         {
@@ -302,6 +300,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             services.ClipboardPasteService,
             services.FileLaunchService,
             services.UrlLaunchService,
+            services.MediaActionService,
             services.SettingsService,
             getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
             hideWindowAfterPaste ?? (() => { }),
