@@ -22,18 +22,12 @@ public sealed class ThumbnailServiceTests
 
         var storedImage = RunInSta(() => services.ThumbnailService.StoreImage(sourcePath));
 
-        Assert.True(File.Exists(storedImage.ImagePath));
-        Assert.True(File.Exists(storedImage.ThumbnailPath));
+        Assert.True(File.Exists(services.Storage.ToAbsolutePath(storedImage.ImagePath)));
+        Assert.True(File.Exists(services.Storage.ToAbsolutePath(storedImage.ThumbnailPath)));
         Assert.EndsWith(".bmp", storedImage.ImagePath, StringComparison.OrdinalIgnoreCase);
         Assert.EndsWith(".png", storedImage.ThumbnailPath, StringComparison.OrdinalIgnoreCase);
-        Assert.StartsWith(
-            Path.GetFullPath(services.Storage.ImageOriginalsPath),
-            Path.GetFullPath(storedImage.ImagePath),
-            StringComparison.OrdinalIgnoreCase);
-        Assert.StartsWith(
-            Path.GetFullPath(services.Storage.ImageThumbnailsPath),
-            Path.GetFullPath(storedImage.ThumbnailPath),
-            StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("images/originals/", storedImage.ImagePath, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("images/thumbnails/", storedImage.ThumbnailPath, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

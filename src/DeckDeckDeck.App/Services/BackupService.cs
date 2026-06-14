@@ -1,5 +1,5 @@
 using System.IO;
-using System.IO.Compression;
+using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 using Microsoft.Data.Sqlite;
@@ -9,6 +9,9 @@ namespace DeckDeckDeck.App.Services;
 public sealed class BackupService : IBackupGateway
 {
     private const string AutomaticBackupSearchPattern = "DeckDeckDeck-auto-*.zip";
+    private const string RestoreSafetyBackupKind = "restore-safety";
+    private readonly BackupArchiveService _backupArchiveService;
+    private readonly BackupRestoreFileService _backupRestoreFileService;
     private readonly FileStorageService _fileStorageService;
     private readonly Func<DateTimeOffset> _getNow;
     private readonly LoggingService? _loggingService;
@@ -23,6 +26,8 @@ public sealed class BackupService : IBackupGateway
         _fileStorageService = fileStorageService;
         _settingsService = settingsService;
         _loggingService = loggingService;
+        _backupArchiveService = new BackupArchiveService();
+        _backupRestoreFileService = new BackupRestoreFileService(fileStorageService, loggingService);
         _getNow = getNow ?? (() => DateTimeOffset.UtcNow);
     }
 
@@ -42,6 +47,81 @@ public sealed class BackupService : IBackupGateway
     public BackupResult CreateManualBackup(string backupFolderPath)
     {
         return CreateBackup(backupFolderPath, "manual", retentionCount: null);
+    }
+
+    public RestoreBackupResult RestoreBackup(string backupZipPath)
+    {
+        var backupZipValidationError = ValidateBackupZipPath(backupZipPath, out var backupZipFullPath);
+        if (backupZipValidationError is not null)
+        {
+            return RestoreBackupResult.Failure(backupZipValidationError);
+        }
+
+        var tempDirectory = Path.Combine(_fileStorageService.TempPath, $"restore-{Guid.NewGuid():N}");
+        var extractedDirectory = Path.Combine(tempDirectory, "extracted");
+        var currentSnapshotDirectory = Path.Combine(tempDirectory, "current");
+        string? safetyBackupPath = null;
+
+        try
+        {
+            Directory.CreateDirectory(extractedDirectory);
+
+            var extractedBackup = _backupArchiveService.ExtractRestoreArchive(
+                backupZipFullPath!,
+                extractedDirectory);
+            if (!extractedBackup.Succeeded)
+            {
+                return RestoreBackupResult.Failure(extractedBackup.ErrorMessage!);
+            }
+
+            ValidateRestoredDatabase(extractedBackup.DatabasePath!);
+
+            var safetyBackupFolder = ResolveRestoreSafetyBackupFolder(backupZipFullPath!);
+            if (safetyBackupFolder is null)
+            {
+                return RestoreBackupResult.Failure(
+                    "복원 전 안전 백업을 저장할 폴더를 찾지 못했습니다. 백업 폴더 설정을 확인해 주세요.");
+            }
+
+            var safetyBackup = CreateBackup(
+                safetyBackupFolder,
+                RestoreSafetyBackupKind,
+                retentionCount: null);
+            if (!safetyBackup.Succeeded)
+            {
+                return RestoreBackupResult.Failure(
+                    safetyBackup.ErrorMessage ?? "복원 전 안전 백업을 만들지 못해 복원을 중단했습니다.");
+            }
+
+            safetyBackupPath = safetyBackup.BackupPath;
+            _backupRestoreFileService.ReplaceCurrentData(extractedDirectory, currentSnapshotDirectory);
+            NormalizeRestoredStoredPaths();
+            _settingsService.ReloadAfterExternalDataChange();
+
+            return RestoreBackupResult.Success(safetyBackupPath!);
+        }
+        catch (InvalidDataException ex)
+        {
+            _loggingService?.Log("Restore backup validation failed.", ex);
+
+            return RestoreBackupResult.Failure(
+                "올바른 DeckDeckDeck 백업 ZIP이 아닙니다.",
+                safetyBackupPath);
+        }
+        catch (Exception ex)
+        {
+            _loggingService?.Log("Restore backup failed.", ex);
+
+            return RestoreBackupResult.Failure(
+                safetyBackupPath is null
+                    ? "백업 ZIP을 복원하지 못했습니다."
+                    : "백업 ZIP을 복원하지 못했습니다. 현재 데이터는 복원 전 안전 백업으로 보관되었습니다.",
+                safetyBackupPath);
+        }
+        finally
+        {
+            DeleteTempDirectory(tempDirectory);
+        }
     }
 
     public string? ValidateBackupFolder(string? backupFolderPath)
@@ -89,13 +169,11 @@ public sealed class BackupService : IBackupGateway
             var backupPath = GetBackupPath(backupFolderPath, backupKind, now);
             var databaseSnapshotPath = CreateDatabaseSnapshot(tempDirectory);
 
-            using (var zipStream = new FileStream(backupPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create))
-            {
-                archive.CreateEntryFromFile(databaseSnapshotPath, "launcher.db", CompressionLevel.Optimal);
-                AddDirectoryToArchive(archive, _fileStorageService.ImagesPath, "images");
-                AddDirectoryToArchive(archive, _fileStorageService.IconCachePath, "icon-cache");
-            }
+            _backupArchiveService.CreateBackupArchive(
+                backupPath,
+                databaseSnapshotPath,
+                _fileStorageService.ImagesPath,
+                _fileStorageService.IconCachePath);
 
             retentionCount ??= 0;
             if (retentionCount > 0)
@@ -117,6 +195,82 @@ public sealed class BackupService : IBackupGateway
         {
             DeleteTempDirectory(tempDirectory);
         }
+    }
+
+    private static string? ValidateBackupZipPath(string backupZipPath, out string? backupZipFullPath)
+    {
+        backupZipFullPath = null;
+        if (string.IsNullOrWhiteSpace(backupZipPath))
+        {
+            return "복원할 백업 ZIP을 선택해 주세요.";
+        }
+
+        try
+        {
+            backupZipFullPath = Path.GetFullPath(backupZipPath);
+        }
+        catch
+        {
+            return "백업 ZIP 경로가 올바르지 않습니다.";
+        }
+
+        return File.Exists(backupZipFullPath)
+            ? null
+            : "선택한 백업 ZIP을 찾을 수 없습니다.";
+    }
+
+    private static void ValidateRestoredDatabase(string databasePath)
+    {
+        try
+        {
+            if (new FileInfo(databasePath).Length == 0)
+            {
+                throw new InvalidDataException("Restored database is empty.");
+            }
+
+            var dbContextFactory = new AppDbContextFactory(databasePath);
+            dbContextFactory.EnsureCreated();
+        }
+        catch (InvalidDataException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidDataException("Restored database is not readable.", ex);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+        }
+    }
+
+    private string? ResolveRestoreSafetyBackupFolder(string backupZipPath)
+    {
+        var configuredBackupFolder = _settingsService.Load().BackupFolderPath;
+        if (IsUsableRestoreSafetyFolder(configuredBackupFolder))
+        {
+            return configuredBackupFolder.Trim();
+        }
+
+        var selectedZipFolder = Path.GetDirectoryName(backupZipPath);
+        return IsUsableRestoreSafetyFolder(selectedZipFolder)
+            ? selectedZipFolder
+            : null;
+    }
+
+    private bool IsUsableRestoreSafetyFolder(string? folderPath)
+    {
+        return !string.IsNullOrWhiteSpace(folderPath)
+            && ValidateBackupFolder(folderPath) is null
+            && !File.Exists(folderPath);
+    }
+
+    private void NormalizeRestoredStoredPaths()
+    {
+        var dbContextFactory = new AppDbContextFactory(_fileStorageService.DatabasePath);
+        dbContextFactory.EnsureCreated();
+        new StoredPathMigrationService(dbContextFactory, _fileStorageService).NormalizeManagedPaths();
     }
 
     private string CreateDatabaseSnapshot(string tempDirectory)
@@ -144,23 +298,6 @@ public sealed class BackupService : IBackupGateway
         SqliteConnection.ClearAllPools();
 
         return snapshotPath;
-    }
-
-    private static void AddDirectoryToArchive(ZipArchive archive, string directoryPath, string entryRoot)
-    {
-        if (!Directory.Exists(directoryPath))
-        {
-            return;
-        }
-
-        foreach (var filePath in Directory.EnumerateFiles(directoryPath, "*", SearchOption.AllDirectories))
-        {
-            var relativePath = Path.GetRelativePath(directoryPath, filePath)
-                .Replace(Path.DirectorySeparatorChar, '/')
-                .Replace(Path.AltDirectorySeparatorChar, '/');
-            var entryName = $"{entryRoot}/{relativePath}";
-            archive.CreateEntryFromFile(filePath, entryName, CompressionLevel.Optimal);
-        }
     }
 
     private static string GetBackupPath(string backupFolderPath, string backupKind, DateTimeOffset createdAt)
@@ -239,5 +376,14 @@ public sealed class BackupService : IBackupGateway
     {
         var result = CreateManualBackup(backupFolderPath);
         return new BackupGatewayResult(result.Succeeded, result.BackupPath, result.ErrorMessage);
+    }
+
+    RestoreBackupGatewayResult IBackupGateway.RestoreBackup(string backupZipPath)
+    {
+        var result = RestoreBackup(backupZipPath);
+        return new RestoreBackupGatewayResult(
+            result.Succeeded,
+            result.SafetyBackupPath,
+            result.ErrorMessage);
     }
 }

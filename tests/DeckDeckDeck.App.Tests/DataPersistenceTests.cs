@@ -268,6 +268,46 @@ public sealed class DataPersistenceTests
     }
 
     [Fact]
+    public void StoredPathMigrationNormalizesManagedAbsolutePaths()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(
+            SlotKey.Numpad1,
+            "Writing",
+            null,
+            @"C:\Users\Old\AppData\Roaming\NumpadPromptLauncher\images\originals\category.png",
+            Path.Combine(services.Storage.ImageThumbnailsPath, "category.png"));
+        services.SnippetService.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Open app",
+            string.Empty,
+            null,
+            @"C:\Users\Old\AppData\Roaming\NumpadPromptLauncher\images\originals\snippet.png",
+            Path.Combine(services.Storage.ImageThumbnailsPath, "snippet.png"),
+            SnippetActionType.LaunchFile,
+            @"C:\tools\app.exe",
+            SlotImageMode.Auto,
+            new AutoIconCacheEntry(
+                @"C:\Users\Old\AppData\Roaming\NumpadPromptLauncher\icon-cache\app.png",
+                @"C:\tools\app.exe",
+                DateTime.UtcNow,
+                123));
+        var dbContextFactory = new AppDbContextFactory(services.Storage.DatabasePath);
+
+        new StoredPathMigrationService(dbContextFactory, services.Storage).NormalizeManagedPaths();
+
+        var migratedCategory = services.CategoryService.GetBySlotKey(SlotKey.Numpad1)!;
+        var migratedSnippet = Assert.Single(services.SnippetService.GetByCategoryId(category.Id));
+        Assert.Equal("images/originals/category.png", migratedCategory.ImagePath);
+        Assert.Equal("images/thumbnails/category.png", migratedCategory.ThumbnailPath);
+        Assert.Equal("images/originals/snippet.png", migratedSnippet.ImagePath);
+        Assert.Equal("images/thumbnails/snippet.png", migratedSnippet.ThumbnailPath);
+        Assert.Equal("icon-cache/app.png", migratedSnippet.AutoIconPath);
+        Assert.Equal(@"C:\tools\app.exe", migratedSnippet.LaunchPath);
+    }
+
+    [Fact]
     public void CategoryAndSnippetImagePathsCanBeReplacedAndRemoved()
     {
         var services = CreateServices();

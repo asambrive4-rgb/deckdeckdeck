@@ -34,15 +34,21 @@ public sealed class FileIconCacheService
             return null;
         }
 
-        if (current is not null && current.Matches(fileInfo) && File.Exists(current.IconPath))
+        if (current is not null
+            && current.Matches(fileInfo)
+            && File.Exists(_fileStorageService.ToAbsolutePath(current.IconPath)))
         {
-            return current;
+            return new AutoIconCacheEntry(
+                _fileStorageService.ToStoredPath(current.IconPath),
+                current.SourcePath,
+                current.SourceLastWriteTimeUtc,
+                current.SourceLength);
         }
 
         Directory.CreateDirectory(_fileStorageService.IconCachePath);
         var cachePath = Path.Combine(_fileStorageService.IconCachePath, GetCacheFileName(fileInfo));
         var newEntry = new AutoIconCacheEntry(
-            cachePath,
+            _fileStorageService.ToStoredPath(cachePath),
             fileInfo.FullName,
             fileInfo.LastWriteTimeUtc,
             fileInfo.Length);

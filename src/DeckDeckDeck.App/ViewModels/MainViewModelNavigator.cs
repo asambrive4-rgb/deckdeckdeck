@@ -48,7 +48,8 @@ internal sealed class MainViewModelNavigator
         _showViewModel(new CategoryEditViewModel(
             slotKey,
             category: null,
-            _services.CategoryService,
+            CreateLoadCategoryEditorStateUseCase()
+                .Execute(new LoadCategoryEditorStateRequest(slotKey, CategoryId: null)),
             CreateSaveCategoryUseCase(),
             CreateDeleteCategoryUseCase(),
             CreateTransferCategoryUseCase(),
@@ -58,9 +59,8 @@ internal sealed class MainViewModelNavigator
             ShowHome,
             _showStatus,
             _services.ThumbnailService,
-            _services.SettingsService,
             _services.LoggingService,
-            _autoBackupCoordinator));
+            _services.StoredImagePathResolver));
         _showStatus($"슬롯 {slotKey.GetDisplayText()}에 새 카테고리 만들기");
     }
 
@@ -70,7 +70,8 @@ internal sealed class MainViewModelNavigator
         _showViewModel(new CategoryEditViewModel(
             category.SlotKey,
             category,
-            _services.CategoryService,
+            CreateLoadCategoryEditorStateUseCase()
+                .Execute(new LoadCategoryEditorStateRequest(category.SlotKey, category.Id)),
             CreateSaveCategoryUseCase(),
             CreateDeleteCategoryUseCase(),
             CreateTransferCategoryUseCase(),
@@ -80,9 +81,8 @@ internal sealed class MainViewModelNavigator
             ShowHome,
             _showStatus,
             _services.ThumbnailService,
-            _services.SettingsService,
             _services.LoggingService,
-            _autoBackupCoordinator));
+            _services.StoredImagePathResolver));
         _showStatus($"{category.Name} 편집");
     }
 
@@ -120,7 +120,8 @@ internal sealed class MainViewModelNavigator
             category,
             slotKey,
             snippet,
-            _services.SnippetService,
+            CreateLoadSnippetEditorStateUseCase()
+                .Execute(new LoadSnippetEditorStateRequest(category.Id, slotKey, snippet?.Id)),
             CreateSaveSnippetUseCase(),
             CreateDeleteSnippetUseCase(),
             CreateTransferSnippetUseCase(),
@@ -130,10 +131,9 @@ internal sealed class MainViewModelNavigator
             () => OpenCategoryById(category.Id),
             _showStatus,
             _services.ThumbnailService,
-            _services.SettingsService,
             _services.LoggingService,
             _services.SnippetImageService,
-            _autoBackupCoordinator));
+            _services.StoredImagePathResolver));
         _showStatus(snippet is null
             ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
             : $"{snippet.Title} 편집");
@@ -145,6 +145,13 @@ internal sealed class MainViewModelNavigator
             _services.CategoryService,
             _services.SettingsService,
             _autoBackupCoordinator);
+    }
+
+    private LoadCategoryEditorStateUseCase CreateLoadCategoryEditorStateUseCase()
+    {
+        return new LoadCategoryEditorStateUseCase(
+            _services.CategoryService,
+            _services.SettingsService);
     }
 
     private DeleteCategoryUseCase CreateDeleteCategoryUseCase()
@@ -171,6 +178,13 @@ internal sealed class MainViewModelNavigator
             _services.SnippetService,
             _services.SettingsService,
             _autoBackupCoordinator);
+    }
+
+    private LoadSnippetEditorStateUseCase CreateLoadSnippetEditorStateUseCase()
+    {
+        return new LoadSnippetEditorStateUseCase(
+            _services.SnippetService,
+            _services.SettingsService);
     }
 
     private DeleteSnippetUseCase CreateDeleteSnippetUseCase()
@@ -203,8 +217,8 @@ internal sealed class MainViewModelNavigator
             _services.BackupService,
             _autoBackupCoordinator,
             _services.DialogService,
-            _services.SpotifyConnectionService,
-            _services.UrlLaunchService));
+            _services.SpotifyConnectionUseCase,
+            _services.ClipboardService));
         _showStatus("설정");
     }
 }

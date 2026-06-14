@@ -104,6 +104,8 @@ public interface IBackupGateway
     string? ValidateBackupFolder(string? backupFolderPath);
 
     BackupGatewayResult CreateManualBackup(string backupFolderPath);
+
+    RestoreBackupGatewayResult RestoreBackup(string backupZipPath);
 }
 
 public interface IAutoBackupRequester
@@ -138,6 +140,19 @@ public interface ISpotifyMediaActionGateway
         CancellationToken cancellationToken = default);
 }
 
+public interface ISpotifyConnectionGateway
+{
+    string DashboardUrl { get; }
+
+    string RedirectUri { get; }
+
+    Task<SpotifyConnectionGatewayResult> ConnectAsync(
+        string clientId,
+        CancellationToken cancellationToken = default);
+
+    void Disconnect();
+}
+
 public sealed record ImageFileReference(string? ImagePath, string? ThumbnailPath);
 
 public sealed record StoredImageReference(string ImagePath, string ThumbnailPath);
@@ -155,6 +170,15 @@ public sealed record BackupGatewayResult(
     string? BackupPath = null,
     string? ErrorMessage = null);
 
+public sealed record RestoreBackupGatewayResult(
+    bool Succeeded,
+    string? SafetyBackupPath = null,
+    string? ErrorMessage = null);
+
 public sealed record SpotifyMediaActionGatewayResult(
+    bool Succeeded,
+    string? ErrorMessage = null);
+
+public sealed record SpotifyConnectionGatewayResult(
     bool Succeeded,
     string? ErrorMessage = null);

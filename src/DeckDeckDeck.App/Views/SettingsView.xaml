@@ -172,6 +172,10 @@
                                 Command="{Binding CreateManualBackupCommand}"
                                 Style="{StaticResource Deck.SecondaryButtonStyle}"
                                 Content="즉시 백업" />
+                        <Button Margin="8,0,0,0"
+                                Command="{Binding RestoreBackupCommand}"
+                                Style="{StaticResource Deck.DangerButtonStyle}"
+                                Content="백업 ZIP 복원" />
                     </StackPanel>
                 </StackPanel>
             </Border>

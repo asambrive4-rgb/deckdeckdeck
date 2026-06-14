@@ -1,20 +1,29 @@
-using System.IO;
 using DeckDeckDeck.App.Models;
+using System.IO;
 
 namespace DeckDeckDeck.App.Services;
 
 public sealed class SnippetImageService
 {
     private readonly FileIconCacheService _fileIconCacheService;
+    private readonly IStoredImagePathResolver _storedImagePathResolver;
 
     public SnippetImageService(FileIconCacheService fileIconCacheService)
+        : this(fileIconCacheService, new StoredImagePathResolver(new FileStorageService()))
+    {
+    }
+
+    public SnippetImageService(
+        FileIconCacheService fileIconCacheService,
+        IStoredImagePathResolver storedImagePathResolver)
     {
         _fileIconCacheService = fileIconCacheService;
+        _storedImagePathResolver = storedImagePathResolver;
     }
 
     public string? GetDisplayImagePath(Snippet? snippet)
     {
-        return GetStoredDisplayImagePath(snippet);
+        return GetStoredDisplayImagePath(snippet, _storedImagePathResolver);
     }
 
     public AutoIconCacheEntry? PrepareAutoIcon(
@@ -27,7 +36,9 @@ public sealed class SnippetImageService
             : null;
     }
 
-    public static string? GetStoredDisplayImagePath(Snippet? snippet)
+    public static string? GetStoredDisplayImagePath(
+        Snippet? snippet,
+        IStoredImagePathResolver? storedImagePathResolver = null)
     {
         if (snippet is null)
         {
@@ -36,13 +47,32 @@ public sealed class SnippetImageService
 
         return snippet.SlotImageMode switch
         {
-            SlotImageMode.Custom => snippet.ThumbnailPath,
+            SlotImageMode.Custom => ResolveDisplayPath(snippet.ThumbnailPath, storedImagePathResolver),
             SlotImageMode.Auto when snippet.ActionType == SnippetActionType.LaunchFile
                 && !string.IsNullOrWhiteSpace(snippet.AutoIconPath)
-                && File.Exists(snippet.AutoIconPath) => snippet.AutoIconPath,
+                && CanDisplayStoredPath(snippet.AutoIconPath, storedImagePathResolver) =>
+                ResolveDisplayPath(snippet.AutoIconPath, storedImagePathResolver),
             SlotImageMode.Auto when snippet.ActionType == SnippetActionType.MediaAction =>
                 MediaIconResources.GetIconResourcePath(snippet.MediaCommand),
             _ => null
         };
+    }
+
+    private static string? ResolveDisplayPath(string? path, IStoredImagePathResolver? storedImagePathResolver)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        return storedImagePathResolver?.ResolveDisplayPath(path) ?? path;
+    }
+
+    private static bool CanDisplayStoredPath(
+        string storedPath,
+        IStoredImagePathResolver? storedImagePathResolver)
+    {
+        return storedImagePathResolver?.FileExists(storedPath) == true
+            || (Path.IsPathRooted(storedPath) && File.Exists(storedPath));
     }
 }

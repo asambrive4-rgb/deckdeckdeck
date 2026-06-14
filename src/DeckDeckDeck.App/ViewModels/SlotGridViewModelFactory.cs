@@ -6,6 +6,13 @@ namespace DeckDeckDeck.App.ViewModels;
 
 public sealed class SlotGridViewModelFactory
 {
+    private readonly IStoredImagePathResolver? _storedImagePathResolver;
+
+    public SlotGridViewModelFactory(IStoredImagePathResolver? storedImagePathResolver = null)
+    {
+        _storedImagePathResolver = storedImagePathResolver;
+    }
+
     public NumpadGridViewModel BuildCategoryGrid(
         IEnumerable<Category> categories,
         AppSettings settings,
@@ -20,7 +27,7 @@ public sealed class SlotGridViewModelFactory
             return new SlotViewModel(
                 slotKey,
                 category?.Name,
-                category?.ThumbnailPath,
+                ResolveDisplayPath(category?.ThumbnailPath),
                 SlotRules.IsEnabled(slotKey, settings.EnabledCategorySlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, category),
                 selectedSlotKey => onEdit(selectedSlotKey, category));
@@ -38,7 +45,7 @@ public sealed class SlotGridViewModelFactory
         return new NumpadGridViewModel(SlotKeyCatalog.All.Select(slotKey =>
         {
             snippetsBySlot.TryGetValue(slotKey, out var snippet);
-            var thumbnailPath = SnippetImageService.GetStoredDisplayImagePath(snippet);
+            var thumbnailPath = SnippetImageService.GetStoredDisplayImagePath(snippet, _storedImagePathResolver);
             return new SlotViewModel(
                 slotKey,
                 snippet?.Title,
@@ -47,5 +54,15 @@ public sealed class SlotGridViewModelFactory
                 selectedSlotKey => onSelected(selectedSlotKey, snippet),
                 selectedSlotKey => onEdit(selectedSlotKey, snippet));
         }));
+    }
+
+    private string? ResolveDisplayPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || _storedImagePathResolver is null)
+        {
+            return path;
+        }
+
+        return _storedImagePathResolver.ResolveDisplayPath(path);
     }
 }

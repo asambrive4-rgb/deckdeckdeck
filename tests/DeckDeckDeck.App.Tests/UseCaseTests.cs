@@ -44,6 +44,99 @@ public sealed class UseCaseTests
     }
 
     [Fact]
+    public void ResolveCategoryHotkeyUseCaseOpensExistingCategory()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var useCase = new ResolveCategoryHotkeyUseCase(
+            services.CategoryService,
+            services.SettingsService);
+
+        var result = useCase.Execute(SlotKey.Numpad1);
+
+        Assert.Equal(CategoryHotkeyResolutionKind.OpenExisting, result.Kind);
+        Assert.Equal(category.Id, result.Category!.Id);
+    }
+
+    [Fact]
+    public void ResolveCategoryHotkeyUseCaseCreatesForEmptySlot()
+    {
+        var services = CreateServices();
+        var useCase = new ResolveCategoryHotkeyUseCase(
+            services.CategoryService,
+            services.SettingsService);
+
+        var result = useCase.Execute(SlotKey.Numpad2);
+
+        Assert.Equal(CategoryHotkeyResolutionKind.CreateNew, result.Kind);
+        Assert.Equal(SlotKey.Numpad2, result.SlotKey);
+    }
+
+    [Fact]
+    public void ResolveCategoryHotkeyUseCaseBlocksDisabledSlot()
+    {
+        var services = CreateServices();
+        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad1, false);
+        var useCase = new ResolveCategoryHotkeyUseCase(
+            services.CategoryService,
+            services.SettingsService);
+
+        var result = useCase.Execute(SlotKey.Numpad1);
+
+        Assert.Equal(CategoryHotkeyResolutionKind.Blocked, result.Kind);
+        Assert.Equal("슬롯 1은 사용 안 함 상태입니다.", result.StatusMessage);
+    }
+
+    [Fact]
+    public void LoadCategoryEditorStateExcludesCurrentSlotAndShowsOccupiedTargets()
+    {
+        var services = CreateServices();
+        var source = services.CategoryService.Create(SlotKey.Numpad4, "Writing", null);
+        services.CategoryService.Create(SlotKey.Numpad5, "Old", null);
+        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad4, false);
+        var useCase = new LoadCategoryEditorStateUseCase(
+            services.CategoryService,
+            services.SettingsService);
+
+        var state = useCase.Execute(new LoadCategoryEditorStateRequest(SlotKey.Numpad4, source.Id));
+
+        Assert.False(state.IsSlotEnabled);
+        Assert.DoesNotContain(state.TransferTargets, target => target.SlotKey == SlotKey.Numpad4);
+        Assert.Contains(
+            state.TransferTargets,
+            target => target.SlotKey == SlotKey.Numpad5 && target.ExistingTitle == "Old");
+    }
+
+    [Fact]
+    public void LoadSnippetEditorStateReturnsSlotAndSpotifyState()
+    {
+        var services = CreateServices();
+        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var source = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        services.SnippetService.Create(category.Id, SlotKey.Numpad5, "Old", "Bye", null);
+        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
+        var settings = services.SettingsService.Load();
+        settings.SpotifyClientId = "client-id";
+        settings.SpotifyAccessToken = "access-token";
+        settings.SpotifyRefreshToken = "refresh-token";
+        settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
+        services.SettingsService.Save(settings);
+        var useCase = new LoadSnippetEditorStateUseCase(
+            services.SnippetService,
+            services.SettingsService);
+
+        var state = useCase.Execute(new LoadSnippetEditorStateRequest(category.Id, SlotKey.Numpad3, source.Id));
+
+        Assert.False(state.IsSlotEnabled);
+        Assert.True(state.SpotifyConnection.IsConnected);
+        Assert.Equal("Spotify 계정", state.SpotifyConnection.DisplayName);
+        Assert.DoesNotContain(state.TransferTargets, target => target.SlotKey == SlotKey.Numpad3);
+        Assert.Contains(
+            state.TransferTargets,
+            target => target.SlotKey == SlotKey.Numpad5 && target.ExistingTitle == "Old");
+    }
+
+    [Fact]
     public async Task ExecuteSnippetActionUseCaseReturnsLaunchFailureWithoutCallingPaste()
     {
         var pasteService = new RecordingClipboardPasteService();
@@ -71,6 +164,109 @@ public sealed class UseCaseTests
         Assert.Empty(pasteService.Calls);
     }
 
+    [Fact]
+    public void CreateManualBackupUseCaseStopsWhenBackupFolderIsInvalid()
+    {
+        var gateway = new RecordingBackupGateway
+        {
+            ValidationError = "invalid folder"
+        };
+        var useCase = new CreateManualBackupUseCase(gateway);
+
+        var result = useCase.Execute(@"C:\app-data");
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("invalid folder", result.ErrorMessage);
+        Assert.Equal(0, gateway.CreateManualBackupCount);
+    }
+
+    [Fact]
+    public void RestoreBackupUseCaseReturnsSafetyBackupPathFromGateway()
+    {
+        var gateway = new RecordingBackupGateway
+        {
+            RestoreResult = new RestoreBackupGatewayResult(true, @"C:\backups\safety.zip")
+        };
+        var useCase = new RestoreBackupUseCase(gateway);
+
+        var result = useCase.Execute(@"C:\backups\deck.zip");
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(@"C:\backups\deck.zip", gateway.RestoreBackupPath);
+        Assert.Equal(@"C:\backups\safety.zip", result.SafetyBackupPath);
+    }
+
+    [Fact]
+    public void SpotifyConnectionUseCaseReportsDisconnectedState()
+    {
+        var services = CreateServices();
+        var useCase = new SpotifyConnectionUseCase(
+            services.SettingsService,
+            new RecordingSpotifyConnectionGateway(),
+            new RecordingUrlLaunchService());
+
+        var state = useCase.GetState();
+
+        Assert.False(state.IsConnected);
+        Assert.Null(state.DisplayName);
+    }
+
+    [Fact]
+    public async Task SpotifyConnectionUseCaseRequiresClientIdBeforeGatewayCall()
+    {
+        var services = CreateServices();
+        var gateway = new RecordingSpotifyConnectionGateway();
+        var useCase = new SpotifyConnectionUseCase(
+            services.SettingsService,
+            gateway,
+            new RecordingUrlLaunchService());
+
+        var result = await useCase.ConnectAsync(" ");
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("Spotify Client ID를 입력해 주세요.", result.ErrorMessage);
+        Assert.Empty(gateway.ClientIds);
+    }
+
+    [Fact]
+    public async Task SpotifyConnectionUseCaseConnectAndDisconnectReflectStoredState()
+    {
+        var services = CreateServices();
+        var gateway = new RecordingSpotifyConnectionGateway
+        {
+            OnConnect = clientId =>
+            {
+                var settings = services.SettingsService.Load();
+                settings.SpotifyClientId = clientId;
+                settings.SpotifyAccessToken = "access-token";
+                settings.SpotifyRefreshToken = "refresh-token";
+                settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
+                services.SettingsService.Save(settings);
+            },
+            OnDisconnect = () =>
+            {
+                var settings = services.SettingsService.Load();
+                settings.SpotifyClientId = string.Empty;
+                settings.SpotifyAccessToken = string.Empty;
+                settings.SpotifyRefreshToken = string.Empty;
+                settings.SpotifyConnectedUserDisplayName = string.Empty;
+                services.SettingsService.Save(settings);
+            }
+        };
+        var useCase = new SpotifyConnectionUseCase(
+            services.SettingsService,
+            gateway,
+            new RecordingUrlLaunchService());
+
+        var connectResult = await useCase.ConnectAsync("client-id");
+        var disconnectState = useCase.Disconnect();
+
+        Assert.True(connectResult.Succeeded);
+        Assert.True(connectResult.State!.IsConnected);
+        Assert.Equal("Spotify 계정", connectResult.State.DisplayName);
+        Assert.False(disconnectState.IsConnected);
+    }
+
     private sealed class TestSpotifyMediaActionGateway : ISpotifyMediaActionGateway
     {
         public Task<SpotifyMediaActionGatewayResult> TryExecuteAsync(
@@ -78,6 +274,71 @@ public sealed class UseCaseTests
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new SpotifyMediaActionGatewayResult(true));
+        }
+    }
+
+    private sealed class RecordingSpotifyConnectionGateway : ISpotifyConnectionGateway
+    {
+        public string DashboardUrl => "https://developer.spotify.com/dashboard";
+
+        public string RedirectUri => "http://127.0.0.1:53682/spotify-callback/";
+
+        public List<string> ClientIds { get; } = [];
+
+        public Action<string>? OnConnect { get; init; }
+
+        public Action? OnDisconnect { get; init; }
+
+        public SpotifyConnectionGatewayResult ConnectResult { get; init; } = new(true);
+
+        public Task<SpotifyConnectionGatewayResult> ConnectAsync(
+            string clientId,
+            CancellationToken cancellationToken = default)
+        {
+            ClientIds.Add(clientId);
+            if (ConnectResult.Succeeded)
+            {
+                OnConnect?.Invoke(clientId);
+            }
+
+            return Task.FromResult(ConnectResult);
+        }
+
+        public void Disconnect()
+        {
+            OnDisconnect?.Invoke();
+        }
+    }
+
+    private sealed class RecordingBackupGateway : IBackupGateway
+    {
+        public string? ValidationError { get; init; }
+
+        public int CreateManualBackupCount { get; private set; }
+
+        public string? RestoreBackupPath { get; private set; }
+
+        public BackupGatewayResult CreateResult { get; init; } =
+            new(true, @"C:\backups\manual.zip");
+
+        public RestoreBackupGatewayResult RestoreResult { get; init; } =
+            new(false, ErrorMessage: "restore failed");
+
+        public string? ValidateBackupFolder(string? backupFolderPath)
+        {
+            return ValidationError;
+        }
+
+        public BackupGatewayResult CreateManualBackup(string backupFolderPath)
+        {
+            CreateManualBackupCount++;
+            return CreateResult;
+        }
+
+        public RestoreBackupGatewayResult RestoreBackup(string backupZipPath)
+        {
+            RestoreBackupPath = backupZipPath;
+            return RestoreResult;
         }
     }
 }

@@ -16,17 +16,19 @@ internal static class TestAppFactory
 
         var dbContextFactory = new AppDbContextFactory(storage.DatabasePath);
         dbContextFactory.EnsureCreated();
+        new StoredPathMigrationService(dbContextFactory, storage).NormalizeManagedPaths();
 
         var settingsService = new SettingsService(dbContextFactory);
         settingsService.EnsureDefaults();
         var snippetService = new SnippetService(dbContextFactory);
         var loggingService = new LoggingService(storage);
+        var storedImagePathResolver = new StoredImagePathResolver(storage);
         var backupService = new BackupService(storage, settingsService, loggingService);
         var fileIconCacheService = new FileIconCacheService(
             storage,
             new StubFileIconExtractor(),
             loggingService);
-        var snippetImageService = new SnippetImageService(fileIconCacheService);
+        var snippetImageService = new SnippetImageService(fileIconCacheService, storedImagePathResolver);
 
         return new TestServices(
             storage,
@@ -37,7 +39,8 @@ internal static class TestAppFactory
             backupService,
             new ThumbnailService(storage),
             fileIconCacheService,
-            snippetImageService);
+            snippetImageService,
+            storedImagePathResolver);
     }
 
     public static MainViewModel CreateMainViewModel(
@@ -59,7 +62,7 @@ internal static class TestAppFactory
             services.CategoryService,
             new DialogService(),
             services.SettingsService,
-            new SlotGridViewModelFactory(),
+            new SlotGridViewModelFactory(services.StoredImagePathResolver),
             services.SnippetService,
             clipboardPasteService,
             getPasteTargetWindowHandle,
@@ -76,7 +79,8 @@ internal static class TestAppFactory
             spotifyMediaActionService: spotifyMediaActionService,
             snippetImageService: services.SnippetImageService,
             backupService: services.BackupService,
-            autoBackupCoordinator: autoBackupCoordinator);
+            autoBackupCoordinator: autoBackupCoordinator,
+            storedImagePathResolver: services.StoredImagePathResolver);
     }
 
     public static string CreateTinyBmp(string directory)
@@ -142,7 +146,8 @@ internal sealed record TestServices(
     BackupService BackupService,
     ThumbnailService ThumbnailService,
     FileIconCacheService FileIconCacheService,
-    SnippetImageService SnippetImageService);
+    SnippetImageService SnippetImageService,
+    IStoredImagePathResolver StoredImagePathResolver);
 
 internal sealed class StubFileIconExtractor : IFileIconExtractor
 {

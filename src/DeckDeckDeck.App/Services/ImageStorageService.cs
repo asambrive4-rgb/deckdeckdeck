@@ -63,16 +63,22 @@ internal sealed class ImageStorageService
 
     private void DeleteImageFile(string? path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !IsAppImagePath(path))
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        var absolutePath = _fileStorageService.ToAbsolutePath(path);
+        if (!IsAppImagePath(absolutePath))
         {
             return;
         }
 
         try
         {
-            if (File.Exists(path))
+            if (File.Exists(absolutePath))
             {
-                File.Delete(path);
+                File.Delete(absolutePath);
             }
         }
         catch

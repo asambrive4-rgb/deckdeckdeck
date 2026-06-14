@@ -9,11 +9,13 @@ public sealed record ImageFileSet(string? ImagePath, string? ThumbnailPath);
 
 public sealed class ThumbnailService : IImageFileManager
 {
+    private readonly FileStorageService _fileStorageService;
     private readonly ThumbnailGenerator _thumbnailGenerator = new();
     private readonly ImageStorageService _imageStorageService;
 
     public ThumbnailService(FileStorageService fileStorageService)
     {
+        _fileStorageService = fileStorageService;
         _imageStorageService = new ImageStorageService(fileStorageService);
     }
 
@@ -26,7 +28,9 @@ public sealed class ThumbnailService : IImageFileManager
             _imageStorageService.CopyOriginal(sourcePath, storedImage.ImagePath);
             _thumbnailGenerator.CreateThumbnail(storedImage.ImagePath, storedImage.ThumbnailPath);
 
-            return storedImage;
+            return new StoredImage(
+                _fileStorageService.ToStoredPath(storedImage.ImagePath),
+                _fileStorageService.ToStoredPath(storedImage.ThumbnailPath));
         }
         catch
         {

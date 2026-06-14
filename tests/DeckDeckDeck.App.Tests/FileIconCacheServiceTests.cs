@@ -32,6 +32,8 @@ public sealed class FileIconCacheServiceTests
 
         Assert.NotNull(first);
         Assert.Equal(first, second);
+        Assert.StartsWith("icon-cache/", first.IconPath, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(storage.ToAbsolutePath(first.IconPath)));
         Assert.Equal(1, extractor.CallCount);
     }
 

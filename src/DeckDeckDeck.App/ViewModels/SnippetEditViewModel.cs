@@ -5,7 +5,6 @@ using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
 using DeckDeckDeck.App.UseCases;
-using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -13,19 +12,18 @@ public sealed class SnippetEditViewModel : ObservableObject
 {
     private readonly Action _afterDelete;
     private readonly Action<Snippet> _afterSave;
-    private readonly IAutoBackupCoordinator? _autoBackupCoordinator;
     private readonly Action _cancel;
     private readonly DeleteSnippetUseCase _deleteSnippetUseCase;
     private readonly DialogService _dialogService;
     private readonly EditableImageState _imageState;
     private readonly LoggingService? _loggingService;
+    private readonly bool _isSpotifyConnected;
     private bool _originalIsSlotEnabled;
     private readonly SaveSnippetUseCase _saveSnippetUseCase;
-    private readonly ISettingsStore? _settingsStore;
     private readonly Guid? _snippetId;
     private readonly SnippetImageService? _snippetImageService;
-    private readonly ISnippetRepository _snippetRepository;
     private readonly Action<string> _showStatus;
+    private readonly IStoredImagePathResolver? _storedImagePathResolver;
     private readonly ThumbnailService? _thumbnailService;
     private readonly TransferSnippetUseCase _transferSnippetUseCase;
     private AutoIconCacheEntry? _autoIcon;
@@ -47,7 +45,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         Category category,
         SlotKey slotKey,
         Snippet? snippet,
-        ISnippetRepository snippetRepository,
+        SnippetEditorState editorState,
         SaveSnippetUseCase saveSnippetUseCase,
         DeleteSnippetUseCase deleteSnippetUseCase,
         TransferSnippetUseCase transferSnippetUseCase,
@@ -57,31 +55,29 @@ public sealed class SnippetEditViewModel : ObservableObject
         Action afterDelete,
         Action<string> showStatus,
         ThumbnailService? thumbnailService = null,
-        ISettingsStore? settingsStore = null,
         LoggingService? loggingService = null,
         SnippetImageService? snippetImageService = null,
-        IAutoBackupCoordinator? autoBackupCoordinator = null)
+        IStoredImagePathResolver? storedImagePathResolver = null)
     {
         CategoryId = category.Id;
         CategoryName = category.Name;
         SlotKey = slotKey;
         KeyText = slotKey.GetDisplayText();
         _snippetId = snippet?.Id;
-        _snippetRepository = snippetRepository;
         _saveSnippetUseCase = saveSnippetUseCase;
         _deleteSnippetUseCase = deleteSnippetUseCase;
         _transferSnippetUseCase = transferSnippetUseCase;
         _dialogService = dialogService;
-        _settingsStore = settingsStore;
         _loggingService = loggingService;
         _snippetImageService = snippetImageService;
-        _autoBackupCoordinator = autoBackupCoordinator;
+        _storedImagePathResolver = storedImagePathResolver;
         _cancel = cancel;
         _afterSave = afterSave;
         _afterDelete = afterDelete;
         _showStatus = showStatus;
         _thumbnailService = thumbnailService;
         _imageState = new EditableImageState(snippet?.ImagePath, snippet?.ThumbnailPath, thumbnailService);
+        _isSpotifyConnected = editorState.SpotifyConnection.IsConnected;
 
         _snippetTitle = snippet?.Title ?? string.Empty;
         _content = snippet?.Content ?? string.Empty;
@@ -96,9 +92,9 @@ public sealed class SnippetEditViewModel : ObservableObject
         _slotImageMode = GetInitialSlotImageMode(snippet);
         _autoIcon = AutoIconCacheEntry.FromSnippet(snippet);
         _description = snippet?.Description ?? string.Empty;
-        TransferTargetSlots = BuildTransferTargetSlots();
+        TransferTargetSlots = BuildTransferTargetSlots(editorState.TransferTargets);
         _selectedTransferTarget = TransferTargetSlots.FirstOrDefault();
-        _originalIsSlotEnabled = LoadSlotEnabledState();
+        _originalIsSlotEnabled = editorState.IsSlotEnabled;
         _isSlotEnabled = _originalIsSlotEnabled;
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
@@ -269,7 +265,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     public bool ShowSpotifyMediaConnectionNotice =>
         IsMediaAction
         && IsSpotifyMediaProvider
-        && !IsSpotifyConnected();
+        && !_isSpotifyConnected;
 
     public string SpotifyMediaConnectionNotice =>
         "Spotify 연결 전에도 저장할 수 있습니다. 실행하려면 설정에서 Spotify를 연결해 주세요.";
@@ -393,106 +389,6 @@ public sealed class SnippetEditViewModel : ObservableObject
             SelectedMediaCommand,
             IsSlotEnabled,
             _originalIsSlotEnabled);
-    }
-
-    private bool TryPrepareSaveInput(
-        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out PreparedSnippetSave? input)
-    {
-        input = null;
-        if (string.IsNullOrWhiteSpace(SnippetTitle))
-        {
-            if (TrySaveSlotOnly())
-            {
-                return false;
-            }
-
-            ErrorMessage = "슬롯 명을 입력해 주세요.";
-            return false;
-        }
-
-        if (ActionType == SnippetActionType.PasteText && string.IsNullOrWhiteSpace(Content))
-        {
-            if (TrySaveSlotOnly())
-            {
-                return false;
-            }
-
-            ErrorMessage = "붙여넣을 문구를 입력해 주세요.";
-            return false;
-        }
-
-        if (ActionType == SnippetActionType.LaunchFile && string.IsNullOrWhiteSpace(LaunchPath))
-        {
-            ErrorMessage = "실행할 파일, 폴더 또는 바로 가기를 선택해 주세요.";
-            return false;
-        }
-
-        var launchUrl = LaunchUrl;
-        if (ActionType == SnippetActionType.LaunchUrl)
-        {
-            if (!UrlAddress.TryNormalize(LaunchUrl, out launchUrl))
-            {
-                ErrorMessage = "열 웹페이지 주소를 http 또는 https 주소로 입력해 주세요.";
-                return false;
-            }
-
-            LaunchUrl = launchUrl;
-        }
-
-        var mediaProvider = ActionType == SnippetActionType.MediaAction
-            ? SelectedMediaProvider
-            : (SnippetMediaProvider?)null;
-        var mediaCommand = ActionType == SnippetActionType.MediaAction
-            ? SelectedMediaCommand
-            : (SnippetMediaCommand?)null;
-        input = new PreparedSnippetSave(
-            SnippetTitle,
-            Content,
-            Description,
-            _imageState.ImagePath,
-            _imageState.ThumbnailPath,
-            ActionType,
-            LaunchPath,
-            _slotImageMode,
-            launchUrl,
-            mediaProvider,
-            mediaCommand);
-
-        return true;
-    }
-
-    private Snippet SaveSnippetRecord(PreparedSnippetSave input, AutoIconCacheEntry? autoIcon)
-    {
-        return _snippetId.HasValue
-            ? _snippetRepository.Update(
-                _snippetId.Value,
-                input.Title,
-                input.Content,
-                input.Description,
-                input.ImagePath,
-                input.ThumbnailPath,
-                input.ActionType,
-                input.LaunchPath,
-                input.SlotImageMode,
-                autoIcon,
-                input.LaunchUrl,
-                input.MediaProvider,
-                input.MediaCommand)
-            : _snippetRepository.Create(
-                CategoryId,
-                SlotKey,
-                input.Title,
-                input.Content,
-                input.Description,
-                input.ImagePath,
-                input.ThumbnailPath,
-                input.ActionType,
-                input.LaunchPath,
-                input.SlotImageMode,
-                autoIcon,
-                input.LaunchUrl,
-                input.MediaProvider,
-                input.MediaCommand);
     }
 
     private void Cancel()
@@ -625,21 +521,6 @@ public sealed class SnippetEditViewModel : ObservableObject
             overwriteConfirmed));
     }
 
-    private bool ConfirmOverwriteIfNeeded(SlotKey targetSlotKey, string actionText)
-    {
-        var targetSnippet = _snippetRepository
-            .GetByCategoryId(CategoryId)
-            .FirstOrDefault(snippet => snippet.SlotKey == targetSlotKey);
-        if (targetSnippet is null || targetSnippet.Id == _snippetId)
-        {
-            return true;
-        }
-
-        return _dialogService.Confirm(
-            $"실행 항목 {actionText}",
-            $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{targetSnippet.Title}' 실행 항목이 있습니다.\n기존 실행 항목을 덮어쓸까요?");
-    }
-
     private void ChooseImage()
     {
         if (_thumbnailService is null)
@@ -719,12 +600,18 @@ public sealed class SnippetEditViewModel : ObservableObject
     {
         return _slotImageMode switch
         {
-            SlotImageMode.Custom => _imageState.ThumbnailPath,
-            SlotImageMode.Auto when ActionType == SnippetActionType.LaunchFile => _autoIcon?.IconPath,
+            SlotImageMode.Custom => ResolveDisplayPath(_imageState.ThumbnailPath),
+            SlotImageMode.Auto when ActionType == SnippetActionType.LaunchFile =>
+                ResolveDisplayPath(_autoIcon?.IconPath),
             SlotImageMode.Auto when ActionType == SnippetActionType.MediaAction =>
                 MediaIconResources.GetIconResourcePath(SelectedMediaCommand),
             _ => null
         };
+    }
+
+    private string? ResolveDisplayPath(string? storedPath)
+    {
+        return _storedImagePathResolver?.ResolveDisplayPath(storedPath) ?? storedPath;
     }
 
     private AutoIconCacheEntry? PrepareAutoIconForSave()
@@ -775,109 +662,24 @@ public sealed class SnippetEditViewModel : ObservableObject
             : snippet.SlotImageMode;
     }
 
-    private IReadOnlyList<SnippetTransferTargetSlot> BuildTransferTargetSlots()
+    private static IReadOnlyList<SnippetTransferTargetSlot> BuildTransferTargetSlots(
+        IReadOnlyList<TransferTargetState> transferTargets)
     {
-        var snippetsBySlot = _snippetRepository
-            .GetByCategoryId(CategoryId)
-            .Where(snippet => !_snippetId.HasValue || snippet.Id != _snippetId.Value)
-            .ToDictionary(snippet => snippet.SlotKey);
-
-        return SlotKeyCatalog.All
-            .Where(slotKey => slotKey != SlotKey)
-            .Select(slotKey =>
-            {
-                snippetsBySlot.TryGetValue(slotKey, out var snippet);
-
-                return new SnippetTransferTargetSlot(
-                    slotKey,
-                    FormatTransferTargetLabel(slotKey, snippet));
-            })
+        return transferTargets
+            .Select(target => new SnippetTransferTargetSlot(
+                target.SlotKey,
+                FormatTransferTargetLabel(target)))
             .ToList();
     }
 
-    private static string FormatTransferTargetLabel(SlotKey slotKey, Snippet? snippet)
+    private static string FormatTransferTargetLabel(TransferTargetState target)
     {
-        var prefix = $"슬롯 {slotKey.GetDisplayText()}";
+        var prefix = $"슬롯 {target.SlotKey.GetDisplayText()}";
 
-        return snippet is null
+        return string.IsNullOrWhiteSpace(target.ExistingTitle)
             ? $"{prefix} - 비어 있음"
-            : $"{prefix} - {snippet.Title}";
+            : $"{prefix} - {target.ExistingTitle}";
     }
-
-    private bool LoadSlotEnabledState()
-    {
-        var settings = _settingsStore?.Load();
-
-        return settings is null
-            || !settings.EnabledSnippetSlotKeys.TryGetValue(SlotKey, out var enabled)
-            || enabled;
-    }
-
-    private bool TrySaveSlotOnly()
-    {
-        if (IsExisting || IsSlotEnabled == _originalIsSlotEnabled)
-        {
-            return false;
-        }
-
-        if (!SaveSlotEnabled())
-        {
-            return true;
-        }
-
-        _imageState.DeleteCurrentUnsavedImage();
-        _autoBackupCoordinator?.RequestAutoBackup();
-        _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
-        _cancel();
-
-        return true;
-    }
-
-    private bool SaveSlotEnabled()
-    {
-        if (_settingsStore is null || IsSlotEnabled == _originalIsSlotEnabled)
-        {
-            return true;
-        }
-
-        try
-        {
-            _settingsStore.SetSnippetSlotEnabled(SlotKey, IsSlotEnabled);
-            _originalIsSlotEnabled = IsSlotEnabled;
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = "슬롯 설정을 저장하지 못했습니다.";
-            _loggingService?.Log($"Setting save failed for snippet slot {SlotKey}.", ex);
-
-            return false;
-        }
-    }
-
-    private bool IsSpotifyConnected()
-    {
-        var settings = _settingsStore?.Load();
-
-        return settings is not null
-            && !string.IsNullOrWhiteSpace(settings.SpotifyClientId)
-            && !string.IsNullOrWhiteSpace(settings.SpotifyAccessToken)
-            && !string.IsNullOrWhiteSpace(settings.SpotifyRefreshToken);
-    }
-
-    private sealed record PreparedSnippetSave(
-        string Title,
-        string Content,
-        string Description,
-        string? ImagePath,
-        string? ThumbnailPath,
-        SnippetActionType ActionType,
-        string LaunchPath,
-        SlotImageMode SlotImageMode,
-        string? LaunchUrl,
-        SnippetMediaProvider? MediaProvider,
-        SnippetMediaCommand? MediaCommand);
 }
 
 public sealed class SnippetTransferTargetSlot

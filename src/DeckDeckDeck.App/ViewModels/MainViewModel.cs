@@ -9,8 +9,8 @@ namespace DeckDeckDeck.App.ViewModels;
 public sealed class MainViewModel : ObservableObject, IDisposable
 {
     private IAutoBackupCoordinator? _autoBackupCoordinator;
-    private CategoryService _categoryService = null!;
     private MainViewModelNavigator _navigator = null!;
+    private ResolveCategoryHotkeyUseCase _resolveCategoryHotkeyUseCase = null!;
     private SettingsService _settingsService = null!;
     private LoggingService? _loggingService;
     private object _currentViewModel = null!;
@@ -53,25 +53,28 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ISpotifyMediaActionService? spotifyMediaActionService = null,
         SnippetImageService? snippetImageService = null,
         BackupService? backupService = null,
-        IAutoBackupCoordinator? autoBackupCoordinator = null)
+        IAutoBackupCoordinator? autoBackupCoordinator = null,
+        IStoredImagePathResolver? storedImagePathResolver = null,
+        IClipboardService? clipboardService = null)
     {
-        var effectiveUrlLaunchService = urlLaunchService ?? new UrlLaunchService();
-        var services = new AppServices(
+        var services = AppServices.Create(
             categoryService,
             backupService,
             dialogService,
             settingsService,
             snippetService,
             snippetImageService,
-            clipboardPasteService ?? new ClipboardPasteService(),
-            fileLaunchService ?? new FileLaunchService(),
-            effectiveUrlLaunchService,
-            mediaActionService ?? new MediaActionService(),
-            spotifyConnectionService ?? new SpotifyConnectionService(settingsService, effectiveUrlLaunchService),
-            spotifyMediaActionService ?? new SpotifyMediaActionService(settingsService),
+            clipboardPasteService,
+            fileLaunchService,
+            urlLaunchService,
+            mediaActionService,
+            spotifyConnectionService,
+            spotifyMediaActionService,
+            storedImagePathResolver,
             loggingService,
             thumbnailService,
-            slotGridViewModelFactory);
+            slotGridViewModelFactory,
+            clipboardService);
 
         Initialize(
             services,
@@ -201,27 +204,20 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public void OpenCategoryFromHotkey(SlotKey slotKey)
     {
-        if (!IsDirectCategorySlot(slotKey))
+        var resolution = _resolveCategoryHotkeyUseCase.Execute(slotKey);
+        switch (resolution.Kind)
         {
-            StatusMessage = "카테고리 바로 열기 단축키는 Ctrl+Numpad 1~9와 기호를 지원합니다.";
-            return;
+            case CategoryHotkeyResolutionKind.OpenExisting:
+                _navigator.OpenCategory(resolution.Category!);
+                break;
+            case CategoryHotkeyResolutionKind.CreateNew:
+                _navigator.CreateCategory(resolution.SlotKey);
+                break;
+            case CategoryHotkeyResolutionKind.Blocked:
+            case CategoryHotkeyResolutionKind.Unsupported:
+                StatusMessage = resolution.StatusMessage ?? string.Empty;
+                break;
         }
-
-        var settings = _settingsService.Load();
-        if (settings.EnabledCategorySlotKeys.TryGetValue(slotKey, out var isEnabled) && !isEnabled)
-        {
-            StatusMessage = $"슬롯 {slotKey.GetDisplayText()}은 사용 안 함 상태입니다.";
-            return;
-        }
-
-        var category = _categoryService.GetBySlotKey(slotKey);
-        if (category is null)
-        {
-            _navigator.CreateCategory(slotKey);
-            return;
-        }
-
-        _navigator.OpenCategory(category);
     }
 
     public void ReportHotkeyRegistrationFailure(IReadOnlyList<string> failures)
@@ -263,11 +259,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowTopBarTitle));
     }
 
-    private static bool IsDirectCategorySlot(SlotKey slotKey)
-    {
-        return slotKey != SlotKey.Numpad0;
-    }
-
     private void Initialize(
         AppServices services,
         Func<IntPtr>? getPasteTargetWindowHandle,
@@ -277,8 +268,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Func<Action>? createPasteSelectionCompletion,
         IAutoBackupCoordinator? autoBackupCoordinator)
     {
-        _categoryService = services.CategoryService;
         _settingsService = services.SettingsService;
+        _resolveCategoryHotkeyUseCase = services.ResolveCategoryHotkeyUseCase;
         _loggingService = services.LoggingService;
         _autoBackupCoordinator = autoBackupCoordinator
             ?? (services.BackupService is null
@@ -289,13 +280,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                     ShowStatus,
                     services.LoggingService));
 
-        var executeSnippetActionUseCase = new ExecuteSnippetActionUseCase(
-            services.ClipboardPasteService,
-            services.FileLaunchService,
-            services.UrlLaunchService,
-            services.MediaActionService,
-            new SpotifyMediaActionGatewayAdapter(services.SpotifyMediaActionService));
-
         _navigator = new MainViewModelNavigator(
             services,
             viewModel => CurrentViewModel = viewModel,
@@ -303,7 +287,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             enterEditMode ?? (() => { }),
             snippet => ExecuteSnippetActionAsync(
                 snippet,
-                executeSnippetActionUseCase,
+                services.ExecuteSnippetActionUseCase,
                 getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
                 hideWindowAfterPaste ?? (() => { }),
                 createPasteSelectionCompletion ?? (() => completePasteSelection ?? (() => { }))),

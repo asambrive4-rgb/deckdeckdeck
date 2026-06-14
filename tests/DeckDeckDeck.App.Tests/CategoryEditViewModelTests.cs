@@ -128,7 +128,8 @@ public sealed class CategoryEditViewModelTests
 
         Assert.True(viewModel.HasImage);
         Assert.NotNull(thumbnailPath);
-        Assert.True(File.Exists(thumbnailPath));
+        Assert.StartsWith("images/thumbnails/", thumbnailPath, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(services.Storage.ToAbsolutePath(thumbnailPath)));
     }
 
     private static CategoryEditViewModel CreateViewModel(
@@ -156,7 +157,10 @@ public sealed class CategoryEditViewModelTests
         return new CategoryEditViewModel(
             category.SlotKey,
             category,
-            services.CategoryService,
+            new LoadCategoryEditorStateUseCase(
+                services.CategoryService,
+                services.SettingsService)
+                .Execute(new LoadCategoryEditorStateRequest(category.SlotKey, category.Id)),
             saveCategoryUseCase,
             deleteCategoryUseCase,
             transferCategoryUseCase,
@@ -166,9 +170,7 @@ public sealed class CategoryEditViewModelTests
             () => { },
             showStatus,
             services.ThumbnailService,
-            services.SettingsService,
-            services.LoggingService,
-            autoBackupCoordinator);
+            services.LoggingService);
     }
 
     private static CategoryTransferTargetSlot GetTargetSlot(

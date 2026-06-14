@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
 using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -12,17 +13,15 @@ public sealed class SettingsViewModel : ObservableObject
 {
     private readonly Action _cancel;
     private readonly Action _afterSave;
-    private readonly IAutoBackupCoordinator? _autoBackupCoordinator;
-    private readonly BackupService? _backupService;
-    private readonly CreateManualBackupUseCase _createManualBackupUseCase;
+    private readonly ICreateManualBackupUseCase _createManualBackupUseCase;
     private readonly DialogService _dialogService;
     private readonly LoggingService? _loggingService;
-    private readonly SettingsService _settingsService;
+    private readonly IRestoreBackupUseCase _restoreBackupUseCase;
+    private readonly ISettingsStore _settingsStore;
     private readonly Action<string> _showStatus;
     private readonly IClipboardService _clipboardService;
-    private readonly ISpotifyConnectionService _spotifyConnectionService;
-    private readonly IUrlLaunchService _urlLaunchService;
-    private readonly SaveSettingsUseCase _saveSettingsUseCase;
+    private readonly ISpotifyConnectionUseCase _spotifyConnectionUseCase;
+    private readonly ISaveSettingsUseCase _saveSettingsUseCase;
     private readonly AppSettings _settings;
     private bool _autoHideAfterPaste;
     private bool _autoBackupEnabled;
@@ -37,33 +36,37 @@ public sealed class SettingsViewModel : ObservableObject
     private string _spotifyConnectionStatusText = string.Empty;
 
     public SettingsViewModel(
-        SettingsService settingsService,
+        ISettingsStore settingsStore,
         Action cancel,
         Action afterSave,
         Action<string> showStatus,
         LoggingService? loggingService = null,
-        BackupService? backupService = null,
+        IBackupGateway? backupGateway = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null,
         DialogService? dialogService = null,
-        ISpotifyConnectionService? spotifyConnectionService = null,
-        IUrlLaunchService? urlLaunchService = null,
-        IClipboardService? clipboardService = null)
+        ISpotifyConnectionUseCase? spotifyConnectionUseCase = null,
+        IClipboardService? clipboardService = null,
+        ISaveSettingsUseCase? saveSettingsUseCase = null,
+        ICreateManualBackupUseCase? createManualBackupUseCase = null,
+        IRestoreBackupUseCase? restoreBackupUseCase = null)
     {
-        _settingsService = settingsService;
+        _settingsStore = settingsStore;
         _cancel = cancel;
         _afterSave = afterSave;
         _showStatus = showStatus;
         _loggingService = loggingService;
-        _backupService = backupService;
-        _autoBackupCoordinator = autoBackupCoordinator;
-        _saveSettingsUseCase = new SaveSettingsUseCase(settingsService, backupService, autoBackupCoordinator);
-        _createManualBackupUseCase = new CreateManualBackupUseCase(backupService);
+        _saveSettingsUseCase = saveSettingsUseCase
+            ?? new SaveSettingsUseCase(settingsStore, backupGateway, autoBackupCoordinator);
+        _createManualBackupUseCase = createManualBackupUseCase
+            ?? new CreateManualBackupUseCase(backupGateway);
+        _restoreBackupUseCase = restoreBackupUseCase
+            ?? new RestoreBackupUseCase(backupGateway);
         _dialogService = dialogService ?? new DialogService();
-        _clipboardService = clipboardService ?? new WpfClipboardService();
-        _urlLaunchService = urlLaunchService ?? new UrlLaunchService();
-        _spotifyConnectionService = spotifyConnectionService
-            ?? new SpotifyConnectionService(settingsService, _urlLaunchService);
-        _settings = settingsService.Load();
+        _clipboardService = clipboardService
+            ?? throw new ArgumentNullException(nameof(clipboardService));
+        _spotifyConnectionUseCase = spotifyConnectionUseCase
+            ?? throw new ArgumentNullException(nameof(spotifyConnectionUseCase));
+        _settings = settingsStore.Load();
 
         _bringWindowToFrontOnHotkey = _settings.BringWindowToFrontOnHotkey;
         _autoHideAfterPaste = _settings.AutoHideAfterPaste;
@@ -76,6 +79,7 @@ public sealed class SettingsViewModel : ObservableObject
         BackCommand = new RelayCommand(_cancel);
         ChooseBackupFolderCommand = new RelayCommand(ChooseBackupFolder);
         CreateManualBackupCommand = new RelayCommand(CreateManualBackup);
+        RestoreBackupCommand = new RelayCommand(RestoreBackup);
         ShowSpotifyConnectionFieldsCommand = new RelayCommand(RevealSpotifyConnectionFields);
         OpenSpotifyDeveloperDashboardCommand = new RelayCommand(OpenSpotifyDeveloperDashboard);
         CopySpotifyAppNameExampleCommand = new RelayCommand(CopySpotifyAppNameExample);
@@ -196,7 +200,7 @@ public sealed class SettingsViewModel : ObservableObject
         set => SetProperty(ref _spotifyClientIdInput, value);
     }
 
-    public string SpotifyRedirectUri => _spotifyConnectionService.RedirectUri;
+    public string SpotifyRedirectUri => _spotifyConnectionUseCase.RedirectUri;
 
     public string SpotifyClientIdHelp =>
         "Client Secret은 입력하지 않습니다. Spotify Developer Dashboard에서 Client ID만 복사해 주세요.";
@@ -227,6 +231,8 @@ public sealed class SettingsViewModel : ObservableObject
     public ICommand ChooseBackupFolderCommand { get; }
 
     public ICommand CreateManualBackupCommand { get; }
+
+    public ICommand RestoreBackupCommand { get; }
 
     public ICommand ShowSpotifyConnectionFieldsCommand { get; }
 
@@ -282,13 +288,6 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void CreateManualBackup()
     {
-        if (_backupService is null)
-        {
-            ErrorMessage = "백업 서비스가 준비되지 않았습니다.";
-            _showStatus(ErrorMessage);
-            return;
-        }
-
         var result = _createManualBackupUseCase.Execute(BackupFolderPath);
         if (!result.Succeeded)
         {
@@ -297,14 +296,46 @@ public sealed class SettingsViewModel : ObservableObject
             return;
         }
 
-        _settings.LastBackupCreatedAt = _settingsService.Load().LastBackupCreatedAt;
+        _settings.LastBackupCreatedAt = _settingsStore.Load().LastBackupCreatedAt;
         ErrorMessage = string.Empty;
         _showStatus($"백업을 만들었습니다: {Path.GetFileName(result.BackupPath)}");
     }
 
+    private void RestoreBackup()
+    {
+        var selectedPath = _dialogService.SelectBackupZipFile();
+        if (selectedPath is null)
+        {
+            return;
+        }
+
+        if (!_dialogService.Confirm(
+            "백업 ZIP 복원",
+            "현재 설정과 키 슬롯이 백업 내용으로 바뀌며, 복원 전 안전 백업을 만듭니다. 계속할까요?"))
+        {
+            return;
+        }
+
+        var result = _restoreBackupUseCase.Execute(selectedPath);
+        if (!result.Succeeded)
+        {
+            ErrorMessage = result.ErrorMessage ?? "백업 ZIP을 복원하지 못했습니다.";
+            _showStatus(ErrorMessage);
+            return;
+        }
+
+        var safetyBackupName = Path.GetFileName(result.SafetyBackupPath);
+        var statusMessage = $"백업 ZIP 복원이 완료되었습니다. 앱을 다시 시작해 주세요. 안전 백업: {safetyBackupName}";
+        ErrorMessage = string.Empty;
+        _showStatus(statusMessage);
+        _dialogService.ShowInformation(
+            "백업 ZIP 복원 완료",
+            "백업 ZIP 복원이 완료되었습니다.\n앱을 닫았다가 다시 열면 복원된 설정과 키 슬롯이 표시됩니다.");
+    }
+
     private void RevealSpotifyConnectionFields()
     {
-        SpotifyClientIdInput = _settingsService.Load().SpotifyClientId;
+        SpotifyClientIdInput = _spotifyConnectionUseCase.GetSavedClientId();
         ShowSpotifyConnectionFields = true;
         ErrorMessage = string.Empty;
     }
@@ -313,7 +344,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         try
         {
-            if (!_urlLaunchService.TryLaunch(_spotifyConnectionService.DashboardUrl))
+            if (!_spotifyConnectionUseCase.OpenDashboard())
             {
                 ErrorMessage = "Spotify Developer Dashboard를 열지 못했습니다.";
             }
@@ -388,7 +419,7 @@ public sealed class SettingsViewModel : ObservableObject
         {
             IsSpotifyConnectionBusy = true;
             ErrorMessage = string.Empty;
-            var result = await _spotifyConnectionService.ConnectAsync(SpotifyClientIdInput);
+            var result = await _spotifyConnectionUseCase.ConnectAsync(SpotifyClientIdInput);
             if (!result.Succeeded)
             {
                 ErrorMessage = result.ErrorMessage ?? "Spotify 연결에 실패했습니다.";
@@ -415,7 +446,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         try
         {
-            _spotifyConnectionService.Disconnect();
+            _spotifyConnectionUseCase.Disconnect();
             SpotifyClientIdInput = string.Empty;
             ShowSpotifyConnectionFields = false;
             RefreshSpotifyConnectionState();
@@ -431,40 +462,17 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void RefreshSpotifyConnectionState()
     {
-        var latestSettings = _settingsService.Load();
-        var connected = IsSpotifySettingsConnected(latestSettings);
-        IsSpotifyConnected = connected;
-        SpotifyConnectionStatusText = connected
-            ? $"Spotify 연결되어 있음{FormatSpotifyDisplayName(latestSettings)}"
+        var state = _spotifyConnectionUseCase.GetState();
+        IsSpotifyConnected = state.IsConnected;
+        SpotifyConnectionStatusText = state.IsConnected
+            ? $"Spotify 연결되어 있음{FormatSpotifyDisplayName(state)}"
             : "Spotify 연결되어 있지 않음";
     }
 
-    private static bool IsSpotifySettingsConnected(AppSettings settings)
+    private static string FormatSpotifyDisplayName(SpotifyConnectionState state)
     {
-        return !string.IsNullOrWhiteSpace(settings.SpotifyClientId)
-            && !string.IsNullOrWhiteSpace(settings.SpotifyAccessToken)
-            && !string.IsNullOrWhiteSpace(settings.SpotifyRefreshToken);
-    }
-
-    private static string FormatSpotifyDisplayName(AppSettings settings)
-    {
-        return string.IsNullOrWhiteSpace(settings.SpotifyConnectedUserDisplayName)
+        return string.IsNullOrWhiteSpace(state.DisplayName)
             ? string.Empty
-            : $" ({settings.SpotifyConnectedUserDisplayName})";
-    }
-
-    private string? ValidateBackupSettings(bool requireFolder)
-    {
-        if (requireFolder && string.IsNullOrWhiteSpace(BackupFolderPath))
-        {
-            return "백업 폴더를 선택해 주세요.";
-        }
-
-        if (string.IsNullOrWhiteSpace(BackupFolderPath))
-        {
-            return null;
-        }
-
-        return _backupService?.ValidateBackupFolder(BackupFolderPath);
+            : $" ({state.DisplayName})";
     }
 }

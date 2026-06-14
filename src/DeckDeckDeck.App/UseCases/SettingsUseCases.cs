@@ -2,7 +2,41 @@ using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.UseCases;
 
-public sealed class SaveSettingsUseCase
+public interface ISaveSettingsUseCase
+{
+    SaveSettingsResult Execute(SaveSettingsRequest request);
+}
+
+public interface ICreateManualBackupUseCase
+{
+    CreateManualBackupResult Execute(string backupFolderPath);
+}
+
+public interface IRestoreBackupUseCase
+{
+    RestoreBackupUseCaseResult Execute(string backupZipPath);
+}
+
+public interface ISpotifyConnectionUseCase
+{
+    string DashboardUrl { get; }
+
+    string RedirectUri { get; }
+
+    SpotifyConnectionState GetState();
+
+    string GetSavedClientId();
+
+    bool OpenDashboard();
+
+    Task<SpotifyConnectionUseCaseResult> ConnectAsync(
+        string clientId,
+        CancellationToken cancellationToken = default);
+
+    SpotifyConnectionState Disconnect();
+}
+
+public sealed class SaveSettingsUseCase : ISaveSettingsUseCase
 {
     private readonly IAutoBackupRequester? _autoBackupRequester;
     private readonly IBackupGateway? _backupGateway;
@@ -56,7 +90,7 @@ public sealed class SaveSettingsUseCase
     }
 }
 
-public sealed class CreateManualBackupUseCase
+public sealed class CreateManualBackupUseCase : ICreateManualBackupUseCase
 {
     private readonly IBackupGateway? _backupGateway;
 
@@ -96,6 +130,94 @@ public sealed class CreateManualBackupUseCase
     }
 }
 
+public sealed class RestoreBackupUseCase : IRestoreBackupUseCase
+{
+    private readonly IBackupGateway? _backupGateway;
+
+    public RestoreBackupUseCase(IBackupGateway? backupGateway)
+    {
+        _backupGateway = backupGateway;
+    }
+
+    public RestoreBackupUseCaseResult Execute(string backupZipPath)
+    {
+        if (string.IsNullOrWhiteSpace(backupZipPath))
+        {
+            return RestoreBackupUseCaseResult.Failure("복원할 백업 ZIP을 선택해 주세요.");
+        }
+
+        if (_backupGateway is null)
+        {
+            return RestoreBackupUseCaseResult.Failure("백업 서비스가 준비되지 않았습니다.");
+        }
+
+        var result = _backupGateway.RestoreBackup(backupZipPath);
+        return result.Succeeded
+            ? RestoreBackupUseCaseResult.Success(result.SafetyBackupPath!)
+            : RestoreBackupUseCaseResult.Failure(
+                result.ErrorMessage ?? "백업 ZIP을 복원하지 못했습니다.",
+                result.SafetyBackupPath);
+    }
+}
+
+public sealed class SpotifyConnectionUseCase : ISpotifyConnectionUseCase
+{
+    private readonly ISpotifyConnectionGateway _spotifyConnectionGateway;
+    private readonly ISettingsStore _settingsStore;
+    private readonly IUrlLaunchGateway _urlLaunchGateway;
+
+    public SpotifyConnectionUseCase(
+        ISettingsStore settingsStore,
+        ISpotifyConnectionGateway spotifyConnectionGateway,
+        IUrlLaunchGateway urlLaunchGateway)
+    {
+        _settingsStore = settingsStore;
+        _spotifyConnectionGateway = spotifyConnectionGateway;
+        _urlLaunchGateway = urlLaunchGateway;
+    }
+
+    public string DashboardUrl => _spotifyConnectionGateway.DashboardUrl;
+
+    public string RedirectUri => _spotifyConnectionGateway.RedirectUri;
+
+    public SpotifyConnectionState GetState()
+    {
+        return SpotifyConnectionState.FromSettings(_settingsStore.Load());
+    }
+
+    public string GetSavedClientId()
+    {
+        return _settingsStore.Load().SpotifyClientId;
+    }
+
+    public bool OpenDashboard()
+    {
+        return _urlLaunchGateway.TryLaunch(DashboardUrl);
+    }
+
+    public async Task<SpotifyConnectionUseCaseResult> ConnectAsync(
+        string clientId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return SpotifyConnectionUseCaseResult.Failure("Spotify Client ID를 입력해 주세요.");
+        }
+
+        var result = await _spotifyConnectionGateway.ConnectAsync(clientId, cancellationToken);
+        return result.Succeeded
+            ? SpotifyConnectionUseCaseResult.Success(GetState())
+            : SpotifyConnectionUseCaseResult.Failure(
+                result.ErrorMessage ?? "Spotify 연결에 실패했습니다.");
+    }
+
+    public SpotifyConnectionState Disconnect()
+    {
+        _spotifyConnectionGateway.Disconnect();
+        return GetState();
+    }
+}
+
 public sealed record SaveSettingsRequest(
     bool BringWindowToFrontOnHotkey,
     bool AutoHideAfterPaste,
@@ -129,5 +251,37 @@ public sealed record CreateManualBackupResult(
     public static CreateManualBackupResult Failure(string errorMessage)
     {
         return new CreateManualBackupResult(false, ErrorMessage: errorMessage);
+    }
+}
+
+public sealed record RestoreBackupUseCaseResult(
+    bool Succeeded,
+    string? SafetyBackupPath = null,
+    string? ErrorMessage = null)
+{
+    public static RestoreBackupUseCaseResult Success(string safetyBackupPath)
+    {
+        return new RestoreBackupUseCaseResult(true, safetyBackupPath);
+    }
+
+    public static RestoreBackupUseCaseResult Failure(string errorMessage, string? safetyBackupPath = null)
+    {
+        return new RestoreBackupUseCaseResult(false, safetyBackupPath, errorMessage);
+    }
+}
+
+public sealed record SpotifyConnectionUseCaseResult(
+    bool Succeeded,
+    SpotifyConnectionState? State = null,
+    string? ErrorMessage = null)
+{
+    public static SpotifyConnectionUseCaseResult Success(SpotifyConnectionState state)
+    {
+        return new SpotifyConnectionUseCaseResult(true, state);
+    }
+
+    public static SpotifyConnectionUseCaseResult Failure(string errorMessage)
+    {
+        return new SpotifyConnectionUseCaseResult(false, ErrorMessage: errorMessage);
     }
 }

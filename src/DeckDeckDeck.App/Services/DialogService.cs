@@ -14,6 +14,15 @@ public class DialogService
             MessageBoxImage.Warning) == MessageBoxResult.Yes;
     }
 
+    public virtual void ShowInformation(string title, string message)
+    {
+        MessageBox.Show(
+            message,
+            title,
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
     public virtual string? SelectImageFile()
     {
         var dialog = new OpenFileDialog
@@ -64,5 +73,18 @@ public class DialogService
         return dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK
             ? dialog.SelectedPath
             : null;
+    }
+
+    public virtual string? SelectBackupZipFile()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "백업 ZIP 선택",
+            Filter = "DeckDeckDeck 백업 ZIP (*.zip)|*.zip|모든 파일 (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 }

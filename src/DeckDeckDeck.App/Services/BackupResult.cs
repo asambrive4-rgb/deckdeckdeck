@@ -21,3 +21,19 @@ public sealed record BackupResult(
         return new BackupResult(false, true, null, null);
     }
 }
+
+public sealed record RestoreBackupResult(
+    bool Succeeded,
+    string? SafetyBackupPath,
+    string? ErrorMessage)
+{
+    public static RestoreBackupResult Success(string safetyBackupPath)
+    {
+        return new RestoreBackupResult(true, safetyBackupPath, null);
+    }
+
+    public static RestoreBackupResult Failure(string errorMessage, string? safetyBackupPath = null)
+    {
+        return new RestoreBackupResult(false, safetyBackupPath, errorMessage);
+    }
+}

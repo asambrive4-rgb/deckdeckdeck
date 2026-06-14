@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Services;
 using DeckDeckDeck.App.UseCases;
-using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -12,17 +11,15 @@ public sealed class CategoryEditViewModel : ObservableObject
 {
     private readonly Action _afterDelete;
     private readonly Action<Category> _afterSave;
-    private readonly IAutoBackupCoordinator? _autoBackupCoordinator;
     private readonly Action _cancel;
-    private readonly ICategoryRepository _categoryRepository;
     private readonly DeleteCategoryUseCase _deleteCategoryUseCase;
     private readonly DialogService _dialogService;
     private readonly EditableImageState _imageState;
     private readonly LoggingService? _loggingService;
     private readonly Guid? _categoryId;
+    private readonly IStoredImagePathResolver? _storedImagePathResolver;
     private bool _originalIsSlotEnabled;
     private readonly SaveCategoryUseCase _saveCategoryUseCase;
-    private readonly ISettingsStore? _settingsStore;
     private readonly Action<string> _showStatus;
     private readonly ThumbnailService? _thumbnailService;
     private readonly TransferCategoryUseCase _transferCategoryUseCase;
@@ -35,7 +32,7 @@ public sealed class CategoryEditViewModel : ObservableObject
     public CategoryEditViewModel(
         SlotKey slotKey,
         Category? category,
-        ICategoryRepository categoryRepository,
+        CategoryEditorState editorState,
         SaveCategoryUseCase saveCategoryUseCase,
         DeleteCategoryUseCase deleteCategoryUseCase,
         TransferCategoryUseCase transferCategoryUseCase,
@@ -45,21 +42,18 @@ public sealed class CategoryEditViewModel : ObservableObject
         Action afterDelete,
         Action<string> showStatus,
         ThumbnailService? thumbnailService = null,
-        ISettingsStore? settingsStore = null,
         LoggingService? loggingService = null,
-        IAutoBackupCoordinator? autoBackupCoordinator = null)
+        IStoredImagePathResolver? storedImagePathResolver = null)
     {
         SlotKey = slotKey;
         KeyText = slotKey.GetDisplayText();
         _categoryId = category?.Id;
-        _categoryRepository = categoryRepository;
         _saveCategoryUseCase = saveCategoryUseCase;
         _deleteCategoryUseCase = deleteCategoryUseCase;
         _transferCategoryUseCase = transferCategoryUseCase;
         _dialogService = dialogService;
-        _settingsStore = settingsStore;
         _loggingService = loggingService;
-        _autoBackupCoordinator = autoBackupCoordinator;
+        _storedImagePathResolver = storedImagePathResolver;
         _cancel = cancel;
         _afterSave = afterSave;
         _afterDelete = afterDelete;
@@ -69,9 +63,9 @@ public sealed class CategoryEditViewModel : ObservableObject
 
         _name = category?.Name ?? string.Empty;
         _description = category?.Description ?? string.Empty;
-        TransferTargetSlots = BuildTransferTargetSlots();
+        TransferTargetSlots = BuildTransferTargetSlots(editorState.TransferTargets);
         _selectedTransferTarget = TransferTargetSlots.FirstOrDefault();
-        _originalIsSlotEnabled = LoadSlotEnabledState();
+        _originalIsSlotEnabled = editorState.IsSlotEnabled;
         _isSlotEnabled = _originalIsSlotEnabled;
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
@@ -126,7 +120,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         private set => SetProperty(ref _errorMessage, value);
     }
 
-    public string? ThumbnailPath => _imageState.ThumbnailPath;
+    public string? ThumbnailPath => ResolveDisplayPath(_imageState.ThumbnailPath);
 
     public bool HasImage => _imageState.HasImage;
 
@@ -322,14 +316,6 @@ public sealed class CategoryEditViewModel : ObservableObject
             overwriteConfirmed));
     }
 
-    private bool ConfirmOverwriteIfNeeded(SlotKey targetSlotKey, string actionText)
-    {
-        var targetCategory = new Category();
-        return _dialogService.Confirm(
-            $"카테고리 {actionText}",
-            $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{targetCategory.Name}' 카테고리가 있습니다.\n기존 카테고리와 안의 실행 항목을 덮어쓸까요?");
-    }
-
     private void ChooseImage()
     {
         if (_thumbnailService is null)
@@ -374,85 +360,28 @@ public sealed class CategoryEditViewModel : ObservableObject
         OnPropertyChanged(nameof(HasImage));
     }
 
-    private IReadOnlyList<CategoryTransferTargetSlot> BuildTransferTargetSlots()
+    private string? ResolveDisplayPath(string? storedPath)
     {
-        var categoriesBySlot = _categoryRepository
-            .GetAll()
-            .Where(category => !_categoryId.HasValue || category.Id != _categoryId.Value)
-            .ToDictionary(category => category.SlotKey);
+        return _storedImagePathResolver?.ResolveDisplayPath(storedPath) ?? storedPath;
+    }
 
-        return SlotKeyCatalog.All
-            .Where(slotKey => slotKey != SlotKey)
-            .Select(slotKey =>
-            {
-                categoriesBySlot.TryGetValue(slotKey, out var category);
-
-                return new CategoryTransferTargetSlot(
-                    slotKey,
-                    FormatTransferTargetLabel(slotKey, category));
-            })
+    private static IReadOnlyList<CategoryTransferTargetSlot> BuildTransferTargetSlots(
+        IReadOnlyList<TransferTargetState> transferTargets)
+    {
+        return transferTargets
+            .Select(target => new CategoryTransferTargetSlot(
+                target.SlotKey,
+                FormatTransferTargetLabel(target)))
             .ToList();
     }
 
-    private static string FormatTransferTargetLabel(SlotKey slotKey, Category? category)
+    private static string FormatTransferTargetLabel(TransferTargetState target)
     {
-        var prefix = $"슬롯 {slotKey.GetDisplayText()}";
+        var prefix = $"슬롯 {target.SlotKey.GetDisplayText()}";
 
-        return category is null
+        return string.IsNullOrWhiteSpace(target.ExistingTitle)
             ? $"{prefix} - 비어 있음"
-            : $"{prefix} - {category.Name}";
-    }
-
-    private bool LoadSlotEnabledState()
-    {
-        var settings = _settingsStore?.Load();
-
-        return settings is null
-            || !settings.EnabledCategorySlotKeys.TryGetValue(SlotKey, out var enabled)
-            || enabled;
-    }
-
-    private bool TrySaveSlotOnly()
-    {
-        if (IsExisting || IsSlotEnabled == _originalIsSlotEnabled)
-        {
-            return false;
-        }
-
-        if (!SaveSlotEnabled())
-        {
-            return true;
-        }
-
-        _imageState.DeleteCurrentUnsavedImage();
-        _autoBackupCoordinator?.RequestAutoBackup();
-        _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
-        _cancel();
-
-        return true;
-    }
-
-    private bool SaveSlotEnabled()
-    {
-        if (_settingsStore is null || IsSlotEnabled == _originalIsSlotEnabled)
-        {
-            return true;
-        }
-
-        try
-        {
-            _settingsStore.SetCategorySlotEnabled(SlotKey, IsSlotEnabled);
-            _originalIsSlotEnabled = IsSlotEnabled;
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = "슬롯 설정을 저장하지 못했습니다.";
-            _loggingService?.Log($"Setting save failed for category slot {SlotKey}.", ex);
-
-            return false;
-        }
+            : $"{prefix} - {target.ExistingTitle}";
     }
 }
 

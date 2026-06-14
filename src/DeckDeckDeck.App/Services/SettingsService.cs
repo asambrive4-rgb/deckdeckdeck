@@ -37,6 +37,16 @@ public sealed class SettingsService : ISettingsStore
         }
     }
 
+    public void ReloadAfterExternalDataChange()
+    {
+        lock (_settingsLock)
+        {
+            _defaultsEnsured = false;
+            _settingsCache = null;
+            EnsureDefaultsLocked();
+        }
+    }
+
     public void SetCategorySlotEnabled(SlotKey slotKey, bool enabled)
     {
         lock (_settingsLock)

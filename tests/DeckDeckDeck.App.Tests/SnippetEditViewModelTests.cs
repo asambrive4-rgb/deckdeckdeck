@@ -223,7 +223,8 @@ public sealed class SnippetEditViewModelTests
         Assert.NotNull(savedSnippet);
         Assert.Equal(SlotImageMode.Auto, savedSnippet.SlotImageMode);
         Assert.NotNull(savedSnippet.AutoIconPath);
-        Assert.True(File.Exists(savedSnippet.AutoIconPath));
+        Assert.StartsWith("icon-cache/", savedSnippet.AutoIconPath, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(services.Storage.ToAbsolutePath(savedSnippet.AutoIconPath)));
         Assert.Equal(launchPath, savedSnippet.AutoIconSourcePath);
         Assert.Equal(savedSnippet.AutoIconPath, viewModel.ThumbnailPath);
     }
@@ -361,7 +362,8 @@ public sealed class SnippetEditViewModelTests
         Assert.Equal(SlotImageMode.Custom, viewModel.SlotImageMode);
         Assert.True(viewModel.HasImage);
         Assert.NotNull(thumbnailPath);
-        Assert.True(File.Exists(thumbnailPath));
+        Assert.StartsWith("images/thumbnails/", thumbnailPath, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(services.Storage.ToAbsolutePath(thumbnailPath)));
     }
 
     [Fact]
@@ -471,7 +473,10 @@ public sealed class SnippetEditViewModelTests
             category,
             SlotKey.Numpad3,
             snippet,
-            services.SnippetService,
+            new LoadSnippetEditorStateUseCase(
+                services.SnippetService,
+                services.SettingsService)
+                .Execute(new LoadSnippetEditorStateRequest(category.Id, SlotKey.Numpad3, snippet?.Id)),
             new SaveSnippetUseCase(
                 services.SnippetService,
                 services.SettingsService,
@@ -495,10 +500,8 @@ public sealed class SnippetEditViewModelTests
             () => { },
             showStatus ?? (_ => { }),
             thumbnailService: services.ThumbnailService,
-            settingsStore: services.SettingsService,
             loggingService: services.LoggingService,
-            snippetImageService: services.SnippetImageService,
-            autoBackupCoordinator: autoBackupCoordinator);
+            snippetImageService: services.SnippetImageService);
     }
 
     private static SnippetTransferTargetSlot GetTargetSlot(

@@ -4,7 +4,9 @@ namespace DeckDeckDeck.App.Services;
 
 public sealed class FileStorageService
 {
-    private const string AppFolderName = "NumpadPromptLauncher";
+    public const string AppFolderName = "NumpadPromptLauncher";
+    public const string IconCacheRelativeRoot = "icon-cache";
+    public const string ImagesRelativeRoot = "images";
 
     public FileStorageService()
         : this(Path.Combine(
@@ -41,6 +43,59 @@ public sealed class FileStorageService
 
     public string TempPath { get; }
 
+    public string ToStoredPath(string path)
+    {
+        return TryGetManagedRelativePath(path, out var relativePath)
+            ? relativePath
+            : path;
+    }
+
+    public string ToAbsolutePath(string path)
+    {
+        if (TryGetManagedRelativePath(path, out var relativePath))
+        {
+            return Path.Combine(AppDataPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        }
+
+        return path;
+    }
+
+    public bool ManagedFileExists(string? path)
+    {
+        return !string.IsNullOrWhiteSpace(path) && File.Exists(ToAbsolutePath(path));
+    }
+
+    public bool TryGetManagedRelativePath(string? path, out string relativePath)
+    {
+        relativePath = string.Empty;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var trimmedPath = path.Trim();
+        if (!Path.IsPathRooted(trimmedPath))
+        {
+            return TryNormalizeManagedRelativePath(trimmedPath, out relativePath);
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(trimmedPath);
+            var appDataRelative = Path.GetRelativePath(AppDataPath, fullPath);
+            if (TryNormalizeManagedRelativePath(appDataRelative, out relativePath))
+            {
+                return true;
+            }
+
+            return TryGetLegacyManagedRelativePath(fullPath, out relativePath);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public void EnsureCreated()
     {
         Directory.CreateDirectory(AppDataPath);
@@ -49,5 +104,44 @@ public sealed class FileStorageService
         Directory.CreateDirectory(IconCachePath);
         Directory.CreateDirectory(LogsPath);
         Directory.CreateDirectory(TempPath);
+    }
+
+    private static bool TryGetLegacyManagedRelativePath(string fullPath, out string relativePath)
+    {
+        relativePath = string.Empty;
+        var parts = fullPath.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+        var appFolderIndex = Array.FindLastIndex(
+            parts,
+            part => string.Equals(part, AppFolderName, StringComparison.OrdinalIgnoreCase));
+        if (appFolderIndex < 0 || appFolderIndex >= parts.Length - 1)
+        {
+            return false;
+        }
+
+        return TryNormalizeManagedRelativePath(
+            string.Join('/', parts.Skip(appFolderIndex + 1)),
+            out relativePath);
+    }
+
+    private static bool TryNormalizeManagedRelativePath(string path, out string relativePath)
+    {
+        relativePath = string.Empty;
+        var normalized = path.Replace('\\', '/').TrimStart('/');
+        var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || parts.Any(part => part is "." or ".."))
+        {
+            return false;
+        }
+
+        if (!string.Equals(parts[0], ImagesRelativeRoot, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(parts[0], IconCacheRelativeRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        relativePath = string.Join('/', parts);
+        return true;
     }
 }

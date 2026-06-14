@@ -28,7 +28,9 @@ public sealed class ViewRenderingTests
                     () => { },
                     () => { },
                     _ => { },
-                    services.LoggingService);
+                    services.LoggingService,
+                    spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
+                    clipboardService: new FakeClipboardService(null));
                 var view = new SettingsView { DataContext = viewModel };
 
                 view.Measure(new Size(560, 680));
@@ -66,7 +68,10 @@ public sealed class ViewRenderingTests
                     category,
                     SlotKey.Numpad3,
                     snippet: null,
-                    services.SnippetService,
+                    new LoadSnippetEditorStateUseCase(
+                        services.SnippetService,
+                        services.SettingsService)
+                        .Execute(new LoadSnippetEditorStateRequest(category.Id, SlotKey.Numpad3, SnippetId: null)),
                     new SaveSnippetUseCase(
                         services.SnippetService,
                         services.SettingsService,
@@ -214,5 +219,15 @@ public sealed class ViewRenderingTests
                 yield return descendant;
             }
         }
+    }
+
+    private static ISpotifyConnectionUseCase CreateSpotifyConnectionUseCase(TestServices services)
+    {
+        var urlLaunchService = new RecordingUrlLaunchService();
+        var spotifyConnectionService = new SpotifyConnectionService(services.SettingsService, urlLaunchService);
+        return new SpotifyConnectionUseCase(
+            services.SettingsService,
+            new SpotifyConnectionGatewayAdapter(spotifyConnectionService),
+            urlLaunchService);
     }
 }
