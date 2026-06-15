@@ -3,9 +3,13 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
-using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
+using DeckDeckDeck.App.UseCases;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -14,12 +18,12 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Action _cancel;
     private readonly Action _afterSave;
     private readonly ICreateManualBackupUseCase _createManualBackupUseCase;
-    private readonly DialogService _dialogService;
-    private readonly LoggingService? _loggingService;
+    private readonly DialogAdapter _dialogService;
+    private readonly FileLogger? _loggingService;
     private readonly IRestoreBackupUseCase _restoreBackupUseCase;
-    private readonly ISettingsStore _settingsStore;
+    private readonly ISettingsRepository _settingsStore;
     private readonly Action<string> _showStatus;
-    private readonly IClipboardService _clipboardService;
+    private readonly IClipboardAdapter _clipboardService;
     private readonly ISpotifyConnectionUseCase _spotifyConnectionUseCase;
     private readonly ISaveSettingsUseCase _saveSettingsUseCase;
     private readonly AppSettings _settings;
@@ -36,16 +40,16 @@ public sealed class SettingsViewModel : ObservableObject
     private string _spotifyConnectionStatusText = string.Empty;
 
     public SettingsViewModel(
-        ISettingsStore settingsStore,
+        ISettingsRepository settingsStore,
         Action cancel,
         Action afterSave,
         Action<string> showStatus,
-        LoggingService? loggingService = null,
+        FileLogger? loggingService = null,
         IBackupGateway? backupGateway = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null,
-        DialogService? dialogService = null,
+        DialogAdapter? dialogService = null,
         ISpotifyConnectionUseCase? spotifyConnectionUseCase = null,
-        IClipboardService? clipboardService = null,
+        IClipboardAdapter? clipboardService = null,
         ISaveSettingsUseCase? saveSettingsUseCase = null,
         ICreateManualBackupUseCase? createManualBackupUseCase = null,
         IRestoreBackupUseCase? restoreBackupUseCase = null)
@@ -61,7 +65,7 @@ public sealed class SettingsViewModel : ObservableObject
             ?? new CreateManualBackupUseCase(backupGateway);
         _restoreBackupUseCase = restoreBackupUseCase
             ?? new RestoreBackupUseCase(backupGateway);
-        _dialogService = dialogService ?? new DialogService();
+        _dialogService = dialogService ?? new DialogAdapter();
         _clipboardService = clipboardService
             ?? throw new ArgumentNullException(nameof(clipboardService));
         _spotifyConnectionUseCase = spotifyConnectionUseCase
@@ -476,3 +480,4 @@ public sealed class SettingsViewModel : ObservableObject
             : $" ({state.DisplayName})";
     }
 }
+

@@ -6,7 +6,12 @@ using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 using DrawingIcon = System.Drawing.Icon;
 
@@ -14,12 +19,12 @@ namespace DeckDeckDeck.App;
 
 public partial class MainWindow : Window
 {
-    private readonly HotkeyService _hotkeyService = new();
-    private readonly NumpadCaptureService _numpadCaptureService = new();
+    private readonly GlobalHotkeyRegistrar _globalHotkeyRegistrar = new();
+    private readonly NumpadCapture _numpadCapture = new();
     private readonly PasteSelectionSession _pasteSelectionSession = new();
-    private readonly PaletteWindowService _paletteWindowService = new();
-    private readonly WindowPlacementService _windowPlacementService = new();
-    private readonly WindowFocusService _windowFocusService = new();
+    private readonly PaletteWindowController _paletteWindowController = new();
+    private readonly WindowPlacementResolver _windowPlacementResolver = new();
+    private readonly Win32WindowFocusAdapter _windowFocusAdapter = new();
     private IntPtr _windowHandle;
     private IntPtr _lastPasteTargetWindowHandle;
     private bool _allowClose;
@@ -39,9 +44,9 @@ public partial class MainWindow : Window
         StateChanged += OnStateChanged;
         Closing += OnClosing;
         Closed += OnClosed;
-        _hotkeyService.HotkeyPressed += OnHotkeyPressed;
-        _hotkeyService.HotkeyLongPressed += OnHotkeyLongPressed;
-        _numpadCaptureService.SlotCaptured += OnNumpadSlotCaptured;
+        _globalHotkeyRegistrar.HotkeyPressed += OnHotkeyPressed;
+        _globalHotkeyRegistrar.HotkeyLongPressed += OnHotkeyLongPressed;
+        _numpadCapture.SlotCaptured += OnNumpadSlotCaptured;
     }
 
     private void UseApplicationIcon()
@@ -107,10 +112,10 @@ public partial class MainWindow : Window
     {
         _windowHandle = new WindowInteropHelper(this).Handle;
         ApplyWindowCornerPreference();
-        _paletteWindowService.Attach(_windowHandle);
+        _paletteWindowController.Attach(_windowHandle);
         ApplyWindowPlacement(IntPtr.Zero);
 
-        var failures = _hotkeyService.Start(_windowHandle);
+        var failures = _globalHotkeyRegistrar.Start(_windowHandle);
 
         if (failures.Count > 0 && DataContext is MainViewModel viewModel)
         {
@@ -147,9 +152,9 @@ public partial class MainWindow : Window
             viewModel.Dispose();
         }
 
-        _numpadCaptureService.Dispose();
-        _paletteWindowService.Dispose();
-        _hotkeyService.Dispose();
+        _numpadCapture.Dispose();
+        _paletteWindowController.Dispose();
+        _globalHotkeyRegistrar.Dispose();
     }
 
     private void OnClosing(object? sender, CancelEventArgs e)
@@ -209,7 +214,7 @@ public partial class MainWindow : Window
 
     private void HandleHotkey(SlotKey slotKey)
     {
-        _lastPasteTargetWindowHandle = _windowFocusService.GetForegroundWindow();
+        _lastPasteTargetWindowHandle = _windowFocusAdapter.GetForegroundWindow();
         EnterPasteMode();
         ShowPastePalette();
 
@@ -249,12 +254,12 @@ public partial class MainWindow : Window
     private void EnterPasteMode()
     {
         _pasteSelectionSession.Start();
-        _numpadCaptureService.Start(_windowHandle);
+        _numpadCapture.Start(_windowHandle);
     }
 
     private void EndPasteSelection()
     {
-        _numpadCaptureService.Stop();
+        _numpadCapture.Stop();
     }
 
     private void EnterEditMode()
@@ -284,19 +289,19 @@ public partial class MainWindow : Window
 
         if (WindowState == WindowState.Minimized)
         {
-            _paletteWindowService.ShowWithoutActivation();
+            _paletteWindowController.ShowWithoutActivation();
         }
 
         if (settings.BringWindowToFrontOnHotkey)
         {
-            _paletteWindowService.BringToFrontWithoutActivation();
+            _paletteWindowController.BringToFrontWithoutActivation();
             Dispatcher.BeginInvoke(
-                () => _paletteWindowService.ReturnToNormalZOrderWithoutActivation(),
+                () => _paletteWindowController.ReturnToNormalZOrderWithoutActivation(),
                 DispatcherPriority.ApplicationIdle);
             return;
         }
 
-        _paletteWindowService.SendToBottomWithoutActivation();
+        _paletteWindowController.SendToBottomWithoutActivation();
     }
 
     private void BringWindowToFrontForEdit()
@@ -323,7 +328,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var placement = _windowPlacementService.ResolveForWindow(
+        var placement = _windowPlacementResolver.ResolveForWindow(
             this,
             viewModel.LoadSettings(),
             fallbackWindowHandle);
@@ -350,7 +355,7 @@ public partial class MainWindow : Window
         viewModel.SaveWindowPlacement(
             bounds.Left,
             bounds.Top,
-            _windowPlacementService.GetScreenDeviceName(this));
+            _windowPlacementResolver.GetScreenDeviceName(this));
     }
 
     private double GetWindowWidthForPlacement()
@@ -363,3 +368,4 @@ public partial class MainWindow : Window
         return ActualHeight > 0 ? ActualHeight : Height;
     }
 }
+

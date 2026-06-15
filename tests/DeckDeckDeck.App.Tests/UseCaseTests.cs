@@ -1,7 +1,11 @@
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
-using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
+using DeckDeckDeck.App.UseCases;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 
 namespace DeckDeckDeck.App.Tests;
@@ -12,11 +16,11 @@ public sealed class UseCaseTests
     public void SaveSnippetUseCaseSavesSnippetAndRequestsBackup()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var autoBackup = new RecordingAutoBackupCoordinator();
         var useCase = new SaveSnippetUseCase(
-            services.SnippetService,
-            services.SettingsService,
+            services.SnippetRepository,
+            services.SettingsRepository,
             autoBackup);
 
         var result = useCase.Execute(new SaveSnippetRequest(
@@ -47,10 +51,10 @@ public sealed class UseCaseTests
     public void ResolveCategoryHotkeyUseCaseOpensExistingCategory()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var useCase = new ResolveCategoryHotkeyUseCase(
-            services.CategoryService,
-            services.SettingsService);
+            services.CategoryRepository,
+            services.SettingsRepository);
 
         var result = useCase.Execute(SlotKey.Numpad1);
 
@@ -63,8 +67,8 @@ public sealed class UseCaseTests
     {
         var services = CreateServices();
         var useCase = new ResolveCategoryHotkeyUseCase(
-            services.CategoryService,
-            services.SettingsService);
+            services.CategoryRepository,
+            services.SettingsRepository);
 
         var result = useCase.Execute(SlotKey.Numpad2);
 
@@ -76,10 +80,10 @@ public sealed class UseCaseTests
     public void ResolveCategoryHotkeyUseCaseBlocksDisabledSlot()
     {
         var services = CreateServices();
-        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad1, false);
+        services.SettingsRepository.SetCategorySlotEnabled(SlotKey.Numpad1, false);
         var useCase = new ResolveCategoryHotkeyUseCase(
-            services.CategoryService,
-            services.SettingsService);
+            services.CategoryRepository,
+            services.SettingsRepository);
 
         var result = useCase.Execute(SlotKey.Numpad1);
 
@@ -91,12 +95,12 @@ public sealed class UseCaseTests
     public void LoadCategoryEditorStateExcludesCurrentSlotAndShowsOccupiedTargets()
     {
         var services = CreateServices();
-        var source = services.CategoryService.Create(SlotKey.Numpad4, "Writing", null);
-        services.CategoryService.Create(SlotKey.Numpad5, "Old", null);
-        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad4, false);
+        var source = services.CategoryRepository.Create(SlotKey.Numpad4, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad5, "Old", null);
+        services.SettingsRepository.SetCategorySlotEnabled(SlotKey.Numpad4, false);
         var useCase = new LoadCategoryEditorStateUseCase(
-            services.CategoryService,
-            services.SettingsService);
+            services.CategoryRepository,
+            services.SettingsRepository);
 
         var state = useCase.Execute(new LoadCategoryEditorStateRequest(SlotKey.Numpad4, source.Id));
 
@@ -111,19 +115,19 @@ public sealed class UseCaseTests
     public void LoadSnippetEditorStateReturnsSlotAndSpotifyState()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        var source = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
-        services.SnippetService.Create(category.Id, SlotKey.Numpad5, "Old", "Bye", null);
-        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
-        var settings = services.SettingsService.Load();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var source = services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad5, "Old", "Bye", null);
+        services.SettingsRepository.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
+        var settings = services.SettingsRepository.Load();
         settings.SpotifyClientId = "client-id";
         settings.SpotifyAccessToken = "access-token";
         settings.SpotifyRefreshToken = "refresh-token";
         settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
-        services.SettingsService.Save(settings);
+        services.SettingsRepository.Save(settings);
         var useCase = new LoadSnippetEditorStateUseCase(
-            services.SnippetService,
-            services.SettingsService);
+            services.SnippetRepository,
+            services.SettingsRepository);
 
         var state = useCase.Execute(new LoadSnippetEditorStateRequest(category.Id, SlotKey.Numpad3, source.Id));
 
@@ -139,13 +143,13 @@ public sealed class UseCaseTests
     [Fact]
     public async Task ExecuteSnippetActionUseCaseReturnsLaunchFailureWithoutCallingPaste()
     {
-        var pasteService = new RecordingClipboardPasteService();
-        var launchService = new RecordingFileLaunchService { Result = false };
+        var pasteService = new RecordingClipboardPasteGateway();
+        var launchService = new RecordingFileLaunchGatewayAdapter { Result = false };
         var useCase = new ExecuteSnippetActionUseCase(
             pasteService,
             launchService,
-            new RecordingUrlLaunchService(),
-            new RecordingMediaActionService(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
             new TestSpotifyMediaActionGateway());
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
@@ -201,9 +205,9 @@ public sealed class UseCaseTests
     {
         var services = CreateServices();
         var useCase = new SpotifyConnectionUseCase(
-            services.SettingsService,
+            services.SettingsRepository,
             new RecordingSpotifyConnectionGateway(),
-            new RecordingUrlLaunchService());
+            new RecordingUrlLaunchGatewayAdapter());
 
         var state = useCase.GetState();
 
@@ -217,9 +221,9 @@ public sealed class UseCaseTests
         var services = CreateServices();
         var gateway = new RecordingSpotifyConnectionGateway();
         var useCase = new SpotifyConnectionUseCase(
-            services.SettingsService,
+            services.SettingsRepository,
             gateway,
-            new RecordingUrlLaunchService());
+            new RecordingUrlLaunchGatewayAdapter());
 
         var result = await useCase.ConnectAsync(" ");
 
@@ -236,27 +240,27 @@ public sealed class UseCaseTests
         {
             OnConnect = clientId =>
             {
-                var settings = services.SettingsService.Load();
+                var settings = services.SettingsRepository.Load();
                 settings.SpotifyClientId = clientId;
                 settings.SpotifyAccessToken = "access-token";
                 settings.SpotifyRefreshToken = "refresh-token";
                 settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
-                services.SettingsService.Save(settings);
+                services.SettingsRepository.Save(settings);
             },
             OnDisconnect = () =>
             {
-                var settings = services.SettingsService.Load();
+                var settings = services.SettingsRepository.Load();
                 settings.SpotifyClientId = string.Empty;
                 settings.SpotifyAccessToken = string.Empty;
                 settings.SpotifyRefreshToken = string.Empty;
                 settings.SpotifyConnectedUserDisplayName = string.Empty;
-                services.SettingsService.Save(settings);
+                services.SettingsRepository.Save(settings);
             }
         };
         var useCase = new SpotifyConnectionUseCase(
-            services.SettingsService,
+            services.SettingsRepository,
             gateway,
-            new RecordingUrlLaunchService());
+            new RecordingUrlLaunchGatewayAdapter());
 
         var connectResult = await useCase.ConnectAsync("client-id");
         var disconnectState = useCase.Disconnect();
@@ -342,3 +346,4 @@ public sealed class UseCaseTests
         }
     }
 }
+

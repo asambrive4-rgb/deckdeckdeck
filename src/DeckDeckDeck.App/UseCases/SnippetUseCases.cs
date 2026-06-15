@@ -9,12 +9,12 @@ public sealed class SaveSnippetUseCase
     private const string SlotSettingSaveFailedMessage = "슬롯 설정을 저장하지 못했습니다.";
 
     private readonly IAutoBackupRequester? _autoBackupRequester;
-    private readonly ISettingsStore? _settingsStore;
+    private readonly ISettingsRepository? _settingsStore;
     private readonly ISnippetRepository _snippetRepository;
 
     public SaveSnippetUseCase(
         ISnippetRepository snippetRepository,
-        ISettingsStore? settingsStore = null,
+        ISettingsRepository? settingsStore = null,
         IAutoBackupRequester? autoBackupRequester = null)
     {
         _snippetRepository = snippetRepository;
@@ -71,7 +71,8 @@ public sealed class SaveSnippetUseCase
                 request.AutoIcon,
                 validation.NormalizedLaunchUrl,
                 validation.MediaProvider,
-                validation.MediaCommand)
+                validation.MediaCommand,
+                request.PasteShortcutMode)
             : _snippetRepository.Create(
                 request.CategoryId,
                 request.SlotKey,
@@ -86,7 +87,8 @@ public sealed class SaveSnippetUseCase
                 request.AutoIcon,
                 validation.NormalizedLaunchUrl,
                 validation.MediaProvider,
-                validation.MediaCommand);
+                validation.MediaCommand,
+                request.PasteShortcutMode);
 
         if (requestAutoBackup)
         {
@@ -151,12 +153,12 @@ public sealed class SaveSnippetUseCase
 public sealed class DeleteSnippetUseCase
 {
     private readonly IAutoBackupRequester? _autoBackupRequester;
-    private readonly IImageFileManager? _imageFileManager;
+    private readonly IImageFileRepository? _imageFileManager;
     private readonly ISnippetRepository _snippetRepository;
 
     public DeleteSnippetUseCase(
         ISnippetRepository snippetRepository,
-        IImageFileManager? imageFileManager = null,
+        IImageFileRepository? imageFileManager = null,
         IAutoBackupRequester? autoBackupRequester = null)
     {
         _snippetRepository = snippetRepository;
@@ -177,16 +179,16 @@ public sealed class TransferSnippetUseCase
     private const string ImageStorageMissingMessage = "이미지 저장소가 준비되지 않았습니다.";
 
     private readonly IAutoBackupRequester? _autoBackupRequester;
-    private readonly IImageFileManager? _imageFileManager;
+    private readonly IImageFileRepository? _imageFileManager;
     private readonly SaveSnippetUseCase _saveSnippetUseCase;
-    private readonly ISettingsStore _settingsStore;
+    private readonly ISettingsRepository _settingsStore;
     private readonly ISnippetRepository _snippetRepository;
 
     public TransferSnippetUseCase(
         ISnippetRepository snippetRepository,
-        ISettingsStore settingsStore,
+        ISettingsRepository settingsStore,
         SaveSnippetUseCase saveSnippetUseCase,
-        IImageFileManager? imageFileManager = null,
+        IImageFileRepository? imageFileManager = null,
         IAutoBackupRequester? autoBackupRequester = null)
     {
         _snippetRepository = snippetRepository;
@@ -325,7 +327,8 @@ public sealed record SaveSnippetRequest(
     SnippetMediaProvider SelectedMediaProvider,
     SnippetMediaCommand SelectedMediaCommand,
     bool IsSlotEnabled,
-    bool OriginalIsSlotEnabled);
+    bool OriginalIsSlotEnabled,
+    PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV);
 
 public sealed record SaveSnippetResult(
     bool Succeeded,
@@ -392,3 +395,4 @@ public sealed record TransferSnippetResult(
             ExistingTargetTitle: existingTargetTitle);
     }
 }
+

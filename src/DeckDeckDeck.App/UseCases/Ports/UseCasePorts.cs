@@ -54,7 +54,8 @@ public interface ISnippetRepository
         AutoIconCacheEntry? autoIcon = null,
         string? launchUrl = null,
         SnippetMediaProvider? mediaProvider = null,
-        SnippetMediaCommand? mediaCommand = null);
+        SnippetMediaCommand? mediaCommand = null,
+        PasteShortcutMode pasteShortcutMode = PasteShortcutMode.CtrlV);
 
     Snippet Update(
         Guid id,
@@ -69,7 +70,8 @@ public interface ISnippetRepository
         AutoIconCacheEntry? autoIcon = null,
         string? launchUrl = null,
         SnippetMediaProvider? mediaProvider = null,
-        SnippetMediaCommand? mediaCommand = null);
+        SnippetMediaCommand? mediaCommand = null,
+        PasteShortcutMode pasteShortcutMode = PasteShortcutMode.CtrlV);
 
     ImageFileReference Delete(Guid id);
 
@@ -81,7 +83,7 @@ public interface ISnippetRepository
     SnippetTransferRepositoryResult MoveToSlot(Guid sourceId, SlotKey targetSlotKey);
 }
 
-public interface ISettingsStore
+public interface ISettingsRepository
 {
     AppSettings Load();
 
@@ -92,7 +94,7 @@ public interface ISettingsStore
     void SetSnippetSlotEnabled(SlotKey slotKey, bool enabled);
 }
 
-public interface IImageFileManager
+public interface IImageFileRepository
 {
     StoredImageReference StoreImage(string sourcePath);
 

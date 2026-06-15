@@ -1,6 +1,11 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 using DeckDeckDeck.App.Views;
 using System.Runtime.InteropServices;
@@ -15,7 +20,7 @@ public sealed class MainViewModelNavigationTests
     public void HomeHotkeyAlwaysReturnsToHome()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var viewModel = CreateMainViewModel(services);
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
 
@@ -28,7 +33,7 @@ public sealed class MainViewModelNavigationTests
     public void DirectCategoryHotkeyOpensExistingCategory()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var viewModel = CreateMainViewModel(services);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
@@ -41,7 +46,7 @@ public sealed class MainViewModelNavigationTests
     public void DirectCategoryHotkeyOpensExistingSymbolCategory()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.NumpadAdd, "Symbols", null);
+        services.CategoryRepository.Create(SlotKey.NumpadAdd, "Symbols", null);
         var viewModel = CreateMainViewModel(services);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.NumpadAdd);
@@ -70,8 +75,8 @@ public sealed class MainViewModelNavigationTests
     public void DirectCategoryHotkeyDoesNotNavigateWhenSlotIsDisabled()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad1, false);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.SettingsRepository.SetCategorySlotEnabled(SlotKey.Numpad1, false);
         var viewModel = CreateMainViewModel(services);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
@@ -113,7 +118,7 @@ public sealed class MainViewModelNavigationTests
     public void CategoryTopBarShowsCategoryNameBackAndSettings()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var viewModel = CreateMainViewModel(services);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
@@ -166,7 +171,7 @@ public sealed class MainViewModelNavigationTests
     public void SnippetEditorTopBarShowsSlotTitleAndBackWithoutSettings()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var viewModel = CreateMainViewModel(services);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
@@ -186,7 +191,7 @@ public sealed class MainViewModelNavigationTests
     public void HomeSlotEditCommandOpensCategoryEditor()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var viewModel = CreateMainViewModel(services);
         var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
 
@@ -200,7 +205,7 @@ public sealed class MainViewModelNavigationTests
     public void CategoryEditorCancelReturnsHome()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var viewModel = CreateMainViewModel(services);
         var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
         home.NumpadGrid.Numpad1.EditCommand.Execute(null);
@@ -215,7 +220,7 @@ public sealed class MainViewModelNavigationTests
     public void CategoryEditorSaveReturnsHome()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var viewModel = CreateMainViewModel(services);
         var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
         home.NumpadGrid.Numpad1.EditCommand.Execute(null);
@@ -225,15 +230,15 @@ public sealed class MainViewModelNavigationTests
         editor.SaveCommand.Execute(null);
 
         Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Writing Updated", Assert.Single(services.CategoryService.GetAll()).Name);
+        Assert.Equal("Writing Updated", Assert.Single(services.CategoryRepository.GetAll()).Name);
     }
 
     [Fact]
     public void CategorySlotEditCommandOpensSnippetEditor()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Structure", "Make this clearer.", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Structure", "Make this clearer.", null);
         var viewModel = CreateMainViewModel(services);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
@@ -248,7 +253,7 @@ public sealed class MainViewModelNavigationTests
     public void DisabledSlotEditCommandStillOpensCategoryEditor()
     {
         var services = CreateServices();
-        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad2, false);
+        services.SettingsRepository.SetCategorySlotEnabled(SlotKey.Numpad2, false);
         var viewModel = CreateMainViewModel(services);
         var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
 
@@ -272,7 +277,7 @@ public sealed class MainViewModelNavigationTests
         editor.IsSlotEnabled = false;
         editor.SaveCommand.Execute(null);
 
-        var settings = services.SettingsService.Load();
+        var settings = services.SettingsRepository.Load();
         Assert.False(settings.EnabledCategorySlotKeys[SlotKey.Numpad2]);
         Assert.True(settings.EnabledSnippetSlotKeys[SlotKey.Numpad2]);
         Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
@@ -283,7 +288,7 @@ public sealed class MainViewModelNavigationTests
     public void EmptySnippetSlotEditorCanSaveSlotEnabledOnly()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var autoBackup = new RecordingAutoBackupCoordinator();
         var viewModel = CreateMainViewModel(services, autoBackupCoordinator: autoBackup);
 
@@ -294,7 +299,7 @@ public sealed class MainViewModelNavigationTests
         editor.IsSlotEnabled = false;
         editor.SaveCommand.Execute(null);
 
-        var settings = services.SettingsService.Load();
+        var settings = services.SettingsRepository.Load();
         Assert.True(settings.EnabledCategorySlotKeys[SlotKey.Numpad4]);
         Assert.False(settings.EnabledSnippetSlotKeys[SlotKey.Numpad4]);
         Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
@@ -305,8 +310,8 @@ public sealed class MainViewModelNavigationTests
     public void DisabledCategorySlotDoesNotDisableSameSnippetSlot()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        services.SettingsService.SetCategorySlotEnabled(SlotKey.Numpad4, false);
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.SettingsRepository.SetCategorySlotEnabled(SlotKey.Numpad4, false);
         var viewModel = CreateMainViewModel(services);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
@@ -322,8 +327,8 @@ public sealed class MainViewModelNavigationTests
     public void DisabledSnippetSlotDoesNotDisableSameCategorySlot()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad4, "Writing", null);
-        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad4, false);
+        services.CategoryRepository.Create(SlotKey.Numpad4, "Writing", null);
+        services.SettingsRepository.SetSnippetSlotEnabled(SlotKey.Numpad4, false);
         var viewModel = CreateMainViewModel(services);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad4);
@@ -341,10 +346,11 @@ public sealed class MainViewModelNavigationTests
 
         viewModel.SaveWindowPlacement(10, 20, "Monitor1");
 
-        var settings = services.SettingsService.Load();
+        var settings = services.SettingsRepository.Load();
         Assert.Equal(10, settings.LastWindowLeft);
         Assert.Equal(20, settings.LastWindowTop);
         Assert.Equal("Monitor1", settings.LastWindowScreenDeviceName);
         Assert.Equal(0, autoBackup.RequestCount);
     }
 }
+

@@ -1,6 +1,11 @@
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -45,7 +50,7 @@ public sealed class SlotGridViewModelFactory
         return new NumpadGridViewModel(SlotKeyCatalog.All.Select(slotKey =>
         {
             snippetsBySlot.TryGetValue(slotKey, out var snippet);
-            var thumbnailPath = SnippetImageService.GetStoredDisplayImagePath(snippet, _storedImagePathResolver);
+            var thumbnailPath = SnippetImageResolver.GetStoredDisplayImagePath(snippet, _storedImagePathResolver);
             return new SlotViewModel(
                 slotKey,
                 snippet?.Title,

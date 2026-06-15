@@ -42,6 +42,11 @@ public sealed class AppDbContextFactory
             AddColumnIfMissing(
                 dbContext,
                 existingColumns,
+                "PasteShortcutMode",
+                "ALTER TABLE Snippets ADD COLUMN PasteShortcutMode TEXT NOT NULL DEFAULT 'CtrlV'");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
                 "LaunchPath",
                 "ALTER TABLE Snippets ADD COLUMN LaunchPath TEXT NULL");
             AddColumnIfMissing(

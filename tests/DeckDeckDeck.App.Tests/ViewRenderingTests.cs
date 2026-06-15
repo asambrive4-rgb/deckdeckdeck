@@ -1,6 +1,11 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.ViewModels;
 using DeckDeckDeck.App.Views;
@@ -24,13 +29,13 @@ public sealed class ViewRenderingTests
             {
                 var services = CreateServices();
                 var viewModel = new SettingsViewModel(
-                    services.SettingsService,
+                    services.SettingsRepository,
                     () => { },
                     () => { },
                     _ => { },
-                    services.LoggingService,
+                    services.FileLogger,
                     spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-                    clipboardService: new FakeClipboardService(null));
+                    clipboardService: new FakeClipboardAdapter(null));
                 var view = new SettingsView { DataContext = viewModel };
 
                 view.Measure(new Size(560, 680));
@@ -63,28 +68,28 @@ public sealed class ViewRenderingTests
             try
             {
                 var services = CreateServices();
-                var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+                var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
                 var viewModel = new SnippetEditViewModel(
                     category,
                     SlotKey.Numpad3,
                     snippet: null,
                     new LoadSnippetEditorStateUseCase(
-                        services.SnippetService,
-                        services.SettingsService)
+                        services.SnippetRepository,
+                        services.SettingsRepository)
                         .Execute(new LoadSnippetEditorStateRequest(category.Id, SlotKey.Numpad3, SnippetId: null)),
                     new SaveSnippetUseCase(
-                        services.SnippetService,
-                        services.SettingsService,
+                        services.SnippetRepository,
+                        services.SettingsRepository,
                         autoBackupRequester: null),
                     new DeleteSnippetUseCase(
-                        services.SnippetService,
-                        services.ThumbnailService),
+                        services.SnippetRepository,
+                        services.ImageFileRepository),
                     new TransferSnippetUseCase(
-                        services.SnippetService,
-                        services.SettingsService,
-                        new SaveSnippetUseCase(services.SnippetService, services.SettingsService),
-                        services.ThumbnailService),
-                    new DialogService(),
+                        services.SnippetRepository,
+                        services.SettingsRepository,
+                        new SaveSnippetUseCase(services.SnippetRepository, services.SettingsRepository),
+                        services.ImageFileRepository),
+                    new DialogAdapter(),
                     () => { },
                     _ => { },
                     () => { },
@@ -223,11 +228,14 @@ public sealed class ViewRenderingTests
 
     private static ISpotifyConnectionUseCase CreateSpotifyConnectionUseCase(TestServices services)
     {
-        var urlLaunchService = new RecordingUrlLaunchService();
-        var spotifyConnectionService = new SpotifyConnectionService(services.SettingsService, urlLaunchService);
+        var urlLaunchService = new RecordingUrlLaunchGatewayAdapter();
+        var spotifyConnectionService = new SpotifyConnectionGatewayAdapter(services.SettingsRepository, urlLaunchService);
         return new SpotifyConnectionUseCase(
-            services.SettingsService,
-            new SpotifyConnectionGatewayAdapter(spotifyConnectionService),
+            services.SettingsRepository,
+            spotifyConnectionService,
             urlLaunchService);
     }
 }
+
+
+

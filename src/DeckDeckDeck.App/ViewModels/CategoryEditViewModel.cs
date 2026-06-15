@@ -2,7 +2,12 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
 
 namespace DeckDeckDeck.App.ViewModels;
@@ -13,15 +18,15 @@ public sealed class CategoryEditViewModel : ObservableObject
     private readonly Action<Category> _afterSave;
     private readonly Action _cancel;
     private readonly DeleteCategoryUseCase _deleteCategoryUseCase;
-    private readonly DialogService _dialogService;
+    private readonly DialogAdapter _dialogService;
     private readonly EditableImageState _imageState;
-    private readonly LoggingService? _loggingService;
+    private readonly FileLogger? _loggingService;
     private readonly Guid? _categoryId;
     private readonly IStoredImagePathResolver? _storedImagePathResolver;
     private bool _originalIsSlotEnabled;
     private readonly SaveCategoryUseCase _saveCategoryUseCase;
     private readonly Action<string> _showStatus;
-    private readonly ThumbnailService? _thumbnailService;
+    private readonly ImageFileRepository? _thumbnailService;
     private readonly TransferCategoryUseCase _transferCategoryUseCase;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
@@ -36,13 +41,13 @@ public sealed class CategoryEditViewModel : ObservableObject
         SaveCategoryUseCase saveCategoryUseCase,
         DeleteCategoryUseCase deleteCategoryUseCase,
         TransferCategoryUseCase transferCategoryUseCase,
-        DialogService dialogService,
+        DialogAdapter dialogService,
         Action cancel,
         Action<Category> afterSave,
         Action afterDelete,
         Action<string> showStatus,
-        ThumbnailService? thumbnailService = null,
-        LoggingService? loggingService = null,
+        ImageFileRepository? thumbnailService = null,
+        FileLogger? loggingService = null,
         IStoredImagePathResolver? storedImagePathResolver = null)
     {
         SlotKey = slotKey;
@@ -271,8 +276,8 @@ public sealed class CategoryEditViewModel : ObservableObject
             if (result.NeedsOverwriteConfirmation)
             {
                 var confirmed = _dialogService.Confirm(
-                    $"移댄뀒怨좊━ {actionText}",
-                    $"?щ’ {targetSlotKey.GetDisplayText()}???대? '{result.ExistingTargetName}' 移댄뀒怨좊━媛 ?덉뒿?덈떎.\n湲곗〈 移댄뀒怨좊━? ?덉쓽 ?ㅽ뻾 ??ぉ????뼱?멸퉴??");
+                    $"카테고리 {actionText}",
+                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetName}' 카테고리가 있습니다.\n기존 카테고리와 안의 실행 항목을 덮어쓸까요?");
                 if (!confirmed)
                 {
                     return;
@@ -397,3 +402,4 @@ public sealed class CategoryTransferTargetSlot
 
     public string Label { get; }
 }
+

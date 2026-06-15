@@ -1,5 +1,10 @@
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.ViewModels;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
@@ -12,7 +17,7 @@ public sealed class SnippetEditViewModelTests
     public void PasteTextRequiresContent()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         Snippet? savedSnippet = null;
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
@@ -25,10 +30,27 @@ public sealed class SnippetEditViewModelTests
     }
 
     [Fact]
+    public void PasteShortcutModeSavesWithPasteTextSnippet()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Terminal", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Terminal paste";
+        viewModel.Content = "Run this";
+        viewModel.PasteShortcutMode = PasteShortcutMode.CtrlShiftV;
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal(PasteShortcutMode.CtrlShiftV, savedSnippet.PasteShortcutMode);
+    }
+
+    [Fact]
     public void LaunchFileRequiresLaunchPath()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
         Snippet? savedSnippet = null;
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
@@ -44,7 +66,7 @@ public sealed class SnippetEditViewModelTests
     public void LaunchUrlRequiresValidUrl()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Web", null);
         Snippet? savedSnippet = null;
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
@@ -60,7 +82,7 @@ public sealed class SnippetEditViewModelTests
     public void LaunchFileSavesWithLaunchPathAndEmptyContent()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
         Snippet? savedSnippet = null;
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
@@ -80,7 +102,7 @@ public sealed class SnippetEditViewModelTests
     public void LaunchUrlSavesWithNormalizedUrlAndEmptyContent()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Web", null);
         Snippet? savedSnippet = null;
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
@@ -103,7 +125,7 @@ public sealed class SnippetEditViewModelTests
     public void MediaActionSavesWithSelectedCommandAndDefaultIcon()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Media", null);
         Snippet? savedSnippet = null;
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
@@ -132,7 +154,7 @@ public sealed class SnippetEditViewModelTests
     public void SpotifyMediaActionSavesEvenWhenDisconnected()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Media", null);
         Snippet? savedSnippet = null;
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
@@ -164,7 +186,7 @@ public sealed class SnippetEditViewModelTests
     public void ChangingMediaProviderResetsUnsupportedCommand()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Media", null);
         var viewModel = CreateViewModel(services, category, _ => { });
 
         viewModel.IsMediaAction = true;
@@ -188,7 +210,7 @@ public sealed class SnippetEditViewModelTests
     public void SpotifyOpenAndResumeCommandSavesWithPlayPauseIcon()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Media", null);
         Snippet? savedSnippet = null;
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
@@ -210,7 +232,7 @@ public sealed class SnippetEditViewModelTests
     public void LaunchFileSavesAutoIconForExe()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
         var launchPath = CreateLaunchFile(services, "tool.exe");
         Snippet? savedSnippet = null;
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
@@ -233,10 +255,10 @@ public sealed class SnippetEditViewModelTests
     public void RemovingCustomImageReturnsToAutoIcon()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
         var launchPath = CreateLaunchFile(services, "shortcut.lnk");
-        var autoIcon = services.FileIconCacheService.GetOrCreateIcon(launchPath, null);
-        var snippet = services.SnippetService.Create(
+        var autoIcon = services.FileIconCacheRepository.GetOrCreateIcon(launchPath, null);
+        var snippet = services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Open shortcut",
@@ -263,8 +285,8 @@ public sealed class SnippetEditViewModelTests
     public void LaunchFileShortcutAndFolderPickerUpdateLaunchPath()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
-        var dialogService = new StubDialogService
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        var dialogService = new StubDialogAdapter
         {
             LaunchFile = @"C:\Users\Public\Desktop\App.lnk",
             LaunchFolder = @"C:\tools"
@@ -282,7 +304,7 @@ public sealed class SnippetEditViewModelTests
     public void SaveRequestsAutoBackupAfterSnippetChange()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var autoBackup = new RecordingAutoBackupCoordinator();
         var viewModel = CreateViewModel(
             services,
@@ -295,15 +317,15 @@ public sealed class SnippetEditViewModelTests
         viewModel.SaveCommand.Execute(null);
 
         Assert.Equal(1, autoBackup.RequestCount);
-        Assert.Single(services.SnippetService.GetByCategoryId(category.Id));
+        Assert.Single(services.SnippetRepository.GetByCategoryId(category.Id));
     }
 
     [Fact]
     public void NewSnippetWithOnlySlotEnabledChangeSavesSlotSettingWithoutCreatingSnippet()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.SettingsRepository.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
         Snippet? savedSnippet = null;
         var statusMessages = new List<string>();
         var autoBackup = new RecordingAutoBackupCoordinator();
@@ -317,9 +339,9 @@ public sealed class SnippetEditViewModelTests
         viewModel.IsSlotEnabled = true;
         viewModel.SaveCommand.Execute(null);
 
-        var settings = services.SettingsService.Load();
+        var settings = services.SettingsRepository.Load();
         Assert.Null(savedSnippet);
-        Assert.Empty(services.SnippetService.GetByCategoryId(category.Id));
+        Assert.Empty(services.SnippetRepository.GetByCategoryId(category.Id));
         Assert.True(settings.EnabledSnippetSlotKeys[SlotKey.Numpad3]);
         Assert.Equal(1, autoBackup.RequestCount);
         Assert.Equal("슬롯 3 설정을 저장했습니다.", statusMessages.Last());
@@ -329,8 +351,8 @@ public sealed class SnippetEditViewModelTests
     public void DeleteRequestsAutoBackupAfterSnippetDelete()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        var snippet = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var snippet = services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
         var autoBackup = new RecordingAutoBackupCoordinator();
         var viewModel = CreateViewModel(
             services,
@@ -341,7 +363,7 @@ public sealed class SnippetEditViewModelTests
 
         viewModel.DeleteCommand.Execute(null);
 
-        Assert.Null(services.SnippetService.GetById(snippet.Id));
+        Assert.Null(services.SnippetRepository.GetById(snippet.Id));
         Assert.Equal(1, autoBackup.RequestCount);
     }
 
@@ -349,7 +371,7 @@ public sealed class SnippetEditViewModelTests
     public void DroppingImageFileUsesCustomImagePreview()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
         var sourcePath = CreateTinyBmp(services.Storage.TempPath);
         var viewModel = CreateViewModel(services, category, _ => { });
 
@@ -370,10 +392,10 @@ public sealed class SnippetEditViewModelTests
     public void CopySnippetOverwritesTargetAfterConfirmAndCopiesSlotEnabled()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        var source = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
-        services.SnippetService.Create(category.Id, SlotKey.Numpad5, "Old", "Bye", null);
-        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var source = services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad5, "Old", "Bye", null);
+        services.SettingsRepository.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
         var statusMessages = new List<string>();
         var autoBackup = new RecordingAutoBackupCoordinator();
         var viewModel = CreateViewModel(
@@ -387,9 +409,9 @@ public sealed class SnippetEditViewModelTests
 
         viewModel.CopySnippetCommand.Execute(null);
 
-        var snippets = services.SnippetService.GetByCategoryId(category.Id);
+        var snippets = services.SnippetRepository.GetByCategoryId(category.Id);
         var copiedSnippet = snippets.Single(snippet => snippet.SlotKey == SlotKey.Numpad5);
-        var settings = services.SettingsService.Load();
+        var settings = services.SettingsRepository.Load();
 
         Assert.Equal(2, snippets.Count);
         Assert.NotEqual(source.Id, copiedSnippet.Id);
@@ -405,9 +427,9 @@ public sealed class SnippetEditViewModelTests
     public void MoveSnippetMovesSlotEnabledAndResetsSourceSlot()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        var source = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
-        services.SettingsService.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var source = services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        services.SettingsRepository.SetSnippetSlotEnabled(SlotKey.Numpad3, false);
         var statusMessages = new List<string>();
         var autoBackup = new RecordingAutoBackupCoordinator();
         var viewModel = CreateViewModel(
@@ -421,9 +443,9 @@ public sealed class SnippetEditViewModelTests
 
         viewModel.MoveSnippetCommand.Execute(null);
 
-        var snippets = services.SnippetService.GetByCategoryId(category.Id);
+        var snippets = services.SnippetRepository.GetByCategoryId(category.Id);
         var movedSnippet = Assert.Single(snippets);
-        var settings = services.SettingsService.Load();
+        var settings = services.SettingsRepository.Load();
 
         Assert.Equal(source.Id, movedSnippet.Id);
         Assert.Equal(SlotKey.Numpad5, movedSnippet.SlotKey);
@@ -437,10 +459,10 @@ public sealed class SnippetEditViewModelTests
     public void SnippetTransferCancelDoesNotOverwriteTarget()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        var source = services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
-        services.SnippetService.Create(category.Id, SlotKey.Numpad5, "Old", "Bye", null);
-        var dialogService = new StubDialogService { ConfirmResult = false };
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var source = services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Paste", "Hello", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad5, "Old", "Bye", null);
+        var dialogService = new StubDialogAdapter { ConfirmResult = false };
         var autoBackup = new RecordingAutoBackupCoordinator();
         var viewModel = CreateViewModel(
             services,
@@ -453,7 +475,7 @@ public sealed class SnippetEditViewModelTests
 
         viewModel.MoveSnippetCommand.Execute(null);
 
-        var snippets = services.SnippetService.GetByCategoryId(category.Id);
+        var snippets = services.SnippetRepository.GetByCategoryId(category.Id);
 
         Assert.Equal("Paste", snippets.Single(snippet => snippet.SlotKey == SlotKey.Numpad3).Title);
         Assert.Equal("Old", snippets.Single(snippet => snippet.SlotKey == SlotKey.Numpad5).Title);
@@ -464,7 +486,7 @@ public sealed class SnippetEditViewModelTests
         TestServices services,
         Category category,
         Action<Snippet> afterSave,
-        DialogService? dialogService = null,
+        DialogAdapter? dialogService = null,
         Snippet? snippet = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null,
         Action<string>? showStatus = null)
@@ -474,34 +496,34 @@ public sealed class SnippetEditViewModelTests
             SlotKey.Numpad3,
             snippet,
             new LoadSnippetEditorStateUseCase(
-                services.SnippetService,
-                services.SettingsService)
+                services.SnippetRepository,
+                services.SettingsRepository)
                 .Execute(new LoadSnippetEditorStateRequest(category.Id, SlotKey.Numpad3, snippet?.Id)),
             new SaveSnippetUseCase(
-                services.SnippetService,
-                services.SettingsService,
+                services.SnippetRepository,
+                services.SettingsRepository,
                 autoBackupCoordinator),
             new DeleteSnippetUseCase(
-                services.SnippetService,
-                services.ThumbnailService,
+                services.SnippetRepository,
+                services.ImageFileRepository,
                 autoBackupCoordinator),
             new TransferSnippetUseCase(
-                services.SnippetService,
-                services.SettingsService,
+                services.SnippetRepository,
+                services.SettingsRepository,
                 new SaveSnippetUseCase(
-                    services.SnippetService,
-                    services.SettingsService,
+                    services.SnippetRepository,
+                    services.SettingsRepository,
                     autoBackupCoordinator),
-                services.ThumbnailService,
+                services.ImageFileRepository,
                 autoBackupCoordinator),
-            dialogService ?? new StubDialogService(),
+            dialogService ?? new StubDialogAdapter(),
             () => { },
             afterSave,
             () => { },
             showStatus ?? (_ => { }),
-            thumbnailService: services.ThumbnailService,
-            loggingService: services.LoggingService,
-            snippetImageService: services.SnippetImageService);
+            thumbnailService: services.ImageFileRepository,
+            loggingService: services.FileLogger,
+            snippetImageService: services.SnippetImageResolver);
     }
 
     private static SnippetTransferTargetSlot GetTargetSlot(
@@ -519,7 +541,7 @@ public sealed class SnippetEditViewModelTests
         return path;
     }
 
-    private sealed class StubDialogService : DialogService
+    private sealed class StubDialogAdapter : DialogAdapter
     {
         public bool ConfirmResult { get; init; } = true;
 
@@ -543,3 +565,4 @@ public sealed class SnippetEditViewModelTests
         }
     }
 }
+

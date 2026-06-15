@@ -6,11 +6,11 @@ namespace DeckDeckDeck.App.UseCases;
 public sealed class ResolveCategoryHotkeyUseCase
 {
     private readonly ICategoryRepository _categoryRepository;
-    private readonly ISettingsStore _settingsStore;
+    private readonly ISettingsRepository _settingsStore;
 
     public ResolveCategoryHotkeyUseCase(
         ICategoryRepository categoryRepository,
-        ISettingsStore settingsStore)
+        ISettingsRepository settingsStore)
     {
         _categoryRepository = categoryRepository;
         _settingsStore = settingsStore;
@@ -81,3 +81,4 @@ public sealed record CategoryHotkeyResolution(
             StatusMessage: statusMessage);
     }
 }
+

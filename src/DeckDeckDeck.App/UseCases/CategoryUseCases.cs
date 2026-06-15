@@ -10,11 +10,11 @@ public sealed class SaveCategoryUseCase
 
     private readonly IAutoBackupRequester? _autoBackupRequester;
     private readonly ICategoryRepository _categoryRepository;
-    private readonly ISettingsStore? _settingsStore;
+    private readonly ISettingsRepository? _settingsStore;
 
     public SaveCategoryUseCase(
         ICategoryRepository categoryRepository,
-        ISettingsStore? settingsStore = null,
+        ISettingsRepository? settingsStore = null,
         IAutoBackupRequester? autoBackupRequester = null)
     {
         _categoryRepository = categoryRepository;
@@ -111,11 +111,11 @@ public sealed class DeleteCategoryUseCase
 {
     private readonly IAutoBackupRequester? _autoBackupRequester;
     private readonly ICategoryRepository _categoryRepository;
-    private readonly IImageFileManager? _imageFileManager;
+    private readonly IImageFileRepository? _imageFileManager;
 
     public DeleteCategoryUseCase(
         ICategoryRepository categoryRepository,
-        IImageFileManager? imageFileManager = null,
+        IImageFileRepository? imageFileManager = null,
         IAutoBackupRequester? autoBackupRequester = null)
     {
         _categoryRepository = categoryRepository;
@@ -150,15 +150,15 @@ public sealed class TransferCategoryUseCase
 
     private readonly IAutoBackupRequester? _autoBackupRequester;
     private readonly ICategoryRepository _categoryRepository;
-    private readonly IImageFileManager? _imageFileManager;
+    private readonly IImageFileRepository? _imageFileManager;
     private readonly SaveCategoryUseCase _saveCategoryUseCase;
-    private readonly ISettingsStore _settingsStore;
+    private readonly ISettingsRepository _settingsStore;
 
     public TransferCategoryUseCase(
         ICategoryRepository categoryRepository,
-        ISettingsStore settingsStore,
+        ISettingsRepository settingsStore,
         SaveCategoryUseCase saveCategoryUseCase,
-        IImageFileManager? imageFileManager = null,
+        IImageFileRepository? imageFileManager = null,
         IAutoBackupRequester? autoBackupRequester = null)
     {
         _categoryRepository = categoryRepository;
@@ -363,3 +363,4 @@ internal sealed record SlotSettingSaveResult(bool Succeeded, string? ErrorMessag
         return new SlotSettingSaveResult(false, errorMessage);
     }
 }
+

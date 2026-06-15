@@ -1,6 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
 using System.Windows.Input;
 
@@ -11,8 +16,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private IAutoBackupCoordinator? _autoBackupCoordinator;
     private MainViewModelNavigator _navigator = null!;
     private ResolveCategoryHotkeyUseCase _resolveCategoryHotkeyUseCase = null!;
-    private SettingsService _settingsService = null!;
-    private LoggingService? _loggingService;
+    private SettingsRepository _settingsService = null!;
+    private FileLogger? _loggingService;
     private object _currentViewModel = null!;
     private string _statusMessage = "준비됨.";
 
@@ -23,7 +28,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Action? completePasteSelection = null,
         Func<Action>? createPasteSelectionCompletion = null)
         : this(
-            AppServices.CreateDefault(),
+            AppComposition.CreateDefault(),
             getPasteTargetWindowHandle,
             hideWindowAfterPaste,
             enterEditMode,
@@ -33,31 +38,31 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     }
 
     public MainViewModel(
-        CategoryService categoryService,
-        DialogService dialogService,
-        SettingsService settingsService,
+        CategoryRepository categoryService,
+        DialogAdapter dialogService,
+        SettingsRepository settingsService,
         SlotGridViewModelFactory slotGridViewModelFactory,
-        SnippetService snippetService,
-        IClipboardPasteService? clipboardPasteService = null,
+        SnippetRepository snippetService,
+        IClipboardPasteGateway? clipboardPasteService = null,
         Func<IntPtr>? getPasteTargetWindowHandle = null,
         Action? hideWindowAfterPaste = null,
         Action? enterEditMode = null,
         Action? completePasteSelection = null,
         Func<Action>? createPasteSelectionCompletion = null,
-        LoggingService? loggingService = null,
-        ThumbnailService? thumbnailService = null,
-        IFileLaunchService? fileLaunchService = null,
-        IUrlLaunchService? urlLaunchService = null,
-        IMediaActionService? mediaActionService = null,
-        ISpotifyConnectionService? spotifyConnectionService = null,
-        ISpotifyMediaActionService? spotifyMediaActionService = null,
-        SnippetImageService? snippetImageService = null,
-        BackupService? backupService = null,
+        FileLogger? loggingService = null,
+        ImageFileRepository? thumbnailService = null,
+        IFileLaunchGateway? fileLaunchService = null,
+        IUrlLaunchGateway? urlLaunchService = null,
+        IMediaActionGateway? mediaActionService = null,
+        ISpotifyConnectionGateway? spotifyConnectionService = null,
+        ISpotifyMediaActionGateway? spotifyMediaActionGatewayAdapter = null,
+        SnippetImageResolver? snippetImageService = null,
+        BackupGateway? backupService = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null,
         IStoredImagePathResolver? storedImagePathResolver = null,
-        IClipboardService? clipboardService = null)
+        IClipboardAdapter? clipboardService = null)
     {
-        var services = AppServices.Create(
+        var services = AppComposition.Create(
             categoryService,
             backupService,
             dialogService,
@@ -69,7 +74,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             urlLaunchService,
             mediaActionService,
             spotifyConnectionService,
-            spotifyMediaActionService,
+            spotifyMediaActionGatewayAdapter,
             storedImagePathResolver,
             loggingService,
             thumbnailService,
@@ -87,7 +92,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     }
 
     private MainViewModel(
-        AppServices services,
+        AppComposition services,
         Func<IntPtr>? getPasteTargetWindowHandle,
         Action? hideWindowAfterPaste,
         Action? enterEditMode,
@@ -260,7 +265,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     }
 
     private void Initialize(
-        AppServices services,
+        AppComposition services,
         Func<IntPtr>? getPasteTargetWindowHandle,
         Action? hideWindowAfterPaste,
         Action? enterEditMode,
@@ -268,17 +273,17 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         Func<Action>? createPasteSelectionCompletion,
         IAutoBackupCoordinator? autoBackupCoordinator)
     {
-        _settingsService = services.SettingsService;
+        _settingsService = services.SettingsRepository;
         _resolveCategoryHotkeyUseCase = services.ResolveCategoryHotkeyUseCase;
-        _loggingService = services.LoggingService;
+        _loggingService = services.FileLogger;
         _autoBackupCoordinator = autoBackupCoordinator
-            ?? (services.BackupService is null
+            ?? (services.BackupGateway is null
                 ? null
                 : new AutoBackupCoordinator(
-                    services.BackupService,
-                    services.SettingsService,
+                    services.BackupGateway,
+                    services.SettingsRepository,
                     ShowStatus,
-                    services.LoggingService));
+                    services.FileLogger));
 
         _navigator = new MainViewModelNavigator(
             services,
@@ -351,3 +356,5 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _loggingService?.Log(result.LogMessage, result.Exception);
     }
 }
+
+

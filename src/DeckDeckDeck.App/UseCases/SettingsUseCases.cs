@@ -40,10 +40,10 @@ public sealed class SaveSettingsUseCase : ISaveSettingsUseCase
 {
     private readonly IAutoBackupRequester? _autoBackupRequester;
     private readonly IBackupGateway? _backupGateway;
-    private readonly ISettingsStore _settingsStore;
+    private readonly ISettingsRepository _settingsStore;
 
     public SaveSettingsUseCase(
-        ISettingsStore settingsStore,
+        ISettingsRepository settingsStore,
         IBackupGateway? backupGateway = null,
         IAutoBackupRequester? autoBackupRequester = null)
     {
@@ -163,11 +163,11 @@ public sealed class RestoreBackupUseCase : IRestoreBackupUseCase
 public sealed class SpotifyConnectionUseCase : ISpotifyConnectionUseCase
 {
     private readonly ISpotifyConnectionGateway _spotifyConnectionGateway;
-    private readonly ISettingsStore _settingsStore;
+    private readonly ISettingsRepository _settingsStore;
     private readonly IUrlLaunchGateway _urlLaunchGateway;
 
     public SpotifyConnectionUseCase(
-        ISettingsStore settingsStore,
+        ISettingsRepository settingsStore,
         ISpotifyConnectionGateway spotifyConnectionGateway,
         IUrlLaunchGateway urlLaunchGateway)
     {
@@ -285,3 +285,4 @@ public sealed record SpotifyConnectionUseCaseResult(
         return new SpotifyConnectionUseCaseResult(false, ErrorMessage: errorMessage);
     }
 }
+

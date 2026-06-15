@@ -1,6 +1,11 @@
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 using System.Windows;
 using System.Windows.Threading;
@@ -11,33 +16,33 @@ internal static class TestAppFactory
 {
     public static TestServices CreateServices(string? appDataPath = null)
     {
-        var storage = new FileStorageService(appDataPath ?? Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+        var storage = new AppStoragePaths(appDataPath ?? Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
         storage.EnsureCreated();
 
         var dbContextFactory = new AppDbContextFactory(storage.DatabasePath);
         dbContextFactory.EnsureCreated();
-        new StoredPathMigrationService(dbContextFactory, storage).NormalizeManagedPaths();
+        new StoredPathMigration(dbContextFactory, storage).NormalizeManagedPaths();
 
-        var settingsService = new SettingsService(dbContextFactory);
+        var settingsService = new SettingsRepository(dbContextFactory);
         settingsService.EnsureDefaults();
-        var snippetService = new SnippetService(dbContextFactory);
-        var loggingService = new LoggingService(storage);
+        var snippetService = new SnippetRepository(dbContextFactory);
+        var loggingService = new FileLogger(storage);
         var storedImagePathResolver = new StoredImagePathResolver(storage);
-        var backupService = new BackupService(storage, settingsService, loggingService);
-        var fileIconCacheService = new FileIconCacheService(
+        var backupService = new BackupGateway(storage, settingsService, loggingService);
+        var fileIconCacheService = new FileIconCacheRepository(
             storage,
             new StubFileIconExtractor(),
             loggingService);
-        var snippetImageService = new SnippetImageService(fileIconCacheService, storedImagePathResolver);
+        var snippetImageService = new SnippetImageResolver(fileIconCacheService, storedImagePathResolver);
 
         return new TestServices(
             storage,
-            new CategoryService(dbContextFactory),
+            new CategoryRepository(dbContextFactory),
             snippetService,
             settingsService,
             loggingService,
             backupService,
-            new ThumbnailService(storage),
+            new ImageFileRepository(storage),
             fileIconCacheService,
             snippetImageService,
             storedImagePathResolver);
@@ -45,40 +50,40 @@ internal static class TestAppFactory
 
     public static MainViewModel CreateMainViewModel(
         TestServices services,
-        IClipboardPasteService? clipboardPasteService = null,
+        IClipboardPasteGateway? clipboardPasteService = null,
         Func<IntPtr>? getPasteTargetWindowHandle = null,
         Action? hideWindowAfterPaste = null,
         Action? enterEditMode = null,
         Action? completePasteSelection = null,
         Func<Action>? createPasteSelectionCompletion = null,
-        IFileLaunchService? fileLaunchService = null,
-        IUrlLaunchService? urlLaunchService = null,
-        IMediaActionService? mediaActionService = null,
-        ISpotifyConnectionService? spotifyConnectionService = null,
-        ISpotifyMediaActionService? spotifyMediaActionService = null,
+        IFileLaunchGateway? fileLaunchService = null,
+        IUrlLaunchGateway? urlLaunchService = null,
+        IMediaActionGateway? mediaActionService = null,
+        ISpotifyConnectionGateway? spotifyConnectionService = null,
+        ISpotifyMediaActionGateway? spotifyMediaActionGatewayAdapter = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
         return new MainViewModel(
-            services.CategoryService,
-            new DialogService(),
-            services.SettingsService,
+            services.CategoryRepository,
+            new DialogAdapter(),
+            services.SettingsRepository,
             new SlotGridViewModelFactory(services.StoredImagePathResolver),
-            services.SnippetService,
+            services.SnippetRepository,
             clipboardPasteService,
             getPasteTargetWindowHandle,
             hideWindowAfterPaste,
             enterEditMode,
             completePasteSelection,
             createPasteSelectionCompletion,
-            loggingService: services.LoggingService,
-            thumbnailService: services.ThumbnailService,
+            loggingService: services.FileLogger,
+            thumbnailService: services.ImageFileRepository,
             fileLaunchService: fileLaunchService,
             urlLaunchService: urlLaunchService,
             mediaActionService: mediaActionService,
             spotifyConnectionService: spotifyConnectionService,
-            spotifyMediaActionService: spotifyMediaActionService,
-            snippetImageService: services.SnippetImageService,
-            backupService: services.BackupService,
+            spotifyMediaActionGatewayAdapter: spotifyMediaActionGatewayAdapter,
+            snippetImageService: services.SnippetImageResolver,
+            backupService: services.BackupGateway,
             autoBackupCoordinator: autoBackupCoordinator,
             storedImagePathResolver: services.StoredImagePathResolver);
     }
@@ -138,15 +143,15 @@ internal static class TestAppFactory
 }
 
 internal sealed record TestServices(
-    FileStorageService Storage,
-    CategoryService CategoryService,
-    SnippetService SnippetService,
-    SettingsService SettingsService,
-    LoggingService LoggingService,
-    BackupService BackupService,
-    ThumbnailService ThumbnailService,
-    FileIconCacheService FileIconCacheService,
-    SnippetImageService SnippetImageService,
+    AppStoragePaths Storage,
+    CategoryRepository CategoryRepository,
+    SnippetRepository SnippetRepository,
+    SettingsRepository SettingsRepository,
+    FileLogger FileLogger,
+    BackupGateway BackupGateway,
+    ImageFileRepository ImageFileRepository,
+    FileIconCacheRepository FileIconCacheRepository,
+    SnippetImageResolver SnippetImageResolver,
     IStoredImagePathResolver StoredImagePathResolver);
 
 internal sealed class StubFileIconExtractor : IFileIconExtractor
@@ -181,9 +186,9 @@ internal sealed class StubFileIconExtractor : IFileIconExtractor
     ];
 }
 
-internal sealed class FakeClipboardService : IClipboardService
+internal sealed class FakeClipboardAdapter : IClipboardAdapter
 {
-    public FakeClipboardService(IDataObject? backup)
+    public FakeClipboardAdapter(IDataObject? backup)
     {
         Backup = backup;
     }
@@ -210,18 +215,26 @@ internal sealed class FakeClipboardService : IClipboardService
     }
 }
 
-internal sealed class FakeKeyboardInputService : IKeyboardInputService
+internal sealed class FakeWin32KeyboardInputAdapter : IWin32KeyboardInputAdapter
 {
     public bool SentCtrlV { get; private set; }
+
+    public bool SentCtrlShiftV { get; private set; }
 
     public bool SendCtrlV()
     {
         SentCtrlV = true;
         return true;
     }
+
+    public bool SendCtrlShiftV()
+    {
+        SentCtrlShiftV = true;
+        return true;
+    }
 }
 
-internal sealed class FakeWindowFocusService : IWindowFocusService
+internal sealed class FakeWin32WindowFocusAdapter : IWin32WindowFocusAdapter
 {
     public bool CanActivate { get; set; } = true;
 
@@ -239,7 +252,7 @@ internal sealed class FakeWindowFocusService : IWindowFocusService
     }
 }
 
-internal sealed class RecordingClipboardPasteService : IClipboardPasteService
+internal sealed class RecordingClipboardPasteGateway : IClipboardPasteGateway
 {
     public List<PasteCall> Calls { get; } = [];
 
@@ -252,7 +265,7 @@ internal sealed class RecordingClipboardPasteService : IClipboardPasteService
 
 internal sealed record PasteCall(Snippet Snippet, IntPtr TargetWindowHandle, AppSettings Settings);
 
-internal sealed class ThrowingClipboardPasteService : IClipboardPasteService
+internal sealed class ThrowingClipboardPasteGateway : IClipboardPasteGateway
 {
     public Task<bool> PasteSnippetAsync(Snippet snippet, IntPtr targetWindowHandle, AppSettings settings)
     {
@@ -260,7 +273,7 @@ internal sealed class ThrowingClipboardPasteService : IClipboardPasteService
     }
 }
 
-internal sealed class RecordingFileLaunchService : IFileLaunchService
+internal sealed class RecordingFileLaunchGatewayAdapter : IFileLaunchGateway
 {
     public bool Result { get; set; } = true;
 
@@ -280,7 +293,7 @@ internal sealed class RecordingFileLaunchService : IFileLaunchService
     }
 }
 
-internal sealed class RecordingUrlLaunchService : IUrlLaunchService
+internal sealed class RecordingUrlLaunchGatewayAdapter : IUrlLaunchGateway
 {
     public bool Result { get; set; } = true;
 
@@ -300,7 +313,7 @@ internal sealed class RecordingUrlLaunchService : IUrlLaunchService
     }
 }
 
-internal sealed class RecordingMediaActionService : IMediaActionService
+internal sealed class RecordingSystemMediaActionGatewayAdapter : IMediaActionGateway
 {
     public bool Result { get; set; } = true;
 
@@ -320,15 +333,15 @@ internal sealed class RecordingMediaActionService : IMediaActionService
     }
 }
 
-internal sealed class RecordingSpotifyMediaActionService : ISpotifyMediaActionService
+internal sealed class RecordingSpotifyMediaActionGatewayAdapter : ISpotifyMediaActionGateway
 {
-    public SpotifyMediaActionResult Result { get; set; } = new(true);
+    public SpotifyMediaActionGatewayResult Result { get; set; } = new(true);
 
     public Exception? Exception { get; set; }
 
     public List<SnippetMediaCommand> Commands { get; } = [];
 
-    public Task<SpotifyMediaActionResult> TryExecuteAsync(
+    public Task<SpotifyMediaActionGatewayResult> TryExecuteAsync(
         SnippetMediaCommand command,
         CancellationToken cancellationToken = default)
     {
@@ -410,3 +423,4 @@ internal sealed class TestDataObject : IDataObject
     {
     }
 }
+

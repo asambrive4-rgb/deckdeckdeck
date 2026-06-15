@@ -1,5 +1,10 @@
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 
@@ -31,19 +36,19 @@ public sealed class PasteSelectionSessionTests
     public async Task PasteFlowUsesCompletionCapturedAtPasteStart()
     {
         var services = CreateServices();
-        var settings = services.SettingsService.Load();
+        var settings = services.SettingsRepository.Load();
         settings.AutoHideAfterPaste = false;
-        services.SettingsService.Save(settings);
+        services.SettingsRepository.Save(settings);
 
         var session = new PasteSelectionSession();
-        var pasteService = new BlockingClipboardPasteService();
+        var pasteService = new BlockingClipboardPasteGateway();
         var completedCount = 0;
         var useCase = new ExecuteSnippetActionUseCase(
             pasteService,
-            new RecordingFileLaunchService(),
-            new RecordingUrlLaunchService(),
-            new RecordingMediaActionService(),
-            new SpotifyMediaActionGatewayAdapter(new RecordingSpotifyMediaActionService()));
+            new RecordingFileLaunchGatewayAdapter(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new RecordingSpotifyMediaActionGatewayAdapter());
 
         session.Start();
         var pasteTask = ExecuteWithCapturedCompletionAsync(
@@ -84,7 +89,7 @@ public sealed class PasteSelectionSessionTests
     }
 }
 
-internal sealed class BlockingClipboardPasteService : IClipboardPasteService
+internal sealed class BlockingClipboardPasteGateway : IClipboardPasteGateway
 {
     private readonly TaskCompletionSource<bool> _completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -102,3 +107,4 @@ internal sealed class BlockingClipboardPasteService : IClipboardPasteService
         return await _completed.Task;
     }
 }
+

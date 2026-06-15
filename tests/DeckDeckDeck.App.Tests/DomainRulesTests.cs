@@ -53,3 +53,4 @@ public sealed class DomainRulesTests
         Assert.True(SlotRules.IsEnabled(SlotKey.Numpad3, new Dictionary<SlotKey, bool>()));
     }
 }
+

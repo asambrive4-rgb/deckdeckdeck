@@ -16,6 +16,8 @@ public sealed class Snippet
 
     public SnippetActionType ActionType { get; set; } = SnippetActionType.PasteText;
 
+    public PasteShortcutMode PasteShortcutMode { get; set; } = PasteShortcutMode.CtrlV;
+
     public string? LaunchPath { get; set; }
 
     public string? LaunchUrl { get; set; }

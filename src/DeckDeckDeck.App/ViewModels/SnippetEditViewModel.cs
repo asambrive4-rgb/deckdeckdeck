@@ -3,7 +3,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
 
 namespace DeckDeckDeck.App.ViewModels;
@@ -14,17 +19,17 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly Action<Snippet> _afterSave;
     private readonly Action _cancel;
     private readonly DeleteSnippetUseCase _deleteSnippetUseCase;
-    private readonly DialogService _dialogService;
+    private readonly DialogAdapter _dialogService;
     private readonly EditableImageState _imageState;
-    private readonly LoggingService? _loggingService;
+    private readonly FileLogger? _loggingService;
     private readonly bool _isSpotifyConnected;
     private bool _originalIsSlotEnabled;
     private readonly SaveSnippetUseCase _saveSnippetUseCase;
     private readonly Guid? _snippetId;
-    private readonly SnippetImageService? _snippetImageService;
+    private readonly SnippetImageResolver? _snippetImageService;
     private readonly Action<string> _showStatus;
     private readonly IStoredImagePathResolver? _storedImagePathResolver;
-    private readonly ThumbnailService? _thumbnailService;
+    private readonly ImageFileRepository? _thumbnailService;
     private readonly TransferSnippetUseCase _transferSnippetUseCase;
     private AutoIconCacheEntry? _autoIcon;
     private SnippetActionType _actionType = SnippetActionType.PasteText;
@@ -37,6 +42,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private SnippetMediaCommand _mediaCommand = SnippetMediaCommand.PlayPause;
     private IReadOnlyList<SnippetMediaCommandOption> _mediaCommandOptions = SnippetMediaCommandOption.SystemCommands;
     private SnippetMediaProvider _mediaProvider = SnippetMediaProvider.System;
+    private PasteShortcutMode _pasteShortcutMode = PasteShortcutMode.CtrlV;
     private SnippetTransferTargetSlot? _selectedTransferTarget;
     private SlotImageMode _slotImageMode = SlotImageMode.Auto;
     private string _snippetTitle = string.Empty;
@@ -49,14 +55,14 @@ public sealed class SnippetEditViewModel : ObservableObject
         SaveSnippetUseCase saveSnippetUseCase,
         DeleteSnippetUseCase deleteSnippetUseCase,
         TransferSnippetUseCase transferSnippetUseCase,
-        DialogService dialogService,
+        DialogAdapter dialogService,
         Action cancel,
         Action<Snippet> afterSave,
         Action afterDelete,
         Action<string> showStatus,
-        ThumbnailService? thumbnailService = null,
-        LoggingService? loggingService = null,
-        SnippetImageService? snippetImageService = null,
+        ImageFileRepository? thumbnailService = null,
+        FileLogger? loggingService = null,
+        SnippetImageResolver? snippetImageService = null,
         IStoredImagePathResolver? storedImagePathResolver = null)
     {
         CategoryId = category.Id;
@@ -82,6 +88,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         _snippetTitle = snippet?.Title ?? string.Empty;
         _content = snippet?.Content ?? string.Empty;
         _actionType = snippet?.ActionType ?? SnippetActionType.PasteText;
+        _pasteShortcutMode = snippet?.PasteShortcutMode ?? PasteShortcutMode.CtrlV;
         _launchPath = snippet?.LaunchPath ?? string.Empty;
         _launchUrl = snippet?.LaunchUrl ?? string.Empty;
         _mediaProvider = snippet?.MediaProvider ?? SnippetMediaProvider.System;
@@ -128,6 +135,9 @@ public sealed class SnippetEditViewModel : ObservableObject
     public IReadOnlyList<SnippetMediaProviderOption> MediaProviderOptions { get; } =
         SnippetMediaProviderOption.All;
 
+    public IReadOnlyList<PasteShortcutModeOption> PasteShortcutModeOptions { get; } =
+        PasteShortcutModeOption.All;
+
     public IReadOnlyList<SnippetMediaCommandOption> MediaCommandOptions
     {
         get => _mediaCommandOptions;
@@ -150,6 +160,12 @@ public sealed class SnippetEditViewModel : ObservableObject
     {
         get => _content;
         set => SetProperty(ref _content, value);
+    }
+
+    public PasteShortcutMode PasteShortcutMode
+    {
+        get => _pasteShortcutMode;
+        set => SetProperty(ref _pasteShortcutMode, value);
     }
 
     public SnippetActionType ActionType
@@ -388,7 +404,8 @@ public sealed class SnippetEditViewModel : ObservableObject
             SelectedMediaProvider,
             SelectedMediaCommand,
             IsSlotEnabled,
-            _originalIsSlotEnabled);
+            _originalIsSlotEnabled,
+            PasteShortcutMode);
     }
 
     private void Cancel()
@@ -464,8 +481,8 @@ public sealed class SnippetEditViewModel : ObservableObject
             if (result.NeedsOverwriteConfirmation)
             {
                 var confirmed = _dialogService.Confirm(
-                    $"?ㅽ뻾 ??ぉ {actionText}",
-                    $"?щ’ {targetSlotKey.GetDisplayText()}???대? '{result.ExistingTargetTitle}' ?ㅽ뻾 ??ぉ???덉뒿?덈떎.\n湲곗〈 ?ㅽ뻾 ??ぉ????뼱?멸퉴??");
+                    $"실행 항목 {actionText}",
+                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetTitle}' 실행 항목이 있습니다.\n기존 실행 항목을 덮어쓸까요?");
                 if (!confirmed)
                 {
                     return;
@@ -749,6 +766,25 @@ public sealed class SnippetMediaCommandOption
     public string Label { get; }
 }
 
+public sealed class PasteShortcutModeOption
+{
+    public static IReadOnlyList<PasteShortcutModeOption> All { get; } =
+    [
+        new(PasteShortcutMode.CtrlV, "기본 붙여넣기 (Ctrl+V)"),
+        new(PasteShortcutMode.CtrlShiftV, "터미널 붙여넣기 (Ctrl+Shift+V)")
+    ];
+
+    public PasteShortcutModeOption(PasteShortcutMode mode, string label)
+    {
+        Mode = mode;
+        Label = label;
+    }
+
+    public PasteShortcutMode Mode { get; }
+
+    public string Label { get; }
+}
+
 public sealed class SnippetMediaProviderOption
 {
     public static IReadOnlyList<SnippetMediaProviderOption> All { get; } =
@@ -767,3 +803,4 @@ public sealed class SnippetMediaProviderOption
 
     public string Label { get; }
 }
+

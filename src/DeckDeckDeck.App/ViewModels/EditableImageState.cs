@@ -1,14 +1,19 @@
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
 internal sealed class EditableImageState
 {
-    private readonly ThumbnailService? _thumbnailService;
+    private readonly ImageFileRepository? _thumbnailService;
     private string? _originalImagePath;
     private string? _originalThumbnailPath;
 
-    public EditableImageState(string? imagePath, string? thumbnailPath, ThumbnailService? thumbnailService)
+    public EditableImageState(string? imagePath, string? thumbnailPath, ImageFileRepository? thumbnailService)
     {
         _thumbnailService = thumbnailService;
         _originalImagePath = imagePath;

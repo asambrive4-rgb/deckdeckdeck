@@ -100,3 +100,4 @@ public partial class App : Application
         _trayIcon = null;
     }
 }
+

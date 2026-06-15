@@ -1,6 +1,11 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 using DeckDeckDeck.App.Views;
 using System.Runtime.InteropServices;
@@ -14,9 +19,9 @@ public sealed class HotkeyMappingTests
     private const int AsyncEventTimeoutMilliseconds = 5000;
 
     [Fact]
-    public void HotkeyServiceRegistersDirectCategorySymbolHotkeys()
+    public void GlobalHotkeyRegistrarRegistersDirectCategorySymbolHotkeys()
     {
-        var registeredSlotKeys = HotkeyService.GetRegisteredHotkeys()
+        var registeredSlotKeys = GlobalHotkeyRegistrar.GetRegisteredHotkeys()
             .Select(hotkey => hotkey.SlotKey)
             .ToArray();
 
@@ -31,7 +36,7 @@ public sealed class HotkeyMappingTests
             Win32Constants.VkControl,
             (int)Win32Constants.VkNumpad0
         };
-        using var service = CreateTestHotkeyService(
+        using var service = CreateTestGlobalHotkeyRegistrar(
             keysDown,
             (_, cancellationToken) =>
             {
@@ -60,7 +65,7 @@ public sealed class HotkeyMappingTests
             Win32Constants.VkControl,
             (int)Win32Constants.VkNumpad0
         };
-        using var service = CreateTestHotkeyService(keysDown);
+        using var service = CreateTestGlobalHotkeyRegistrar(keysDown);
         var events = new List<string>();
 
         service.HotkeyPressed += (_, e) => events.Add($"pressed:{e.SlotKey}");
@@ -85,7 +90,7 @@ public sealed class HotkeyMappingTests
             (int)Win32Constants.VkNumpad0
         };
         var delayStarted = false;
-        using var service = CreateTestHotkeyService(
+        using var service = CreateTestGlobalHotkeyRegistrar(
             keysDown,
             (_, cancellationToken) =>
             {
@@ -115,7 +120,7 @@ public sealed class HotkeyMappingTests
             Win32Constants.VkControl,
             (int)Win32Constants.VkNumpad0
         };
-        using var service = CreateTestHotkeyService(keysDown);
+        using var service = CreateTestGlobalHotkeyRegistrar(keysDown);
         var events = new List<string>();
 
         service.HotkeyPressed += (_, e) => events.Add($"pressed:{e.SlotKey}");
@@ -145,7 +150,7 @@ public sealed class HotkeyMappingTests
             Win32Constants.VkControl,
             (int)Win32Constants.VkNumpad0 + 1
         };
-        using var service = CreateTestHotkeyService(keysDown);
+        using var service = CreateTestGlobalHotkeyRegistrar(keysDown);
         var events = new List<string>();
 
         service.HotkeyPressed += (_, e) => events.Add($"pressed:{e.SlotKey}");
@@ -156,11 +161,11 @@ public sealed class HotkeyMappingTests
         Assert.Equal(["pressed:Numpad1"], events);
     }
 
-    private static HotkeyService CreateTestHotkeyService(
+    private static GlobalHotkeyRegistrar CreateTestGlobalHotkeyRegistrar(
         ISet<int> keysDown,
         Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
     {
-        return new HotkeyService(
+        return new GlobalHotkeyRegistrar(
             TimeSpan.FromMilliseconds(40),
             TimeSpan.FromMilliseconds(5),
             keysDown.Contains,

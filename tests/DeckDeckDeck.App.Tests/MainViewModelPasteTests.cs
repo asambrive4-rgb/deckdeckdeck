@@ -1,6 +1,11 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
-using DeckDeckDeck.App.Services;
+using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Gateways;
+using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 using DeckDeckDeck.App.Views;
 using System.Runtime.InteropServices;
@@ -15,9 +20,9 @@ public sealed class MainViewModelPasteTests
     public void ExistingSnippetSlotPastesInsteadOfOpeningEditor()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Structure", "Make this clearer.", null);
-        var pasteService = new RecordingClipboardPasteService();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Structure", "Make this clearer.", null);
+        var pasteService = new RecordingClipboardPasteGateway();
         var hidden = false;
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
@@ -42,8 +47,8 @@ public sealed class MainViewModelPasteTests
     public void EmptySnippetSlotStillOpensEditor()
     {
         var services = CreateServices();
-        services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        var pasteService = new RecordingClipboardPasteService();
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var pasteService = new RecordingClipboardPasteGateway();
         var enteredEditMode = false;
         var viewModel = CreateMainViewModel(
             services,
@@ -64,12 +69,12 @@ public sealed class MainViewModelPasteTests
     public void PasteSelectionIsCompletedWhenPasteServiceThrows()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Writing", null);
-        services.SnippetService.Create(category.Id, SlotKey.Numpad3, "Structure", "Make this clearer.", null);
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Structure", "Make this clearer.", null);
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
             services,
-            new ThrowingClipboardPasteService(),
+            new ThrowingClipboardPasteGateway(),
             () => new IntPtr(123),
             () => { },
             completePasteSelection: () => completedPasteSelection = true);
@@ -85,8 +90,8 @@ public sealed class MainViewModelPasteTests
     public void LaunchFileSnippetLaunchesInsteadOfPasting()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
-        services.SnippetService.Create(
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Open notes",
@@ -94,8 +99,8 @@ public sealed class MainViewModelPasteTests
             null,
             actionType: SnippetActionType.LaunchFile,
             launchPath: @"C:\notes");
-        var pasteService = new RecordingClipboardPasteService();
-        var launchService = new RecordingFileLaunchService();
+        var pasteService = new RecordingClipboardPasteGateway();
+        var launchService = new RecordingFileLaunchGatewayAdapter();
         var hidden = false;
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
@@ -119,8 +124,8 @@ public sealed class MainViewModelPasteTests
     public void LaunchFileFailureShowsStatusAndKeepsWindowVisible()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Tools", null);
-        services.SnippetService.Create(
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Missing file",
@@ -128,12 +133,12 @@ public sealed class MainViewModelPasteTests
             null,
             actionType: SnippetActionType.LaunchFile,
             launchPath: @"C:\missing.exe");
-        var launchService = new RecordingFileLaunchService { Result = false };
+        var launchService = new RecordingFileLaunchGatewayAdapter { Result = false };
         var hidden = false;
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
             services,
-            new RecordingClipboardPasteService(),
+            new RecordingClipboardPasteGateway(),
             () => new IntPtr(123),
             () => hidden = true,
             completePasteSelection: () => completedPasteSelection = true,
@@ -152,8 +157,8 @@ public sealed class MainViewModelPasteTests
     public void LaunchUrlSnippetLaunchesInsteadOfPasting()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
-        services.SnippetService.Create(
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Web", null);
+        services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Open docs",
@@ -161,8 +166,8 @@ public sealed class MainViewModelPasteTests
             null,
             actionType: SnippetActionType.LaunchUrl,
             launchUrl: "https://example.com/docs");
-        var pasteService = new RecordingClipboardPasteService();
-        var urlLaunchService = new RecordingUrlLaunchService();
+        var pasteService = new RecordingClipboardPasteGateway();
+        var urlLaunchService = new RecordingUrlLaunchGatewayAdapter();
         var hidden = false;
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
@@ -186,8 +191,8 @@ public sealed class MainViewModelPasteTests
     public void MediaActionSnippetExecutesInsteadOfPasting()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
-        services.SnippetService.Create(
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Next track",
@@ -196,8 +201,8 @@ public sealed class MainViewModelPasteTests
             actionType: SnippetActionType.MediaAction,
             mediaProvider: SnippetMediaProvider.System,
             mediaCommand: SnippetMediaCommand.NextTrack);
-        var pasteService = new RecordingClipboardPasteService();
-        var mediaActionService = new RecordingMediaActionService();
+        var pasteService = new RecordingClipboardPasteGateway();
+        var mediaActionService = new RecordingSystemMediaActionGatewayAdapter();
         var hidden = false;
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
@@ -221,8 +226,8 @@ public sealed class MainViewModelPasteTests
     public void SpotifyMediaActionSnippetExecutesSpotifyInsteadOfSystemMediaKeys()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
-        services.SnippetService.Create(
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Shuffle",
@@ -231,9 +236,9 @@ public sealed class MainViewModelPasteTests
             actionType: SnippetActionType.MediaAction,
             mediaProvider: SnippetMediaProvider.Spotify,
             mediaCommand: SnippetMediaCommand.ToggleShuffle);
-        var pasteService = new RecordingClipboardPasteService();
-        var mediaActionService = new RecordingMediaActionService();
-        var spotifyMediaActionService = new RecordingSpotifyMediaActionService();
+        var pasteService = new RecordingClipboardPasteGateway();
+        var mediaActionService = new RecordingSystemMediaActionGatewayAdapter();
+        var spotifyMediaActionGatewayAdapter = new RecordingSpotifyMediaActionGatewayAdapter();
         var hidden = false;
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
@@ -243,14 +248,14 @@ public sealed class MainViewModelPasteTests
             () => hidden = true,
             completePasteSelection: () => completedPasteSelection = true,
             mediaActionService: mediaActionService,
-            spotifyMediaActionService: spotifyMediaActionService);
+            spotifyMediaActionGatewayAdapter: spotifyMediaActionGatewayAdapter);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
         viewModel.SelectSlot(SlotKey.Numpad3);
 
         Assert.Empty(pasteService.Calls);
         Assert.Empty(mediaActionService.Commands);
-        Assert.Equal([SnippetMediaCommand.ToggleShuffle], spotifyMediaActionService.Commands);
+        Assert.Equal([SnippetMediaCommand.ToggleShuffle], spotifyMediaActionGatewayAdapter.Commands);
         Assert.True(hidden);
         Assert.True(completedPasteSelection);
         Assert.Contains("Spotify 명령 실행됨", viewModel.StatusMessage);
@@ -260,8 +265,8 @@ public sealed class MainViewModelPasteTests
     public void SpotifyMediaActionFailureShowsStatusAndKeepsWindowVisible()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
-        services.SnippetService.Create(
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Spotify next",
@@ -270,19 +275,19 @@ public sealed class MainViewModelPasteTests
             actionType: SnippetActionType.MediaAction,
             mediaProvider: SnippetMediaProvider.Spotify,
             mediaCommand: SnippetMediaCommand.NextTrack);
-        var spotifyMediaActionService = new RecordingSpotifyMediaActionService
+        var spotifyMediaActionGatewayAdapter = new RecordingSpotifyMediaActionGatewayAdapter
         {
-            Result = new SpotifyMediaActionResult(false, "Spotify를 다시 연결해 주세요.")
+            Result = new SpotifyMediaActionGatewayResult(false, "Spotify를 다시 연결해 주세요.")
         };
         var hidden = false;
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
             services,
-            new RecordingClipboardPasteService(),
+            new RecordingClipboardPasteGateway(),
             () => new IntPtr(123),
             () => hidden = true,
             completePasteSelection: () => completedPasteSelection = true,
-            spotifyMediaActionService: spotifyMediaActionService);
+            spotifyMediaActionGatewayAdapter: spotifyMediaActionGatewayAdapter);
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
         viewModel.SelectSlot(SlotKey.Numpad3);
@@ -297,8 +302,8 @@ public sealed class MainViewModelPasteTests
     public void MediaActionFailureShowsStatusAndKeepsWindowVisible()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Media", null);
-        services.SnippetService.Create(
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Media", null);
+        services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Mute",
@@ -307,12 +312,12 @@ public sealed class MainViewModelPasteTests
             actionType: SnippetActionType.MediaAction,
             mediaProvider: SnippetMediaProvider.System,
             mediaCommand: SnippetMediaCommand.Mute);
-        var mediaActionService = new RecordingMediaActionService { Result = false };
+        var mediaActionService = new RecordingSystemMediaActionGatewayAdapter { Result = false };
         var hidden = false;
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
             services,
-            new RecordingClipboardPasteService(),
+            new RecordingClipboardPasteGateway(),
             () => new IntPtr(123),
             () => hidden = true,
             completePasteSelection: () => completedPasteSelection = true,
@@ -331,8 +336,8 @@ public sealed class MainViewModelPasteTests
     public void LaunchUrlFailureShowsStatusAndKeepsWindowVisible()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
-        services.SnippetService.Create(
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Web", null);
+        services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Broken site",
@@ -340,12 +345,12 @@ public sealed class MainViewModelPasteTests
             null,
             actionType: SnippetActionType.LaunchUrl,
             launchUrl: "https://example.com");
-        var urlLaunchService = new RecordingUrlLaunchService { Result = false };
+        var urlLaunchService = new RecordingUrlLaunchGatewayAdapter { Result = false };
         var hidden = false;
         var completedPasteSelection = false;
         var viewModel = CreateMainViewModel(
             services,
-            new RecordingClipboardPasteService(),
+            new RecordingClipboardPasteGateway(),
             () => new IntPtr(123),
             () => hidden = true,
             completePasteSelection: () => completedPasteSelection = true,
@@ -364,19 +369,19 @@ public sealed class MainViewModelPasteTests
     public void EmptyLaunchUrlShowsStatusAndDoesNotCallLauncher()
     {
         var services = CreateServices();
-        var category = services.CategoryService.Create(SlotKey.Numpad1, "Web", null);
-        services.SnippetService.Create(
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Web", null);
+        services.SnippetRepository.Create(
             category.Id,
             SlotKey.Numpad3,
             "Empty site",
             string.Empty,
             null,
             actionType: SnippetActionType.LaunchUrl);
-        var urlLaunchService = new RecordingUrlLaunchService();
+        var urlLaunchService = new RecordingUrlLaunchGatewayAdapter();
         var hidden = false;
         var viewModel = CreateMainViewModel(
             services,
-            new RecordingClipboardPasteService(),
+            new RecordingClipboardPasteGateway(),
             () => new IntPtr(123),
             () => hidden = true,
             urlLaunchService: urlLaunchService);
@@ -389,3 +394,5 @@ public sealed class MainViewModelPasteTests
         Assert.Contains("웹 주소 열기 실패", viewModel.StatusMessage);
     }
 }
+
+

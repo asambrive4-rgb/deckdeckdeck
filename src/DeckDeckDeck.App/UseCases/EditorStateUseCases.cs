@@ -6,11 +6,11 @@ namespace DeckDeckDeck.App.UseCases;
 public sealed class LoadCategoryEditorStateUseCase
 {
     private readonly ICategoryRepository _categoryRepository;
-    private readonly ISettingsStore _settingsStore;
+    private readonly ISettingsRepository _settingsStore;
 
     public LoadCategoryEditorStateUseCase(
         ICategoryRepository categoryRepository,
-        ISettingsStore settingsStore)
+        ISettingsRepository settingsStore)
     {
         _categoryRepository = categoryRepository;
         _settingsStore = settingsStore;
@@ -41,11 +41,11 @@ public sealed class LoadCategoryEditorStateUseCase
 public sealed class LoadSnippetEditorStateUseCase
 {
     private readonly ISnippetRepository _snippetRepository;
-    private readonly ISettingsStore _settingsStore;
+    private readonly ISettingsRepository _settingsStore;
 
     public LoadSnippetEditorStateUseCase(
         ISnippetRepository snippetRepository,
-        ISettingsStore settingsStore)
+        ISettingsRepository settingsStore)
     {
         _snippetRepository = snippetRepository;
         _settingsStore = settingsStore;
