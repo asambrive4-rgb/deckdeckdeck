@@ -3,11 +3,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Composition;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
 
@@ -19,17 +14,17 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly Action<Snippet> _afterSave;
     private readonly Action _cancel;
     private readonly DeleteSnippetUseCase _deleteSnippetUseCase;
-    private readonly DialogAdapter _dialogService;
+    private readonly IDialogAdapter _dialogService;
     private readonly EditableImageState _imageState;
-    private readonly FileLogger? _loggingService;
+    private readonly IAppLogger? _loggingService;
     private readonly bool _isSpotifyConnected;
     private bool _originalIsSlotEnabled;
     private readonly SaveSnippetUseCase _saveSnippetUseCase;
     private readonly Guid? _snippetId;
-    private readonly SnippetImageResolver? _snippetImageService;
+    private readonly ISnippetImageResolver? _snippetImageService;
     private readonly Action<string> _showStatus;
     private readonly IStoredImagePathResolver? _storedImagePathResolver;
-    private readonly ImageFileRepository? _thumbnailService;
+    private readonly IImageFileRepository? _thumbnailService;
     private readonly TransferSnippetUseCase _transferSnippetUseCase;
     private AutoIconCacheEntry? _autoIcon;
     private SnippetActionType _actionType = SnippetActionType.PasteText;
@@ -55,14 +50,14 @@ public sealed class SnippetEditViewModel : ObservableObject
         SaveSnippetUseCase saveSnippetUseCase,
         DeleteSnippetUseCase deleteSnippetUseCase,
         TransferSnippetUseCase transferSnippetUseCase,
-        DialogAdapter dialogService,
+        IDialogAdapter dialogService,
         Action cancel,
         Action<Snippet> afterSave,
         Action afterDelete,
         Action<string> showStatus,
-        ImageFileRepository? thumbnailService = null,
-        FileLogger? loggingService = null,
-        SnippetImageResolver? snippetImageService = null,
+        IImageFileRepository? thumbnailService = null,
+        IAppLogger? loggingService = null,
+        ISnippetImageResolver? snippetImageService = null,
         IStoredImagePathResolver? storedImagePathResolver = null)
     {
         CategoryId = category.Id;
@@ -621,7 +616,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             SlotImageMode.Auto when ActionType == SnippetActionType.LaunchFile =>
                 ResolveDisplayPath(_autoIcon?.IconPath),
             SlotImageMode.Auto when ActionType == SnippetActionType.MediaAction =>
-                MediaIconResources.GetIconResourcePath(SelectedMediaCommand),
+                MediaIconResourcePaths.GetIconResourcePath(SelectedMediaCommand),
             _ => null
         };
     }

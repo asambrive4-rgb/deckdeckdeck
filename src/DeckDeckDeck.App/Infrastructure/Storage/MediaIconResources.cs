@@ -1,4 +1,3 @@
-using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -15,33 +14,30 @@ namespace DeckDeckDeck.App.Infrastructure.Storage;
 public static class MediaIconResources
 {
     private const string ResourcePrefix = "resource:";
-    private const string PlayPauseIcon = ResourcePrefix + "Deck.Icon.Media.PlayPause";
-    private const string PreviousTrackIcon = ResourcePrefix + "Deck.Icon.Media.PreviousTrack";
-    private const string NextTrackIcon = ResourcePrefix + "Deck.Icon.Media.NextTrack";
-    private const string StopIcon = ResourcePrefix + "Deck.Icon.Media.Stop";
-    private const string MuteIcon = ResourcePrefix + "Deck.Icon.Media.Mute";
-    private const string VolumeUpIcon = ResourcePrefix + "Deck.Icon.Media.VolumeUp";
-    private const string VolumeDownIcon = ResourcePrefix + "Deck.Icon.Media.VolumeDown";
-    private const string ShuffleIcon = ResourcePrefix + "Deck.Icon.Media.Shuffle";
-    private const string RepeatIcon = ResourcePrefix + "Deck.Icon.Media.Repeat";
+    private static readonly string PlayPauseIcon =
+        MediaIconResourcePaths.GetIconResourcePath(SnippetMediaCommand.PlayPause);
+    private static readonly string PreviousTrackIcon =
+        MediaIconResourcePaths.GetIconResourcePath(SnippetMediaCommand.PreviousTrack);
+    private static readonly string NextTrackIcon =
+        MediaIconResourcePaths.GetIconResourcePath(SnippetMediaCommand.NextTrack);
+    private static readonly string StopIcon =
+        MediaIconResourcePaths.GetIconResourcePath(SnippetMediaCommand.Stop);
+    private static readonly string MuteIcon =
+        MediaIconResourcePaths.GetIconResourcePath(SnippetMediaCommand.Mute);
+    private static readonly string VolumeUpIcon =
+        MediaIconResourcePaths.GetIconResourcePath(SnippetMediaCommand.VolumeUp);
+    private static readonly string VolumeDownIcon =
+        MediaIconResourcePaths.GetIconResourcePath(SnippetMediaCommand.VolumeDown);
+    private static readonly string ShuffleIcon =
+        MediaIconResourcePaths.GetIconResourcePath(SnippetMediaCommand.ToggleShuffle);
+    private static readonly string RepeatIcon =
+        MediaIconResourcePaths.GetIconResourcePath(SnippetMediaCommand.CycleRepeat);
 
     private static readonly IReadOnlyDictionary<string, ImageSource> Images = CreateImages();
 
     public static string GetIconResourcePath(SnippetMediaCommand? command)
     {
-        return command switch
-        {
-            SnippetMediaCommand.PreviousTrack => PreviousTrackIcon,
-            SnippetMediaCommand.NextTrack => NextTrackIcon,
-            SnippetMediaCommand.Stop => StopIcon,
-            SnippetMediaCommand.Mute => MuteIcon,
-            SnippetMediaCommand.VolumeUp => VolumeUpIcon,
-            SnippetMediaCommand.VolumeDown => VolumeDownIcon,
-            SnippetMediaCommand.ToggleShuffle => ShuffleIcon,
-            SnippetMediaCommand.CycleRepeat => RepeatIcon,
-            SnippetMediaCommand.OpenSpotifyAndResume => PlayPauseIcon,
-            _ => PlayPauseIcon
-        };
+        return MediaIconResourcePaths.GetIconResourcePath(command);
     }
 
     public static bool TryGetImage(string value, out ImageSource? image)

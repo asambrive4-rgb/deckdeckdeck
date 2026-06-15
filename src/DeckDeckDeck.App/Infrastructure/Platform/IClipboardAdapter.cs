@@ -1,4 +1,3 @@
-using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -12,11 +11,9 @@ using System.Windows;
 
 namespace DeckDeckDeck.App.Infrastructure.Platform;
 
-public interface IClipboardAdapter
+public interface IClipboardAdapter : IClipboardTextWriter
 {
     IDataObject? GetDataObject();
-
-    void SetText(string text);
 
     void SetDataObject(IDataObject dataObject);
 }

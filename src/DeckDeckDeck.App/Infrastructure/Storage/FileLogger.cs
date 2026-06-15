@@ -1,4 +1,3 @@
-using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -12,7 +11,7 @@ using System.IO;
 
 namespace DeckDeckDeck.App.Infrastructure.Storage;
 
-public sealed class FileLogger
+public sealed class FileLogger : IAppLogger
 {
     private readonly AppStoragePaths _fileStorageService;
 

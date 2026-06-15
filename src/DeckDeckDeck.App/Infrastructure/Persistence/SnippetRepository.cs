@@ -1,4 +1,3 @@
-using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -48,6 +47,46 @@ public sealed class SnippetRepository : ISnippetRepository
     public Snippet Create(
         Guid categoryId,
         SlotKey slotKey,
+        SnippetSaveData data)
+    {
+        using var dbContext = _dbContextFactory.Create();
+
+        var now = DateTime.UtcNow;
+        var storedImageMode = GetStoredSlotImageMode(data.SlotImageMode, data.ImagePath);
+        var snippet = new Snippet
+        {
+            Id = Guid.NewGuid(),
+            CategoryId = categoryId,
+            SlotKey = slotKey,
+            Title = data.Title.Trim(),
+            Content = GetStoredContent(data.ActionType, data.Content),
+            ActionType = data.ActionType,
+            PasteShortcutMode = GetStoredPasteShortcutMode(data.ActionType, data.PasteShortcutMode),
+            LaunchPath = GetStoredLaunchPath(data.ActionType, data.LaunchPath),
+            LaunchUrl = GetStoredLaunchUrl(data.ActionType, data.LaunchUrl),
+            MediaProvider = GetStoredMediaProvider(data.ActionType, data.MediaProvider),
+            MediaCommand = GetStoredMediaCommand(data.ActionType, data.MediaCommand),
+            SlotImageMode = storedImageMode,
+            Description = NormalizeOptionalText(data.Description),
+            ImagePath = data.ImagePath,
+            ThumbnailPath = data.ThumbnailPath,
+            AutoIconPath = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon)?.IconPath,
+            AutoIconSourcePath = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon)?.SourcePath,
+            AutoIconSourceLastWriteTimeUtc = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon)?.SourceLastWriteTimeUtc,
+            AutoIconSourceLength = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon)?.SourceLength,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        dbContext.Snippets.Add(snippet);
+        dbContext.SaveChanges();
+
+        return snippet;
+    }
+
+    public Snippet Create(
+        Guid categoryId,
+        SlotKey slotKey,
         string title,
         string content,
         string? description,
@@ -62,39 +101,23 @@ public sealed class SnippetRepository : ISnippetRepository
         SnippetMediaCommand? mediaCommand = null,
         PasteShortcutMode pasteShortcutMode = PasteShortcutMode.CtrlV)
     {
-        using var dbContext = _dbContextFactory.Create();
-
-        var now = DateTime.UtcNow;
-        var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
-        var snippet = new Snippet
-        {
-            Id = Guid.NewGuid(),
-            CategoryId = categoryId,
-            SlotKey = slotKey,
-            Title = title.Trim(),
-            Content = GetStoredContent(actionType, content),
-            ActionType = actionType,
-            PasteShortcutMode = GetStoredPasteShortcutMode(actionType, pasteShortcutMode),
-            LaunchPath = GetStoredLaunchPath(actionType, launchPath),
-            LaunchUrl = GetStoredLaunchUrl(actionType, launchUrl),
-            MediaProvider = GetStoredMediaProvider(actionType, mediaProvider),
-            MediaCommand = GetStoredMediaCommand(actionType, mediaCommand),
-            SlotImageMode = storedImageMode,
-            Description = NormalizeOptionalText(description),
-            ImagePath = imagePath,
-            ThumbnailPath = thumbnailPath,
-            AutoIconPath = GetStoredAutoIcon(actionType, storedImageMode, autoIcon)?.IconPath,
-            AutoIconSourcePath = GetStoredAutoIcon(actionType, storedImageMode, autoIcon)?.SourcePath,
-            AutoIconSourceLastWriteTimeUtc = GetStoredAutoIcon(actionType, storedImageMode, autoIcon)?.SourceLastWriteTimeUtc,
-            AutoIconSourceLength = GetStoredAutoIcon(actionType, storedImageMode, autoIcon)?.SourceLength,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
-
-        dbContext.Snippets.Add(snippet);
-        dbContext.SaveChanges();
-
-        return snippet;
+        return Create(
+            categoryId,
+            slotKey,
+            new SnippetSaveData(
+                title,
+                content,
+                description,
+                imagePath,
+                thumbnailPath,
+                actionType,
+                launchPath,
+                slotImageMode,
+                autoIcon,
+                launchUrl,
+                mediaProvider,
+                mediaCommand,
+                pasteShortcutMode));
     }
 
     public Snippet Update(Guid id, string title, string content, string? description)
@@ -103,6 +126,36 @@ public sealed class SnippetRepository : ISnippetRepository
 
         var snippet = dbContext.Snippets.First(item => item.Id == id);
         UpdateText(snippet, title, content, description, SnippetActionType.PasteText, null, null);
+
+        dbContext.SaveChanges();
+
+        return snippet;
+    }
+
+    public Snippet Update(
+        Guid id,
+        SnippetSaveData data)
+    {
+        using var dbContext = _dbContextFactory.Create();
+
+        var snippet = dbContext.Snippets.First(item => item.Id == id);
+        UpdateText(
+            snippet,
+            data.Title,
+            data.Content,
+            data.Description,
+            data.ActionType,
+            data.LaunchPath,
+            data.LaunchUrl,
+            data.MediaProvider,
+            data.MediaCommand,
+            data.PasteShortcutMode);
+        var storedImageMode = GetStoredSlotImageMode(data.SlotImageMode, data.ImagePath);
+        var storedAutoIcon = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon);
+        snippet.SlotImageMode = storedImageMode;
+        snippet.ImagePath = data.ImagePath;
+        snippet.ThumbnailPath = data.ThumbnailPath;
+        SetAutoIcon(snippet, storedAutoIcon);
 
         dbContext.SaveChanges();
 
@@ -125,30 +178,22 @@ public sealed class SnippetRepository : ISnippetRepository
         SnippetMediaCommand? mediaCommand = null,
         PasteShortcutMode pasteShortcutMode = PasteShortcutMode.CtrlV)
     {
-        using var dbContext = _dbContextFactory.Create();
-
-        var snippet = dbContext.Snippets.First(item => item.Id == id);
-        UpdateText(
-            snippet,
-            title,
-            content,
-            description,
-            actionType,
-            launchPath,
-            launchUrl,
-            mediaProvider,
-            mediaCommand,
-            pasteShortcutMode);
-        var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
-        var storedAutoIcon = GetStoredAutoIcon(actionType, storedImageMode, autoIcon);
-        snippet.SlotImageMode = storedImageMode;
-        snippet.ImagePath = imagePath;
-        snippet.ThumbnailPath = thumbnailPath;
-        SetAutoIcon(snippet, storedAutoIcon);
-
-        dbContext.SaveChanges();
-
-        return snippet;
+        return Update(
+            id,
+            new SnippetSaveData(
+                title,
+                content,
+                description,
+                imagePath,
+                thumbnailPath,
+                actionType,
+                launchPath,
+                slotImageMode,
+                autoIcon,
+                launchUrl,
+                mediaProvider,
+                mediaCommand,
+                pasteShortcutMode));
     }
 
     public void UpdateAutoIcon(Guid id, AutoIconCacheEntry? autoIcon)

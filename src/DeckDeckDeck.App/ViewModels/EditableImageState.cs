@@ -1,19 +1,14 @@
-using DeckDeckDeck.App.Composition;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
 internal sealed class EditableImageState
 {
-    private readonly ImageFileRepository? _thumbnailService;
+    private readonly IImageFileRepository? _thumbnailService;
     private string? _originalImagePath;
     private string? _originalThumbnailPath;
 
-    public EditableImageState(string? imagePath, string? thumbnailPath, ImageFileRepository? thumbnailService)
+    public EditableImageState(string? imagePath, string? thumbnailPath, IImageFileRepository? thumbnailService)
     {
         _thumbnailService = thumbnailService;
         _originalImagePath = imagePath;
@@ -55,7 +50,7 @@ internal sealed class EditableImageState
             return;
         }
 
-        _thumbnailService.DeleteImageFiles(ImagePath, ThumbnailPath);
+        _thumbnailService.DeleteImageFiles(new ImageFileReference(ImagePath, ThumbnailPath));
     }
 
     public void DeleteOriginalImageIfReplaced()
@@ -65,7 +60,7 @@ internal sealed class EditableImageState
             return;
         }
 
-        _thumbnailService.DeleteImageFiles(_originalImagePath, _originalThumbnailPath);
+        _thumbnailService.DeleteImageFiles(new ImageFileReference(_originalImagePath, _originalThumbnailPath));
     }
 
     public void MarkCurrentAsOriginal()

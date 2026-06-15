@@ -3,11 +3,6 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Composition;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
 
@@ -18,12 +13,12 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Action _cancel;
     private readonly Action _afterSave;
     private readonly ICreateManualBackupUseCase _createManualBackupUseCase;
-    private readonly DialogAdapter _dialogService;
-    private readonly FileLogger? _loggingService;
+    private readonly IDialogAdapter _dialogService;
+    private readonly IAppLogger? _loggingService;
     private readonly IRestoreBackupUseCase _restoreBackupUseCase;
     private readonly ISettingsRepository _settingsStore;
     private readonly Action<string> _showStatus;
-    private readonly IClipboardAdapter _clipboardService;
+    private readonly IClipboardTextWriter _clipboardService;
     private readonly ISpotifyConnectionUseCase _spotifyConnectionUseCase;
     private readonly ISaveSettingsUseCase _saveSettingsUseCase;
     private readonly AppSettings _settings;
@@ -44,12 +39,12 @@ public sealed class SettingsViewModel : ObservableObject
         Action cancel,
         Action afterSave,
         Action<string> showStatus,
-        FileLogger? loggingService = null,
+        IAppLogger? loggingService = null,
         IBackupGateway? backupGateway = null,
-        IAutoBackupCoordinator? autoBackupCoordinator = null,
-        DialogAdapter? dialogService = null,
+        IAutoBackupRequester? autoBackupCoordinator = null,
+        IDialogAdapter? dialogService = null,
         ISpotifyConnectionUseCase? spotifyConnectionUseCase = null,
-        IClipboardAdapter? clipboardService = null,
+        IClipboardTextWriter? clipboardService = null,
         ISaveSettingsUseCase? saveSettingsUseCase = null,
         ICreateManualBackupUseCase? createManualBackupUseCase = null,
         IRestoreBackupUseCase? restoreBackupUseCase = null)
@@ -65,7 +60,7 @@ public sealed class SettingsViewModel : ObservableObject
             ?? new CreateManualBackupUseCase(backupGateway);
         _restoreBackupUseCase = restoreBackupUseCase
             ?? new RestoreBackupUseCase(backupGateway);
-        _dialogService = dialogService ?? new DialogAdapter();
+        _dialogService = dialogService ?? NullDialogAdapter.Instance;
         _clipboardService = clipboardService
             ?? throw new ArgumentNullException(nameof(clipboardService));
         _spotifyConnectionUseCase = spotifyConnectionUseCase
@@ -478,6 +473,45 @@ public sealed class SettingsViewModel : ObservableObject
         return string.IsNullOrWhiteSpace(state.DisplayName)
             ? string.Empty
             : $" ({state.DisplayName})";
+    }
+
+    private sealed class NullDialogAdapter : IDialogAdapter
+    {
+        public static NullDialogAdapter Instance { get; } = new();
+
+        public bool Confirm(string title, string message)
+        {
+            return false;
+        }
+
+        public void ShowInformation(string title, string message)
+        {
+        }
+
+        public string? SelectImageFile()
+        {
+            return null;
+        }
+
+        public string? SelectLaunchFile()
+        {
+            return null;
+        }
+
+        public string? SelectLaunchFolder()
+        {
+            return null;
+        }
+
+        public string? SelectBackupFolder()
+        {
+            return null;
+        }
+
+        public string? SelectBackupZipFile()
+        {
+            return null;
+        }
     }
 }
 

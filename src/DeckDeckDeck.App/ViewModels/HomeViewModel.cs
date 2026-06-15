@@ -1,9 +1,4 @@
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Composition;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
@@ -17,8 +12,8 @@ public sealed class HomeViewModel
     private readonly Action<SlotKey> _createCategory;
 
     public HomeViewModel(
-        CategoryRepository categoryService,
-        SettingsRepository settingsService,
+        ICategoryRepository categoryService,
+        ISettingsRepository settingsService,
         SlotGridViewModelFactory slotGridViewModelFactory,
         Action<Category> openCategory,
         Action<Category> editCategory,

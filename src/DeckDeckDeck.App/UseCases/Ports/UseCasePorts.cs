@@ -40,38 +40,9 @@ public interface ISnippetRepository
 
     Snippet? GetById(Guid id);
 
-    Snippet Create(
-        Guid categoryId,
-        SlotKey slotKey,
-        string title,
-        string content,
-        string? description,
-        string? imagePath = null,
-        string? thumbnailPath = null,
-        SnippetActionType actionType = SnippetActionType.PasteText,
-        string? launchPath = null,
-        SlotImageMode slotImageMode = SlotImageMode.Auto,
-        AutoIconCacheEntry? autoIcon = null,
-        string? launchUrl = null,
-        SnippetMediaProvider? mediaProvider = null,
-        SnippetMediaCommand? mediaCommand = null,
-        PasteShortcutMode pasteShortcutMode = PasteShortcutMode.CtrlV);
+    Snippet Create(Guid categoryId, SlotKey slotKey, SnippetSaveData data);
 
-    Snippet Update(
-        Guid id,
-        string title,
-        string content,
-        string? description,
-        string? imagePath,
-        string? thumbnailPath,
-        SnippetActionType actionType = SnippetActionType.PasteText,
-        string? launchPath = null,
-        SlotImageMode slotImageMode = SlotImageMode.Auto,
-        AutoIconCacheEntry? autoIcon = null,
-        string? launchUrl = null,
-        SnippetMediaProvider? mediaProvider = null,
-        SnippetMediaCommand? mediaCommand = null,
-        PasteShortcutMode pasteShortcutMode = PasteShortcutMode.CtrlV);
+    Snippet Update(Guid id, SnippetSaveData data);
 
     ImageFileReference Delete(Guid id);
 
@@ -87,7 +58,11 @@ public interface ISettingsRepository
 {
     AppSettings Load();
 
+    void EnsureDefaults();
+
     void Save(AppSettings settings);
+
+    void SaveWindowPlacement(double left, double top, string screenDeviceName);
 
     void SetCategorySlotEnabled(SlotKey slotKey, bool enabled);
 
@@ -113,6 +88,54 @@ public interface IBackupGateway
 public interface IAutoBackupRequester
 {
     void RequestAutoBackup();
+}
+
+public interface IAutoBackupCoordinator : IAutoBackupRequester
+{
+}
+
+public interface IDialogAdapter
+{
+    bool Confirm(string title, string message);
+
+    void ShowInformation(string title, string message);
+
+    string? SelectImageFile();
+
+    string? SelectLaunchFile();
+
+    string? SelectLaunchFolder();
+
+    string? SelectBackupFolder();
+
+    string? SelectBackupZipFile();
+}
+
+public interface IAppLogger
+{
+    void Log(string message, Exception? exception = null);
+}
+
+public interface IStoredImagePathResolver
+{
+    string? ResolveDisplayPath(string? storedPath);
+
+    bool FileExists(string? storedPath);
+}
+
+public interface ISnippetImageResolver
+{
+    string? GetDisplayImagePath(Snippet? snippet);
+
+    AutoIconCacheEntry? PrepareAutoIcon(
+        SnippetActionType actionType,
+        string? launchPath,
+        AutoIconCacheEntry? current);
+}
+
+public interface IClipboardTextWriter
+{
+    void SetText(string text);
 }
 
 public interface IClipboardPasteGateway
@@ -158,6 +181,21 @@ public interface ISpotifyConnectionGateway
 public sealed record ImageFileReference(string? ImagePath, string? ThumbnailPath);
 
 public sealed record StoredImageReference(string ImagePath, string ThumbnailPath);
+
+public sealed record SnippetSaveData(
+    string Title,
+    string Content,
+    string? Description,
+    string? ImagePath,
+    string? ThumbnailPath,
+    SnippetActionType ActionType = SnippetActionType.PasteText,
+    string? LaunchPath = null,
+    SlotImageMode SlotImageMode = SlotImageMode.Auto,
+    AutoIconCacheEntry? AutoIcon = null,
+    string? LaunchUrl = null,
+    SnippetMediaProvider? MediaProvider = null,
+    SnippetMediaCommand? MediaCommand = null,
+    PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV);
 
 public sealed record CategoryTransferRepositoryResult(
     Category Category,

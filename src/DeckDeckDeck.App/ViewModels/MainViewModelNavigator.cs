@@ -1,32 +1,27 @@
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Composition;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
-using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
 internal sealed class MainViewModelNavigator
 {
+    private readonly MainViewModelNavigatorDependencies _dependencies;
     private readonly Action _enterEditMode;
     private readonly IAutoBackupCoordinator? _autoBackupCoordinator;
     private readonly Func<Snippet, Task> _pasteSnippet;
-    private readonly AppComposition _services;
     private readonly Action<string> _showStatus;
     private readonly Action<object> _showViewModel;
 
     public MainViewModelNavigator(
-        AppComposition services,
+        MainViewModelNavigatorDependencies dependencies,
         Action<object> showViewModel,
         Action<string> showStatus,
         Action enterEditMode,
         Func<Snippet, Task> pasteSnippet,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
-        _services = services;
+        _dependencies = dependencies;
         _showViewModel = showViewModel;
         _showStatus = showStatus;
         _enterEditMode = enterEditMode;
@@ -37,9 +32,9 @@ internal sealed class MainViewModelNavigator
     public void ShowHome()
     {
         _showViewModel(new HomeViewModel(
-            _services.CategoryRepository,
-            _services.SettingsRepository,
-            _services.SlotGridViewModelFactory,
+            _dependencies.CategoryRepository,
+            _dependencies.SettingsRepository,
+            _dependencies.SlotGridViewModelFactory,
             OpenCategory,
             EditCategory,
             CreateCategory,
@@ -58,14 +53,14 @@ internal sealed class MainViewModelNavigator
             CreateSaveCategoryUseCase(),
             CreateDeleteCategoryUseCase(),
             CreateTransferCategoryUseCase(),
-            _services.DialogAdapter,
+            _dependencies.DialogAdapter,
             ShowHome,
             _ => ShowHome(),
             ShowHome,
             _showStatus,
-            _services.ImageFileRepository,
-            _services.FileLogger,
-            _services.StoredImagePathResolver));
+            _dependencies.ImageFileRepository,
+            _dependencies.Logger,
+            _dependencies.StoredImagePathResolver));
         _showStatus($"슬롯 {slotKey.GetDisplayText()}에 새 카테고리 만들기");
     }
 
@@ -80,14 +75,14 @@ internal sealed class MainViewModelNavigator
             CreateSaveCategoryUseCase(),
             CreateDeleteCategoryUseCase(),
             CreateTransferCategoryUseCase(),
-            _services.DialogAdapter,
+            _dependencies.DialogAdapter,
             ShowHome,
             _ => ShowHome(),
             ShowHome,
             _showStatus,
-            _services.ImageFileRepository,
-            _services.FileLogger,
-            _services.StoredImagePathResolver));
+            _dependencies.ImageFileRepository,
+            _dependencies.Logger,
+            _dependencies.StoredImagePathResolver));
         _showStatus($"{category.Name} 편집");
     }
 
@@ -95,9 +90,9 @@ internal sealed class MainViewModelNavigator
     {
         _showViewModel(new CategoryViewModel(
             category,
-            _services.SnippetRepository,
-            _services.SettingsRepository,
-            _services.SlotGridViewModelFactory,
+            _dependencies.SnippetRepository,
+            _dependencies.SettingsRepository,
+            _dependencies.SlotGridViewModelFactory,
             ShowHome,
             () => ShowSettings(() => OpenCategoryById(category.Id)),
             EditSnippet,
@@ -107,7 +102,7 @@ internal sealed class MainViewModelNavigator
 
     private void OpenCategoryById(Guid categoryId)
     {
-        var category = _services.CategoryRepository.GetById(categoryId);
+        var category = _dependencies.CategoryRepository.GetById(categoryId);
 
         if (category is null)
         {
@@ -130,15 +125,15 @@ internal sealed class MainViewModelNavigator
             CreateSaveSnippetUseCase(),
             CreateDeleteSnippetUseCase(),
             CreateTransferSnippetUseCase(),
-            _services.DialogAdapter,
+            _dependencies.DialogAdapter,
             () => OpenCategoryById(category.Id),
             _ => OpenCategoryById(category.Id),
             () => OpenCategoryById(category.Id),
             _showStatus,
-            _services.ImageFileRepository,
-            _services.FileLogger,
-            _services.SnippetImageResolver,
-            _services.StoredImagePathResolver));
+            _dependencies.ImageFileRepository,
+            _dependencies.Logger,
+            _dependencies.SnippetImageResolver,
+            _dependencies.StoredImagePathResolver));
         _showStatus(snippet is null
             ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
             : $"{snippet.Title} 편집");
@@ -147,66 +142,66 @@ internal sealed class MainViewModelNavigator
     private SaveCategoryUseCase CreateSaveCategoryUseCase()
     {
         return new SaveCategoryUseCase(
-            _services.CategoryRepository,
-            _services.SettingsRepository,
+            _dependencies.CategoryRepository,
+            _dependencies.SettingsRepository,
             _autoBackupCoordinator);
     }
 
     private LoadCategoryEditorStateUseCase CreateLoadCategoryEditorStateUseCase()
     {
         return new LoadCategoryEditorStateUseCase(
-            _services.CategoryRepository,
-            _services.SettingsRepository);
+            _dependencies.CategoryRepository,
+            _dependencies.SettingsRepository);
     }
 
     private DeleteCategoryUseCase CreateDeleteCategoryUseCase()
     {
         return new DeleteCategoryUseCase(
-            _services.CategoryRepository,
-            _services.ImageFileRepository,
+            _dependencies.CategoryRepository,
+            _dependencies.ImageFileRepository,
             _autoBackupCoordinator);
     }
 
     private TransferCategoryUseCase CreateTransferCategoryUseCase()
     {
         return new TransferCategoryUseCase(
-            _services.CategoryRepository,
-            _services.SettingsRepository,
+            _dependencies.CategoryRepository,
+            _dependencies.SettingsRepository,
             CreateSaveCategoryUseCase(),
-            _services.ImageFileRepository,
+            _dependencies.ImageFileRepository,
             _autoBackupCoordinator);
     }
 
     private SaveSnippetUseCase CreateSaveSnippetUseCase()
     {
         return new SaveSnippetUseCase(
-            _services.SnippetRepository,
-            _services.SettingsRepository,
+            _dependencies.SnippetRepository,
+            _dependencies.SettingsRepository,
             _autoBackupCoordinator);
     }
 
     private LoadSnippetEditorStateUseCase CreateLoadSnippetEditorStateUseCase()
     {
         return new LoadSnippetEditorStateUseCase(
-            _services.SnippetRepository,
-            _services.SettingsRepository);
+            _dependencies.SnippetRepository,
+            _dependencies.SettingsRepository);
     }
 
     private DeleteSnippetUseCase CreateDeleteSnippetUseCase()
     {
         return new DeleteSnippetUseCase(
-            _services.SnippetRepository,
-            _services.ImageFileRepository,
+            _dependencies.SnippetRepository,
+            _dependencies.ImageFileRepository,
             _autoBackupCoordinator);
     }
 
     private TransferSnippetUseCase CreateTransferSnippetUseCase()
     {
         return new TransferSnippetUseCase(
-            _services.SnippetRepository,
-            _services.SettingsRepository,
+            _dependencies.SnippetRepository,
+            _dependencies.SettingsRepository,
             CreateSaveSnippetUseCase(),
-            _services.ImageFileRepository,
+            _dependencies.ImageFileRepository,
             _autoBackupCoordinator);
     }
 
@@ -214,17 +209,16 @@ internal sealed class MainViewModelNavigator
     {
         _enterEditMode();
         _showViewModel(new SettingsViewModel(
-            _services.SettingsRepository,
+            _dependencies.SettingsRepository,
             returnTo,
             returnTo,
             _showStatus,
-            _services.FileLogger,
-            _services.BackupGateway,
+            _dependencies.Logger,
+            _dependencies.BackupGateway,
             _autoBackupCoordinator,
-            _services.DialogAdapter,
-            _services.SpotifyConnectionUseCase,
-            _services.ClipboardAdapter));
+            _dependencies.DialogAdapter,
+            _dependencies.SpotifyConnectionUseCase,
+            _dependencies.ClipboardTextWriter));
         _showStatus("설정");
     }
 }
-

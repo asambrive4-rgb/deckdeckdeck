@@ -80,7 +80,7 @@ internal sealed record AppComposition(
             storedImagePathResolver,
             fileLogger,
             imageFileRepository,
-            new SlotGridViewModelFactory(storedImagePathResolver),
+            new SlotGridViewModelFactory(storedImagePathResolver, snippetImageResolver),
             CreateExecuteSnippetActionUseCase(
                 clipboardPasteGateway,
                 fileLaunchGatewayAdapter,
@@ -142,7 +142,7 @@ internal sealed record AppComposition(
             effectiveStoredImagePathResolver,
             fileLogger,
             imageFileRepository,
-            slotGridViewModelFactory,
+            new SlotGridViewModelFactory(effectiveStoredImagePathResolver, snippetImageResolver),
             CreateExecuteSnippetActionUseCase(
                 effectiveClipboardPasteGateway,
                 effectiveFileLaunchGatewayAdapter,

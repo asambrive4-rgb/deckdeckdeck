@@ -1,4 +1,3 @@
-using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -12,7 +11,7 @@ using System.IO;
 
 namespace DeckDeckDeck.App.Infrastructure.Storage;
 
-public sealed class SnippetImageResolver
+public sealed class SnippetImageResolver : ISnippetImageResolver
 {
     private readonly FileIconCacheRepository _fileIconCacheService;
     private readonly IStoredImagePathResolver _storedImagePathResolver;
@@ -62,7 +61,7 @@ public sealed class SnippetImageResolver
                 && CanDisplayStoredPath(snippet.AutoIconPath, storedImagePathResolver) =>
                 ResolveDisplayPath(snippet.AutoIconPath, storedImagePathResolver),
             SlotImageMode.Auto when snippet.ActionType == SnippetActionType.MediaAction =>
-                MediaIconResources.GetIconResourcePath(snippet.MediaCommand),
+                MediaIconResourcePaths.GetIconResourcePath(snippet.MediaCommand),
             _ => null
         };
     }

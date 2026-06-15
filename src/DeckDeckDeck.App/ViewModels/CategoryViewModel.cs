@@ -1,11 +1,6 @@
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Composition;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
@@ -18,8 +13,8 @@ public sealed class CategoryViewModel
 
     public CategoryViewModel(
         Category category,
-        SnippetRepository snippetService,
-        SettingsRepository settingsService,
+        ISnippetRepository snippetService,
+        ISettingsRepository settingsService,
         SlotGridViewModelFactory slotGridViewModelFactory,
         Action showHome,
         Action showSettings,

@@ -1,21 +1,21 @@
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Composition;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
+using System.IO;
 
 namespace DeckDeckDeck.App.ViewModels;
 
 public sealed class SlotGridViewModelFactory
 {
     private readonly IStoredImagePathResolver? _storedImagePathResolver;
+    private readonly ISnippetImageResolver? _snippetImageResolver;
 
-    public SlotGridViewModelFactory(IStoredImagePathResolver? storedImagePathResolver = null)
+    public SlotGridViewModelFactory(
+        IStoredImagePathResolver? storedImagePathResolver = null,
+        ISnippetImageResolver? snippetImageResolver = null)
     {
         _storedImagePathResolver = storedImagePathResolver;
+        _snippetImageResolver = snippetImageResolver;
     }
 
     public NumpadGridViewModel BuildCategoryGrid(
@@ -50,7 +50,7 @@ public sealed class SlotGridViewModelFactory
         return new NumpadGridViewModel(SlotKeyCatalog.All.Select(slotKey =>
         {
             snippetsBySlot.TryGetValue(slotKey, out var snippet);
-            var thumbnailPath = SnippetImageResolver.GetStoredDisplayImagePath(snippet, _storedImagePathResolver);
+            var thumbnailPath = ResolveSnippetDisplayPath(snippet);
             return new SlotViewModel(
                 slotKey,
                 snippet?.Title,
@@ -69,5 +69,36 @@ public sealed class SlotGridViewModelFactory
         }
 
         return _storedImagePathResolver.ResolveDisplayPath(path);
+    }
+
+    private string? ResolveSnippetDisplayPath(Snippet? snippet)
+    {
+        if (_snippetImageResolver is not null)
+        {
+            return _snippetImageResolver.GetDisplayImagePath(snippet);
+        }
+
+        if (snippet is null)
+        {
+            return null;
+        }
+
+        return snippet.SlotImageMode switch
+        {
+            SlotImageMode.Custom => ResolveDisplayPath(snippet.ThumbnailPath),
+            SlotImageMode.Auto when snippet.ActionType == SnippetActionType.LaunchFile
+                && !string.IsNullOrWhiteSpace(snippet.AutoIconPath)
+                && CanDisplayStoredPath(snippet.AutoIconPath) =>
+                ResolveDisplayPath(snippet.AutoIconPath),
+            SlotImageMode.Auto when snippet.ActionType == SnippetActionType.MediaAction =>
+                MediaIconResourcePaths.GetIconResourcePath(snippet.MediaCommand),
+            _ => null
+        };
+    }
+
+    private bool CanDisplayStoredPath(string storedPath)
+    {
+        return _storedImagePathResolver?.FileExists(storedPath) == true
+            || (Path.IsPathRooted(storedPath) && File.Exists(storedPath));
     }
 }

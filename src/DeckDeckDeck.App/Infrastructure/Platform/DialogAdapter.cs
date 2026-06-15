@@ -1,4 +1,3 @@
-using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -13,7 +12,7 @@ using Microsoft.Win32;
 
 namespace DeckDeckDeck.App.Infrastructure.Platform;
 
-public class DialogAdapter
+public class DialogAdapter : IDialogAdapter
 {
     public virtual bool Confirm(string title, string message)
     {

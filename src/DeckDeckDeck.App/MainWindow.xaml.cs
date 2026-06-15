@@ -34,7 +34,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         UseApplicationIcon();
         WindowStartupLocation = WindowStartupLocation.Manual;
-        DataContext = new MainViewModel(
+        DataContext = MainViewModelFactory.CreateDefault(
             () => _lastPasteTargetWindowHandle,
             HideAfterPaste,
             EnterEditMode,

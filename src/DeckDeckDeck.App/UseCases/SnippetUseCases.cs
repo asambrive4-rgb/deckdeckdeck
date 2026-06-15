@@ -57,38 +57,24 @@ public sealed class SaveSnippetUseCase
             return SaveSnippetResult.Failure(slotSaveResult.ErrorMessage!);
         }
 
+        var saveData = new SnippetSaveData(
+            request.Title,
+            request.Content,
+            request.Description,
+            request.ImagePath,
+            request.ThumbnailPath,
+            request.ActionType,
+            request.LaunchPath,
+            request.SlotImageMode,
+            request.AutoIcon,
+            validation.NormalizedLaunchUrl,
+            validation.MediaProvider,
+            validation.MediaCommand,
+            request.PasteShortcutMode);
+
         var snippet = request.SnippetId.HasValue
-            ? _snippetRepository.Update(
-                request.SnippetId.Value,
-                request.Title,
-                request.Content,
-                request.Description,
-                request.ImagePath,
-                request.ThumbnailPath,
-                request.ActionType,
-                request.LaunchPath,
-                request.SlotImageMode,
-                request.AutoIcon,
-                validation.NormalizedLaunchUrl,
-                validation.MediaProvider,
-                validation.MediaCommand,
-                request.PasteShortcutMode)
-            : _snippetRepository.Create(
-                request.CategoryId,
-                request.SlotKey,
-                request.Title,
-                request.Content,
-                request.Description,
-                request.ImagePath,
-                request.ThumbnailPath,
-                request.ActionType,
-                request.LaunchPath,
-                request.SlotImageMode,
-                request.AutoIcon,
-                validation.NormalizedLaunchUrl,
-                validation.MediaProvider,
-                validation.MediaCommand,
-                request.PasteShortcutMode);
+            ? _snippetRepository.Update(request.SnippetId.Value, saveData)
+            : _snippetRepository.Create(request.CategoryId, request.SlotKey, saveData);
 
         if (requestAutoBackup)
         {

@@ -2,11 +2,6 @@ using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.Composition;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
 
@@ -18,15 +13,15 @@ public sealed class CategoryEditViewModel : ObservableObject
     private readonly Action<Category> _afterSave;
     private readonly Action _cancel;
     private readonly DeleteCategoryUseCase _deleteCategoryUseCase;
-    private readonly DialogAdapter _dialogService;
+    private readonly IDialogAdapter _dialogService;
     private readonly EditableImageState _imageState;
-    private readonly FileLogger? _loggingService;
+    private readonly IAppLogger? _loggingService;
     private readonly Guid? _categoryId;
     private readonly IStoredImagePathResolver? _storedImagePathResolver;
     private bool _originalIsSlotEnabled;
     private readonly SaveCategoryUseCase _saveCategoryUseCase;
     private readonly Action<string> _showStatus;
-    private readonly ImageFileRepository? _thumbnailService;
+    private readonly IImageFileRepository? _thumbnailService;
     private readonly TransferCategoryUseCase _transferCategoryUseCase;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
@@ -41,13 +36,13 @@ public sealed class CategoryEditViewModel : ObservableObject
         SaveCategoryUseCase saveCategoryUseCase,
         DeleteCategoryUseCase deleteCategoryUseCase,
         TransferCategoryUseCase transferCategoryUseCase,
-        DialogAdapter dialogService,
+        IDialogAdapter dialogService,
         Action cancel,
         Action<Category> afterSave,
         Action afterDelete,
         Action<string> showStatus,
-        ImageFileRepository? thumbnailService = null,
-        FileLogger? loggingService = null,
+        IImageFileRepository? thumbnailService = null,
+        IAppLogger? loggingService = null,
         IStoredImagePathResolver? storedImagePathResolver = null)
     {
         SlotKey = slotKey;

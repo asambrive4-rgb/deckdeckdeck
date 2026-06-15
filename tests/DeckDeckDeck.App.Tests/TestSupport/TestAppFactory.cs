@@ -5,6 +5,7 @@ using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 using System.Windows;
@@ -67,23 +68,30 @@ internal static class TestAppFactory
             services.CategoryRepository,
             new DialogAdapter(),
             services.SettingsRepository,
-            new SlotGridViewModelFactory(services.StoredImagePathResolver),
+            new SlotGridViewModelFactory(services.StoredImagePathResolver, services.SnippetImageResolver),
             services.SnippetRepository,
-            clipboardPasteService,
+            clipboardPasteService ?? new RecordingClipboardPasteGateway(),
+            fileLaunchService ?? new RecordingFileLaunchGatewayAdapter(),
+            urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter(),
+            mediaActionService ?? new RecordingSystemMediaActionGatewayAdapter(),
+            spotifyMediaActionGatewayAdapter ?? new RecordingSpotifyMediaActionGatewayAdapter(),
+            new SpotifyConnectionUseCase(
+                services.SettingsRepository,
+                spotifyConnectionService
+                    ?? new SpotifyConnectionGatewayAdapter(
+                        services.SettingsRepository,
+                        urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter()),
+                urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter()),
+            new FakeClipboardAdapter(null),
             getPasteTargetWindowHandle,
             hideWindowAfterPaste,
             enterEditMode,
             completePasteSelection,
             createPasteSelectionCompletion,
             loggingService: services.FileLogger,
-            thumbnailService: services.ImageFileRepository,
-            fileLaunchService: fileLaunchService,
-            urlLaunchService: urlLaunchService,
-            mediaActionService: mediaActionService,
-            spotifyConnectionService: spotifyConnectionService,
-            spotifyMediaActionGatewayAdapter: spotifyMediaActionGatewayAdapter,
-            snippetImageService: services.SnippetImageResolver,
-            backupService: services.BackupGateway,
+            imageFileRepository: services.ImageFileRepository,
+            snippetImageResolver: services.SnippetImageResolver,
+            backupGateway: services.BackupGateway,
             autoBackupCoordinator: autoBackupCoordinator,
             storedImagePathResolver: services.StoredImagePathResolver);
     }
