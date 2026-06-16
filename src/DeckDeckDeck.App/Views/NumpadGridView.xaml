@@ -10,108 +10,139 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ItemsControl ItemsSource="{Binding Slots}">
-        <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                </Grid>
-            </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemContainerStyle>
-            <Style TargetType="{x:Type ContentPresenter}">
-                <Setter Property="Grid.Row" Value="{Binding Row}" />
-                <Setter Property="Grid.Column" Value="{Binding Column}" />
-                <Setter Property="Grid.RowSpan" Value="{Binding RowSpan}" />
-                <Setter Property="Grid.ColumnSpan" Value="{Binding ColumnSpan}" />
-            </Style>
-        </ItemsControl.ItemContainerStyle>
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <Grid>
-                    <Button Command="{Binding SelectCommand}"
-                            Style="{StaticResource Deck.SlotMainButtonStyle}">
-                        <Button.InputBindings>
-                            <MouseBinding Command="{Binding EditCommand}"
-                                          MouseAction="RightClick" />
-                        </Button.InputBindings>
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
+        <ItemsControl Grid.RowSpan="5"
+                      Grid.ColumnSpan="4"
+                      ItemsSource="{Binding Slots}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemContainerStyle>
+                <Style TargetType="{x:Type ContentPresenter}">
+                    <Setter Property="Grid.Row" Value="{Binding Row}" />
+                    <Setter Property="Grid.Column" Value="{Binding Column}" />
+                    <Setter Property="Grid.RowSpan" Value="{Binding RowSpan}" />
+                    <Setter Property="Grid.ColumnSpan" Value="{Binding ColumnSpan}" />
+                </Style>
+            </ItemsControl.ItemContainerStyle>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Button Command="{Binding SelectCommand}"
+                                Style="{StaticResource Deck.SlotMainButtonStyle}">
+                            <Button.InputBindings>
+                                <MouseBinding Command="{Binding EditCommand}"
+                                              MouseAction="RightClick" />
+                            </Button.InputBindings>
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
 
-                                <TextBlock Style="{StaticResource Deck.SlotKeyTextStyle}"
-                                           Text="{Binding KeyText}" />
-                                <TextBlock x:Name="HeaderTitleTextBlock"
-                                           Grid.Column="1"
-                                           Margin="6,0,24,0"
-                                           Style="{StaticResource Deck.SlotTitleWithThumbnailTextStyle}"
-                                           Text="{Binding Title}"
-                                           Visibility="Collapsed" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Style="{StaticResource Deck.SlotKeyTextStyle}"
+                                               Text="{Binding KeyText}" />
+                                    <TextBlock x:Name="HeaderTitleTextBlock"
+                                               Grid.Column="1"
+                                               Margin="6,0,24,0"
+                                               Style="{StaticResource Deck.SlotTitleWithThumbnailTextStyle}"
+                                               Text="{Binding Title}"
+                                               Visibility="Collapsed" />
+                                </Grid>
+
+                                <Grid Grid.Row="1"
+                                      Margin="0,2,0,0"
+                                      VerticalAlignment="Center">
+                                    <Border x:Name="ThumbnailFrame"
+                                            Style="{StaticResource Deck.SlotThumbnailFrameBorderStyle}">
+                                        <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=42}"
+                                               Width="42"
+                                               Height="42"
+                                               Stretch="UniformToFill">
+                                            <Image.OpacityMask>
+                                                <VisualBrush Stretch="Fill">
+                                                    <VisualBrush.Visual>
+                                                        <Border Width="42"
+                                                                Height="42"
+                                                                Background="Black"
+                                                                CornerRadius="{StaticResource Deck.Radius.Thumbnail}" />
+                                                    </VisualBrush.Visual>
+                                                </VisualBrush>
+                                            </Image.OpacityMask>
+                                        </Image>
+                                    </Border>
+                                    <TextBlock x:Name="DisplayTextBlock"
+                                               Style="{StaticResource Deck.SlotTitleTextStyle}"
+                                               LineHeight="20"
+                                               LineStackingStrategy="BlockLineHeight"
+                                               MaxHeight="40"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding DisplayText}" />
+                                </Grid>
                             </Grid>
+                        </Button>
 
-                            <Grid Grid.Row="1"
-                                  Margin="0,2,0,0"
-                                  VerticalAlignment="Center">
-                                <Border x:Name="ThumbnailFrame"
-                                        Style="{StaticResource Deck.SlotThumbnailFrameBorderStyle}">
-                                    <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=42}"
-                                           Width="42"
-                                           Height="42"
-                                           Stretch="UniformToFill">
-                                        <Image.OpacityMask>
-                                            <VisualBrush Stretch="Fill">
-                                                <VisualBrush.Visual>
-                                                    <Border Width="42"
-                                                            Height="42"
-                                                            Background="Black"
-                                                            CornerRadius="{StaticResource Deck.Radius.Thumbnail}" />
-                                                </VisualBrush.Visual>
-                                            </VisualBrush>
-                                        </Image.OpacityMask>
-                                    </Image>
-                                </Border>
-                                <TextBlock x:Name="DisplayTextBlock"
-                                           Style="{StaticResource Deck.SlotTitleTextStyle}"
-                                           LineHeight="20"
-                                           LineStackingStrategy="BlockLineHeight"
-                                           MaxHeight="40"
-                                           TextWrapping="Wrap"
-                                           Text="{Binding DisplayText}" />
-                            </Grid>
-                        </Grid>
-                    </Button>
+                        <Button Command="{Binding EditCommand}"
+                                Style="{StaticResource Deck.SlotEditButtonStyle}" />
+                    </Grid>
+                    <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding HasThumbnail}" Value="True">
+                            <Setter TargetName="ThumbnailFrame" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="DisplayTextBlock" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="HeaderTitleTextBlock" Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
-                    <Button Command="{Binding EditCommand}"
-                            Style="{StaticResource Deck.SlotEditButtonStyle}" />
-                </Grid>
-                <DataTemplate.Triggers>
-                    <DataTrigger Binding="{Binding HasThumbnail}" Value="True">
-                        <Setter TargetName="ThumbnailFrame" Property="Visibility" Value="Visible" />
-                        <Setter TargetName="DisplayTextBlock" Property="Visibility" Value="Collapsed" />
-                        <Setter TargetName="HeaderTitleTextBlock" Property="Visibility" Value="Visible" />
-                    </DataTrigger>
-                </DataTemplate.Triggers>
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
+        <Button Grid.Row="0"
+                Grid.Column="0"
+                Focusable="False"
+                IsHitTestVisible="False"
+                Style="{StaticResource Deck.SlotMainButtonStyle}">
+            <TextBlock Style="{StaticResource Deck.SlotTitleTextStyle}"
+                       FontSize="13"
+                       HorizontalAlignment="Center"
+                       Text="Hotkey"
+                       TextAlignment="Center"
+                       TextWrapping="NoWrap" />
+        </Button>
+    </Grid>
 </UserControl>

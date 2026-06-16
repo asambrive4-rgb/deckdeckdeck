@@ -85,10 +85,10 @@ public static class SlotKeyCatalog
     {
         return slotKey switch
         {
-            SlotKey.NumpadDivide or SlotKey.Numpad7 or SlotKey.Numpad4 or SlotKey.Numpad1 or SlotKey.Numpad0 => 0,
-            SlotKey.NumpadMultiply or SlotKey.Numpad8 or SlotKey.Numpad5 or SlotKey.Numpad2 => 1,
-            SlotKey.NumpadSubtract or SlotKey.Numpad9 or SlotKey.Numpad6 or SlotKey.Numpad3 or SlotKey.NumpadDecimal => 2,
-            SlotKey.NumpadAdd => 3,
+            SlotKey.Numpad7 or SlotKey.Numpad4 or SlotKey.Numpad1 or SlotKey.Numpad0 => 0,
+            SlotKey.NumpadDivide or SlotKey.Numpad8 or SlotKey.Numpad5 or SlotKey.Numpad2 => 1,
+            SlotKey.NumpadMultiply or SlotKey.Numpad9 or SlotKey.Numpad6 or SlotKey.Numpad3 or SlotKey.NumpadDecimal => 2,
+            SlotKey.NumpadSubtract or SlotKey.NumpadAdd => 3,
             _ => throw new ArgumentOutOfRangeException(nameof(slotKey), slotKey, null)
         };
     }
