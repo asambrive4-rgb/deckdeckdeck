@@ -15,13 +15,14 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
             <!-- 카드 1: 기본 정보 -->
             <Border Style="{StaticResource Deck.InfoPanelBorderStyle}"
@@ -123,7 +124,8 @@
                        Style="{StaticResource Deck.ErrorTextStyle}"
                        Text="{Binding ErrorMessage}"
                        TextWrapping="Wrap" />
-        </Grid>
+            </Grid>
+        </ScrollViewer>
 
         <Grid Grid.Row="1"
               Style="{StaticResource Deck.FooterActionsGridStyle}">

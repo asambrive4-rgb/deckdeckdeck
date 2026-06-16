@@ -10,8 +10,8 @@
         Title="{Binding WindowTitle}"
         Width="500"
         Height="680"
-        MinWidth="500"
-        MinHeight="680"
+        MinWidth="440"
+        MinHeight="580"
         Style="{StaticResource Deck.MainWindowStyle}"
         ShowActivated="False"
         PreviewKeyDown="OnPreviewKeyDown">
