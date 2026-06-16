@@ -113,7 +113,7 @@ public sealed class ImageFileRepositoryTests
             AutoIconPath = autoIconPath
         };
 
-        var grid = new SlotGridViewModelFactory().BuildSnippetGrid(
+        var grid = new SlotGridViewModelFactory(new ExistingPathResolver(autoIconPath)).BuildSnippetGrid(
             [snippet],
             new AppSettings(),
             (_, _) => { },
@@ -179,6 +179,26 @@ public sealed class ImageFileRepositoryTests
 
         Assert.Null(grid.Numpad1.ThumbnailPath);
         Assert.False(grid.Numpad1.HasThumbnail);
+    }
+
+    private sealed class ExistingPathResolver : IStoredImagePathResolver
+    {
+        private readonly string _existingPath;
+
+        public ExistingPathResolver(string existingPath)
+        {
+            _existingPath = existingPath;
+        }
+
+        public string? ResolveDisplayPath(string? storedPath)
+        {
+            return storedPath;
+        }
+
+        public bool FileExists(string? storedPath)
+        {
+            return string.Equals(storedPath, _existingPath, StringComparison.OrdinalIgnoreCase);
+        }
     }
 }
 

@@ -22,30 +22,13 @@ internal static class MainViewModelFactory
                 services.FileLogger);
 
         viewModel = new MainViewModel(
-            services.CategoryRepository,
-            services.DialogAdapter,
-            services.SettingsRepository,
-            services.SlotGridViewModelFactory,
-            services.SnippetRepository,
-            services.ClipboardPasteGateway,
-            services.FileLaunchGatewayAdapter,
-            services.UrlLaunchGatewayAdapter,
-            services.SystemMediaActionGatewayAdapter,
-            services.SpotifyMediaActionGatewayAdapter,
-            services.TerminalCommandGatewayAdapter,
-            services.SpotifyConnectionUseCase,
-            services.ClipboardAdapter,
-            getPasteTargetWindowHandle,
-            hideWindowAfterPaste,
-            enterEditMode,
-            completePasteSelection,
-            createPasteSelectionCompletion,
-            services.FileLogger,
-            services.ImageFileRepository,
-            services.SnippetImageResolver,
-            services.BackupGateway,
-            autoBackupCoordinator,
-            services.StoredImagePathResolver);
+            services.CreateMainViewModelDependencies(autoBackupCoordinator),
+            new MainViewModelCallbacks(
+                getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
+                hideWindowAfterPaste ?? (() => { }),
+                enterEditMode ?? (() => { }),
+                createPasteSelectionCompletion
+                    ?? (() => completePasteSelection ?? (() => { }))));
 
         return viewModel;
     }

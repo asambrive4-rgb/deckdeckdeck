@@ -1,3 +1,4 @@
+using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.UseCases;
@@ -5,6 +6,11 @@ namespace DeckDeckDeck.App.UseCases;
 public interface ISaveSettingsUseCase
 {
     SaveSettingsResult Execute(SaveSettingsRequest request);
+}
+
+public interface ILoadSettingsUseCase
+{
+    AppSettings Execute();
 }
 
 public interface ICreateManualBackupUseCase

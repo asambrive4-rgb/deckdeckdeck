@@ -14,7 +14,7 @@ public sealed class CategoryEditViewModel : ObservableObject
     private readonly Action _cancel;
     private readonly DeleteCategoryUseCase _deleteCategoryUseCase;
     private readonly IDialogAdapter _dialogService;
-    private readonly EditableImageState _imageState;
+    private readonly EditableImageDraft _imageState;
     private readonly IAppLogger? _loggingService;
     private readonly Guid? _categoryId;
     private readonly IStoredImagePathResolver? _storedImagePathResolver;
@@ -59,7 +59,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         _afterDelete = afterDelete;
         _showStatus = showStatus;
         _thumbnailService = thumbnailService;
-        _imageState = new EditableImageState(category?.ImagePath, category?.ThumbnailPath, thumbnailService);
+        _imageState = new EditableImageDraft(category?.ImagePath, category?.ThumbnailPath, thumbnailService);
 
         _name = category?.Name ?? string.Empty;
         _description = category?.Description ?? string.Empty;

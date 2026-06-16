@@ -1,7 +1,6 @@
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
-using System.IO;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -98,7 +97,6 @@ public sealed class SlotGridViewModelFactory
 
     private bool CanDisplayStoredPath(string storedPath)
     {
-        return _storedImagePathResolver?.FileExists(storedPath) == true
-            || (Path.IsPathRooted(storedPath) && File.Exists(storedPath));
+        return _storedImagePathResolver?.FileExists(storedPath) == true;
     }
 }

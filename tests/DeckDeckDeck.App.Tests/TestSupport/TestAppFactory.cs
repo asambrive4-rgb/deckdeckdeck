@@ -65,37 +65,79 @@ internal static class TestAppFactory
         ISpotifyMediaActionGateway? spotifyMediaActionGatewayAdapter = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
     {
-        return new MainViewModel(
+        var effectiveUrlLaunchGatewayAdapter = urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter();
+        var composition = AppComposition.Create(
             services.CategoryRepository,
+            services.BackupGateway,
             new DialogAdapter(),
             services.SettingsRepository,
-            new SlotGridViewModelFactory(services.StoredImagePathResolver, services.SnippetImageResolver),
             services.SnippetRepository,
+            services.SnippetImageResolver,
             clipboardPasteService ?? new RecordingClipboardPasteGateway(),
             fileLaunchService ?? new RecordingFileLaunchGatewayAdapter(),
-            urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter(),
+            effectiveUrlLaunchGatewayAdapter,
             mediaActionService ?? new RecordingSystemMediaActionGatewayAdapter(),
-            spotifyMediaActionGatewayAdapter ?? new RecordingSpotifyMediaActionGatewayAdapter(),
             terminalCommandService ?? new RecordingTerminalCommandGatewayAdapter(),
-            new SpotifyConnectionUseCase(
+            spotifyConnectionService
+                ?? new SpotifyConnectionGatewayAdapter(
+                    services.SettingsRepository,
+                    effectiveUrlLaunchGatewayAdapter),
+            spotifyMediaActionGatewayAdapter ?? new RecordingSpotifyMediaActionGatewayAdapter(),
+            services.StoredImagePathResolver,
+            services.FileLogger,
+            services.ImageFileRepository,
+            new SlotGridViewModelFactory(services.StoredImagePathResolver, services.SnippetImageResolver),
+            new FakeClipboardAdapter(null));
+
+        return new MainViewModel(
+            composition.CreateMainViewModelDependencies(autoBackupCoordinator),
+            new MainViewModelCallbacks(
+                getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
+                hideWindowAfterPaste ?? (() => { }),
+                enterEditMode ?? (() => { }),
+                createPasteSelectionCompletion
+                    ?? (() => completePasteSelection ?? (() => { }))));
+    }
+
+    public static SettingsViewModel CreateSettingsViewModel(
+        TestServices services,
+        Action? cancel = null,
+        Action? afterSave = null,
+        Action<string>? showStatus = null,
+        IAppLogger? loggingService = null,
+        IBackupGateway? backupGateway = null,
+        IAutoBackupRequester? autoBackupRequester = null,
+        IDialogAdapter? dialogAdapter = null,
+        ISpotifyConnectionUseCase? spotifyConnectionUseCase = null,
+        IClipboardTextWriter? clipboardTextWriter = null,
+        ISaveSettingsUseCase? saveSettingsUseCase = null,
+        ICreateManualBackupUseCase? createManualBackupUseCase = null,
+        IRestoreBackupUseCase? restoreBackupUseCase = null)
+    {
+        var effectiveBackupGateway = backupGateway ?? services.BackupGateway;
+        var urlLaunchGateway = new RecordingUrlLaunchGatewayAdapter();
+        var effectiveSpotifyConnectionUseCase = spotifyConnectionUseCase
+            ?? new SpotifyConnectionUseCase(
                 services.SettingsRepository,
-                spotifyConnectionService
-                    ?? new SpotifyConnectionGatewayAdapter(
-                        services.SettingsRepository,
-                        urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter()),
-                urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter()),
-            new FakeClipboardAdapter(null),
-            getPasteTargetWindowHandle,
-            hideWindowAfterPaste,
-            enterEditMode,
-            completePasteSelection,
-            createPasteSelectionCompletion,
-            loggingService: services.FileLogger,
-            imageFileRepository: services.ImageFileRepository,
-            snippetImageResolver: services.SnippetImageResolver,
-            backupGateway: services.BackupGateway,
-            autoBackupCoordinator: autoBackupCoordinator,
-            storedImagePathResolver: services.StoredImagePathResolver);
+                new SpotifyConnectionGatewayAdapter(services.SettingsRepository, urlLaunchGateway),
+                urlLaunchGateway);
+
+        return new SettingsViewModel(
+            new LoadSettingsUseCase(services.SettingsRepository),
+            saveSettingsUseCase
+                ?? new SaveSettingsUseCase(
+                    services.SettingsRepository,
+                    effectiveBackupGateway,
+                    autoBackupRequester),
+            createManualBackupUseCase ?? new CreateManualBackupUseCase(effectiveBackupGateway),
+            restoreBackupUseCase ?? new RestoreBackupUseCase(effectiveBackupGateway),
+            effectiveSpotifyConnectionUseCase,
+            clipboardTextWriter ?? new FakeClipboardAdapter(null),
+            dialogAdapter ?? new DialogAdapter(),
+            cancel ?? (() => { }),
+            afterSave ?? (() => { }),
+            showStatus ?? (_ => { }),
+            loggingService ?? services.FileLogger);
     }
 
     public static string CreateTinyBmp(string directory)

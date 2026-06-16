@@ -14,9 +14,9 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Action _afterSave;
     private readonly ICreateManualBackupUseCase _createManualBackupUseCase;
     private readonly IDialogAdapter _dialogService;
+    private readonly ILoadSettingsUseCase _loadSettingsUseCase;
     private readonly IAppLogger? _loggingService;
     private readonly IRestoreBackupUseCase _restoreBackupUseCase;
-    private readonly ISettingsRepository _settingsStore;
     private readonly Action<string> _showStatus;
     private readonly IClipboardTextWriter _clipboardService;
     private readonly ISpotifyConnectionUseCase _spotifyConnectionUseCase;
@@ -35,37 +35,30 @@ public sealed class SettingsViewModel : ObservableObject
     private string _spotifyConnectionStatusText = string.Empty;
 
     public SettingsViewModel(
-        ISettingsRepository settingsStore,
+        ILoadSettingsUseCase loadSettingsUseCase,
+        ISaveSettingsUseCase saveSettingsUseCase,
+        ICreateManualBackupUseCase createManualBackupUseCase,
+        IRestoreBackupUseCase restoreBackupUseCase,
+        ISpotifyConnectionUseCase spotifyConnectionUseCase,
+        IClipboardTextWriter clipboardService,
+        IDialogAdapter dialogService,
         Action cancel,
         Action afterSave,
         Action<string> showStatus,
-        IAppLogger? loggingService = null,
-        IBackupGateway? backupGateway = null,
-        IAutoBackupRequester? autoBackupCoordinator = null,
-        IDialogAdapter? dialogService = null,
-        ISpotifyConnectionUseCase? spotifyConnectionUseCase = null,
-        IClipboardTextWriter? clipboardService = null,
-        ISaveSettingsUseCase? saveSettingsUseCase = null,
-        ICreateManualBackupUseCase? createManualBackupUseCase = null,
-        IRestoreBackupUseCase? restoreBackupUseCase = null)
+        IAppLogger? loggingService = null)
     {
-        _settingsStore = settingsStore;
+        _loadSettingsUseCase = loadSettingsUseCase;
         _cancel = cancel;
         _afterSave = afterSave;
         _showStatus = showStatus;
         _loggingService = loggingService;
-        _saveSettingsUseCase = saveSettingsUseCase
-            ?? new SaveSettingsUseCase(settingsStore, backupGateway, autoBackupCoordinator);
-        _createManualBackupUseCase = createManualBackupUseCase
-            ?? new CreateManualBackupUseCase(backupGateway);
-        _restoreBackupUseCase = restoreBackupUseCase
-            ?? new RestoreBackupUseCase(backupGateway);
-        _dialogService = dialogService ?? NullDialogAdapter.Instance;
-        _clipboardService = clipboardService
-            ?? throw new ArgumentNullException(nameof(clipboardService));
-        _spotifyConnectionUseCase = spotifyConnectionUseCase
-            ?? throw new ArgumentNullException(nameof(spotifyConnectionUseCase));
-        _settings = settingsStore.Load();
+        _saveSettingsUseCase = saveSettingsUseCase;
+        _createManualBackupUseCase = createManualBackupUseCase;
+        _restoreBackupUseCase = restoreBackupUseCase;
+        _dialogService = dialogService;
+        _clipboardService = clipboardService;
+        _spotifyConnectionUseCase = spotifyConnectionUseCase;
+        _settings = loadSettingsUseCase.Execute();
 
         _bringWindowToFrontOnHotkey = _settings.BringWindowToFrontOnHotkey;
         _autoHideAfterPaste = _settings.AutoHideAfterPaste;
@@ -295,7 +288,7 @@ public sealed class SettingsViewModel : ObservableObject
             return;
         }
 
-        _settings.LastBackupCreatedAt = _settingsStore.Load().LastBackupCreatedAt;
+        _settings.LastBackupCreatedAt = _loadSettingsUseCase.Execute().LastBackupCreatedAt;
         ErrorMessage = string.Empty;
         _showStatus($"백업을 만들었습니다: {Path.GetFileName(result.BackupPath)}");
     }
@@ -475,43 +468,5 @@ public sealed class SettingsViewModel : ObservableObject
             : $" ({state.DisplayName})";
     }
 
-    private sealed class NullDialogAdapter : IDialogAdapter
-    {
-        public static NullDialogAdapter Instance { get; } = new();
-
-        public bool Confirm(string title, string message)
-        {
-            return false;
-        }
-
-        public void ShowInformation(string title, string message)
-        {
-        }
-
-        public string? SelectImageFile()
-        {
-            return null;
-        }
-
-        public string? SelectLaunchFile()
-        {
-            return null;
-        }
-
-        public string? SelectLaunchFolder()
-        {
-            return null;
-        }
-
-        public string? SelectBackupFolder()
-        {
-            return null;
-        }
-
-        public string? SelectBackupZipFile()
-        {
-            return null;
-        }
-    }
 }
 

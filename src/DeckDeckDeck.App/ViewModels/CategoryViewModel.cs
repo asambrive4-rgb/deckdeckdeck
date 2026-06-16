@@ -1,7 +1,7 @@
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases.Ports;
+using DeckDeckDeck.App.UseCases;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -13,8 +13,7 @@ public sealed class CategoryViewModel
 
     public CategoryViewModel(
         Category category,
-        ISnippetRepository snippetService,
-        ISettingsRepository settingsService,
+        CategoryGridState gridState,
         SlotGridViewModelFactory slotGridViewModelFactory,
         Action showHome,
         Action showSettings,
@@ -30,11 +29,9 @@ public sealed class CategoryViewModel
         BackCommand = new RelayCommand(showHome);
         SettingsCommand = new RelayCommand(showSettings);
 
-        var snippets = snippetService.GetByCategoryId(category.Id);
-        var settings = settingsService.Load();
         NumpadGrid = slotGridViewModelFactory.BuildSnippetGrid(
-            snippets,
-            settings,
+            gridState.Snippets,
+            gridState.Settings,
             SelectSnippetSlot,
             EditSnippetSlot);
     }

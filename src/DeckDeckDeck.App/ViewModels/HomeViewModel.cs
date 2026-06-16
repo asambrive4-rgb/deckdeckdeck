@@ -1,5 +1,5 @@
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases.Ports;
+using DeckDeckDeck.App.UseCases;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 
@@ -12,8 +12,7 @@ public sealed class HomeViewModel
     private readonly Action<SlotKey> _createCategory;
 
     public HomeViewModel(
-        ICategoryRepository categoryService,
-        ISettingsRepository settingsService,
+        HomeGridState gridState,
         SlotGridViewModelFactory slotGridViewModelFactory,
         Action<Category> openCategory,
         Action<Category> editCategory,
@@ -25,11 +24,9 @@ public sealed class HomeViewModel
         _createCategory = createCategory;
         SettingsCommand = new RelayCommand(showSettings);
 
-        var categories = categoryService.GetAll();
-        var settings = settingsService.Load();
         NumpadGrid = slotGridViewModelFactory.BuildCategoryGrid(
-            categories,
-            settings,
+            gridState.Categories,
+            gridState.Settings,
             SelectCategorySlot,
             EditCategorySlot);
     }

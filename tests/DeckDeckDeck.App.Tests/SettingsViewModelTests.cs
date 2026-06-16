@@ -24,19 +24,13 @@ public sealed class SettingsViewModelTests
         var services = CreateServices();
         var returned = false;
         var status = string.Empty;
-        var viewModel = new SettingsViewModel(
-            services.SettingsRepository,
-            () => { },
-            () => returned = true,
-            message => status = message,
-            services.FileLogger,
-            spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-            clipboardService: new FakeClipboardAdapter(null))
-        {
-            BringWindowToFrontOnHotkey = false,
-            AutoHideAfterPaste = false,
-            RestoreClipboardAfterPaste = false
-        };
+        var viewModel = CreateSettingsViewModel(
+            services,
+            afterSave: () => returned = true,
+            showStatus: message => status = message);
+        viewModel.BringWindowToFrontOnHotkey = false;
+        viewModel.AutoHideAfterPaste = false;
+        viewModel.RestoreClipboardAfterPaste = false;
 
         viewModel.SaveCommand.Execute(null);
 
@@ -54,20 +48,11 @@ public sealed class SettingsViewModelTests
         var services = CreateServices();
         var backupFolder = CreateTempBackupFolder();
         var autoBackup = new RecordingAutoBackupCoordinator();
-        var viewModel = new SettingsViewModel(
-            services.SettingsRepository,
-            () => { },
-            () => { },
-            _ => { },
-            services.FileLogger,
-            services.BackupGateway,
-            autoBackup,
-            spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-            clipboardService: new FakeClipboardAdapter(null))
-        {
-            AutoBackupEnabled = true,
-            BackupFolderPath = backupFolder
-        };
+        var viewModel = CreateSettingsViewModel(
+            services,
+            autoBackupRequester: autoBackup);
+        viewModel.AutoBackupEnabled = true;
+        viewModel.BackupFolderPath = backupFolder;
 
         viewModel.SaveCommand.Execute(null);
 
@@ -83,19 +68,11 @@ public sealed class SettingsViewModelTests
         var services = CreateServices();
         var backupFolder = CreateTempBackupFolder();
         var status = string.Empty;
-        var viewModel = new SettingsViewModel(
-            services.SettingsRepository,
-            () => { },
-            () => { },
-            message => status = message,
-            services.FileLogger,
-            services.BackupGateway,
-            spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-            clipboardService: new FakeClipboardAdapter(null))
-        {
-            AutoBackupEnabled = false,
-            BackupFolderPath = backupFolder
-        };
+        var viewModel = CreateSettingsViewModel(
+            services,
+            showStatus: message => status = message);
+        viewModel.AutoBackupEnabled = false;
+        viewModel.BackupFolderPath = backupFolder;
 
         viewModel.CreateManualBackupCommand.Execute(null);
 
@@ -109,16 +86,9 @@ public sealed class SettingsViewModelTests
     {
         var services = CreateServices();
         var backupFolder = CreateTempBackupFolder();
-        var viewModel = new SettingsViewModel(
-            services.SettingsRepository,
-            () => { },
-            () => { },
-            _ => { },
-            services.FileLogger,
-            services.BackupGateway,
-            dialogService: new StubDialogAdapter { BackupFolder = backupFolder },
-            spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-            clipboardService: new FakeClipboardAdapter(null));
+        var viewModel = CreateSettingsViewModel(
+            services,
+            dialogService: new StubDialogAdapter { BackupFolder = backupFolder });
 
         viewModel.ChooseBackupFolderCommand.Execute(null);
 
@@ -142,16 +112,10 @@ public sealed class SettingsViewModelTests
         services.CategoryRepository.Create(SlotKey.Numpad5, "Current", null);
         var status = string.Empty;
         var dialogService = new StubDialogAdapter { BackupZip = backup.BackupPath };
-        var viewModel = new SettingsViewModel(
-            services.SettingsRepository,
-            () => { },
-            () => { },
-            message => status = message,
-            services.FileLogger,
-            services.BackupGateway,
-            dialogService: dialogService,
-            spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-            clipboardService: new FakeClipboardAdapter(null));
+        var viewModel = CreateSettingsViewModel(
+            services,
+            showStatus: message => status = message,
+            dialogService: dialogService);
 
         viewModel.RestoreBackupCommand.Execute(null);
 
@@ -178,16 +142,9 @@ public sealed class SettingsViewModelTests
             BackupZip = backup.BackupPath,
             ConfirmResult = false
         };
-        var viewModel = new SettingsViewModel(
-            services.SettingsRepository,
-            () => { },
-            () => { },
-            _ => { },
-            services.FileLogger,
-            services.BackupGateway,
-            dialogService: dialogService,
-            spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-            clipboardService: new FakeClipboardAdapter(null));
+        var viewModel = CreateSettingsViewModel(
+            services,
+            dialogService: dialogService);
 
         viewModel.RestoreBackupCommand.Execute(null);
 
@@ -203,16 +160,9 @@ public sealed class SettingsViewModelTests
         var services = CreateServices();
         services.CategoryRepository.Create(SlotKey.Numpad5, "Current", null);
         var dialogService = new StubDialogAdapter { BackupZip = null };
-        var viewModel = new SettingsViewModel(
-            services.SettingsRepository,
-            () => { },
-            () => { },
-            _ => { },
-            services.FileLogger,
-            services.BackupGateway,
-            dialogService: dialogService,
-            spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-            clipboardService: new FakeClipboardAdapter(null));
+        var viewModel = CreateSettingsViewModel(
+            services,
+            dialogService: dialogService);
 
         viewModel.RestoreBackupCommand.Execute(null);
 
@@ -231,16 +181,11 @@ public sealed class SettingsViewModelTests
         {
             Result = RestoreBackupUseCaseResult.Success(@"C:\backups\safety.zip")
         };
-        var viewModel = new SettingsViewModel(
-            services.SettingsRepository,
-            () => { },
-            () => { },
-            message => status = message,
-            services.FileLogger,
+        var viewModel = CreateSettingsViewModel(
+            services,
+            showStatus: message => status = message,
             backupGateway: null,
             dialogService: dialogService,
-            spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-            clipboardService: new FakeClipboardAdapter(null),
             restoreBackupUseCase: restoreUseCase);
 
         viewModel.RestoreBackupCommand.Execute(null);
@@ -396,24 +341,36 @@ public sealed class SettingsViewModelTests
 
     private static SettingsViewModel CreateSettingsViewModel(
         TestServices services,
-        ISpotifyConnectionGateway spotifyConnectionService,
+        ISpotifyConnectionGateway? spotifyConnectionService = null,
         IUrlLaunchGateway? urlLaunchService = null,
+        Action? cancel = null,
+        Action? afterSave = null,
         Action<string>? showStatus = null,
-        IClipboardAdapter? clipboardService = null)
+        IClipboardTextWriter? clipboardService = null,
+        IBackupGateway? backupGateway = null,
+        IAutoBackupRequester? autoBackupRequester = null,
+        IDialogAdapter? dialogService = null,
+        ISaveSettingsUseCase? saveSettingsUseCase = null,
+        ICreateManualBackupUseCase? createManualBackupUseCase = null,
+        IRestoreBackupUseCase? restoreBackupUseCase = null)
     {
-        return new SettingsViewModel(
-            services.SettingsRepository,
-            () => { },
-            () => { },
-            showStatus ?? (_ => { }),
+        return TestAppFactory.CreateSettingsViewModel(
+            services,
+            cancel,
+            afterSave,
+            showStatus,
             services.FileLogger,
-            services.BackupGateway,
-            dialogService: new StubDialogAdapter(),
-            spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(
+            backupGateway,
+            autoBackupRequester,
+            dialogService ?? new StubDialogAdapter(),
+            CreateSpotifyConnectionUseCase(
                 services,
-                spotifyConnectionService,
+                spotifyConnectionService ?? new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository),
                 urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter()),
-            clipboardService: clipboardService ?? new FakeClipboardAdapter(null));
+            clipboardService ?? new FakeClipboardAdapter(null),
+            saveSettingsUseCase,
+            createManualBackupUseCase,
+            restoreBackupUseCase);
     }
 
     private static ISpotifyConnectionUseCase CreateSpotifyConnectionUseCase(

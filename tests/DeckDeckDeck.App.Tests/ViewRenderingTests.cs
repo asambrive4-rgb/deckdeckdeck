@@ -28,14 +28,10 @@ public sealed class ViewRenderingTests
             try
             {
                 var services = CreateServices();
-                var viewModel = new SettingsViewModel(
-                    services.SettingsRepository,
-                    () => { },
-                    () => { },
-                    _ => { },
-                    services.FileLogger,
+                var viewModel = TestAppFactory.CreateSettingsViewModel(
+                    services,
                     spotifyConnectionUseCase: CreateSpotifyConnectionUseCase(services),
-                    clipboardService: new FakeClipboardAdapter(null));
+                    clipboardTextWriter: new FakeClipboardAdapter(null));
                 var view = new SettingsView { DataContext = viewModel };
 
                 view.Measure(new Size(560, 680));

@@ -15,7 +15,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly Action _cancel;
     private readonly DeleteSnippetUseCase _deleteSnippetUseCase;
     private readonly IDialogAdapter _dialogService;
-    private readonly EditableImageState _imageState;
+    private readonly EditableImageDraft _imageState;
     private readonly IAppLogger? _loggingService;
     private readonly bool _isSpotifyConnected;
     private bool _originalIsSlotEnabled;
@@ -80,7 +80,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         _afterDelete = afterDelete;
         _showStatus = showStatus;
         _thumbnailService = thumbnailService;
-        _imageState = new EditableImageState(snippet?.ImagePath, snippet?.ThumbnailPath, thumbnailService);
+        _imageState = new EditableImageDraft(snippet?.ImagePath, snippet?.ThumbnailPath, thumbnailService);
         _isSpotifyConnected = editorState.SpotifyConnection.IsConnected;
 
         _snippetTitle = snippet?.Title ?? string.Empty;

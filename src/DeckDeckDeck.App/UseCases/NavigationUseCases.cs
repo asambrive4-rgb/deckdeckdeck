@@ -38,6 +38,21 @@ public sealed class ResolveCategoryHotkeyUseCase
     }
 }
 
+public sealed class GetCategoryByIdUseCase
+{
+    private readonly ICategoryRepository _categoryRepository;
+
+    public GetCategoryByIdUseCase(ICategoryRepository categoryRepository)
+    {
+        _categoryRepository = categoryRepository;
+    }
+
+    public Category? Execute(Guid categoryId)
+    {
+        return _categoryRepository.GetById(categoryId);
+    }
+}
+
 public enum CategoryHotkeyResolutionKind
 {
     OpenExisting,

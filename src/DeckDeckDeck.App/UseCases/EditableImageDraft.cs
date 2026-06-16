@@ -1,16 +1,19 @@
 using DeckDeckDeck.App.UseCases.Ports;
 
-namespace DeckDeckDeck.App.ViewModels;
+namespace DeckDeckDeck.App.UseCases;
 
-internal sealed class EditableImageState
+internal sealed class EditableImageDraft
 {
-    private readonly IImageFileRepository? _thumbnailService;
+    private readonly IImageFileRepository? _imageFileRepository;
     private string? _originalImagePath;
     private string? _originalThumbnailPath;
 
-    public EditableImageState(string? imagePath, string? thumbnailPath, IImageFileRepository? thumbnailService)
+    public EditableImageDraft(
+        string? imagePath,
+        string? thumbnailPath,
+        IImageFileRepository? imageFileRepository)
     {
-        _thumbnailService = thumbnailService;
+        _imageFileRepository = imageFileRepository;
         _originalImagePath = imagePath;
         _originalThumbnailPath = thumbnailPath;
         ImagePath = imagePath;
@@ -25,12 +28,12 @@ internal sealed class EditableImageState
 
     public void ReplaceWithStoredImage(string sourcePath)
     {
-        if (_thumbnailService is null)
+        if (_imageFileRepository is null)
         {
             throw new InvalidOperationException("Image storage is not available.");
         }
 
-        var storedImage = _thumbnailService.StoreImage(sourcePath);
+        var storedImage = _imageFileRepository.StoreImage(sourcePath);
         DeleteCurrentUnsavedImage();
         ImagePath = storedImage.ImagePath;
         ThumbnailPath = storedImage.ThumbnailPath;
@@ -45,22 +48,23 @@ internal sealed class EditableImageState
 
     public void DeleteCurrentUnsavedImage()
     {
-        if (_thumbnailService is null || IsCurrentOriginalImage())
+        if (_imageFileRepository is null || IsCurrentOriginalImage())
         {
             return;
         }
 
-        _thumbnailService.DeleteImageFiles(new ImageFileReference(ImagePath, ThumbnailPath));
+        _imageFileRepository.DeleteImageFiles(new ImageFileReference(ImagePath, ThumbnailPath));
     }
 
     public void DeleteOriginalImageIfReplaced()
     {
-        if (_thumbnailService is null || IsCurrentOriginalImage())
+        if (_imageFileRepository is null || IsCurrentOriginalImage())
         {
             return;
         }
 
-        _thumbnailService.DeleteImageFiles(new ImageFileReference(_originalImagePath, _originalThumbnailPath));
+        _imageFileRepository.DeleteImageFiles(
+            new ImageFileReference(_originalImagePath, _originalThumbnailPath));
     }
 
     public void MarkCurrentAsOriginal()

@@ -165,6 +165,70 @@ internal sealed record AppComposition(
             effectiveClipboardAdapter);
     }
 
+    public MainViewModelDependencies CreateMainViewModelDependencies(
+        IAutoBackupCoordinator? autoBackupCoordinator)
+    {
+        var loadSettingsUseCase = new LoadSettingsUseCase(SettingsRepository);
+        var saveCategoryUseCase = new SaveCategoryUseCase(
+            CategoryRepository,
+            SettingsRepository,
+            autoBackupCoordinator);
+        var saveSnippetUseCase = new SaveSnippetUseCase(
+            SnippetRepository,
+            SettingsRepository,
+            autoBackupCoordinator);
+        var navigatorDependencies = new MainViewModelNavigatorDependencies(
+            new LoadHomeGridUseCase(CategoryRepository, SettingsRepository),
+            new LoadCategoryGridUseCase(SnippetRepository, SettingsRepository),
+            new GetCategoryByIdUseCase(CategoryRepository),
+            new LoadCategoryEditorStateUseCase(CategoryRepository, SettingsRepository),
+            new LoadSnippetEditorStateUseCase(SnippetRepository, SettingsRepository),
+            saveCategoryUseCase,
+            new DeleteCategoryUseCase(
+                CategoryRepository,
+                ImageFileRepository,
+                autoBackupCoordinator),
+            new TransferCategoryUseCase(
+                CategoryRepository,
+                SettingsRepository,
+                saveCategoryUseCase,
+                ImageFileRepository,
+                autoBackupCoordinator),
+            saveSnippetUseCase,
+            new DeleteSnippetUseCase(
+                SnippetRepository,
+                ImageFileRepository,
+                autoBackupCoordinator),
+            new TransferSnippetUseCase(
+                SnippetRepository,
+                SettingsRepository,
+                saveSnippetUseCase,
+                ImageFileRepository,
+                autoBackupCoordinator),
+            loadSettingsUseCase,
+            new SaveSettingsUseCase(SettingsRepository, BackupGateway, autoBackupCoordinator),
+            new CreateManualBackupUseCase(BackupGateway),
+            new RestoreBackupUseCase(BackupGateway),
+            DialogAdapter,
+            SlotGridViewModelFactory,
+            ImageFileRepository,
+            FileLogger,
+            SnippetImageResolver,
+            StoredImagePathResolver,
+            SpotifyConnectionUseCase,
+            ClipboardAdapter);
+
+        return new MainViewModelDependencies(
+            navigatorDependencies,
+            loadSettingsUseCase,
+            new SaveWindowPlacementUseCase(SettingsRepository, FileLogger),
+            ResolveCategoryHotkeyUseCase,
+            new PrepareSnippetActionUseCase(),
+            ExecuteSnippetActionUseCase,
+            FileLogger,
+            autoBackupCoordinator);
+    }
+
     private static ExecuteSnippetActionUseCase CreateExecuteSnippetActionUseCase(
         IClipboardPasteGateway clipboardPasteGateway,
         IFileLaunchGateway fileLaunchGateway,
