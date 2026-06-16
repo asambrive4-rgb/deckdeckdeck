@@ -165,6 +165,14 @@ public interface ISpotifyMediaActionGateway
         CancellationToken cancellationToken = default);
 }
 
+public interface ITerminalCommandGateway
+{
+    bool TryExecute(
+        string command,
+        SnippetTerminalShell shell,
+        bool runAsAdministrator);
+}
+
 public interface ISpotifyConnectionGateway
 {
     string DashboardUrl { get; }
@@ -195,7 +203,10 @@ public sealed record SnippetSaveData(
     string? LaunchUrl = null,
     SnippetMediaProvider? MediaProvider = null,
     SnippetMediaCommand? MediaCommand = null,
-    PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV);
+    PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV,
+    string? TerminalCommand = null,
+    SnippetTerminalShell? TerminalShell = null,
+    bool RunAsAdministrator = true);
 
 public sealed record CategoryTransferRepositoryResult(
     Category Category,

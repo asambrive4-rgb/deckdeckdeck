@@ -79,6 +79,22 @@ public sealed class SnippetEditViewModelTests
     }
 
     [Fact]
+    public void TerminalCommandRequiresCommand()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Reconnect Bluetooth";
+        viewModel.IsTerminalCommandAction = true;
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.Null(savedSnippet);
+        Assert.Equal("실행할 터미널 명령을 입력해 주세요.", viewModel.ErrorMessage);
+    }
+
+    [Fact]
     public void LaunchFileSavesWithLaunchPathAndEmptyContent()
     {
         var services = CreateServices();
@@ -148,6 +164,54 @@ public sealed class SnippetEditViewModelTests
         Assert.Equal(SnippetMediaProvider.System, savedSnippet.MediaProvider);
         Assert.Equal(SnippetMediaCommand.VolumeDown, savedSnippet.MediaCommand);
         Assert.Equal(SlotImageMode.Auto, savedSnippet.SlotImageMode);
+    }
+
+    [Fact]
+    public void TerminalCommandSavesWithCmdAndAdminByDefault()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Reconnect Bluetooth";
+        viewModel.Content = "unused";
+        viewModel.LaunchPath = @"C:\unused";
+        viewModel.LaunchUrl = "https://example.com";
+        viewModel.IsTerminalCommandAction = true;
+        viewModel.TerminalCommand = "echo reconnect";
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal(SnippetActionType.TerminalCommand, savedSnippet.ActionType);
+        Assert.Equal(string.Empty, savedSnippet.Content);
+        Assert.Null(savedSnippet.LaunchPath);
+        Assert.Null(savedSnippet.LaunchUrl);
+        Assert.Null(savedSnippet.MediaProvider);
+        Assert.Null(savedSnippet.MediaCommand);
+        Assert.Equal("echo reconnect", savedSnippet.TerminalCommand);
+        Assert.Equal(SnippetTerminalShell.Cmd, savedSnippet.TerminalShell);
+        Assert.True(savedSnippet.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void TerminalCommandCanDisableAdminAndUsePowerShell()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "List";
+        viewModel.IsTerminalCommandAction = true;
+        viewModel.SelectedTerminalShell = SnippetTerminalShell.PowerShell;
+        viewModel.RunAsAdministrator = false;
+        viewModel.TerminalCommand = "Get-ChildItem";
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal(SnippetTerminalShell.PowerShell, savedSnippet.TerminalShell);
+        Assert.False(savedSnippet.RunAsAdministrator);
     }
 
     [Fact]

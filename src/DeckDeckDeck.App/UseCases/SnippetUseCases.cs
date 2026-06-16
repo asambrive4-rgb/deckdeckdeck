@@ -38,7 +38,10 @@ public sealed class SaveSnippetUseCase
             request.LaunchPath,
             request.LaunchUrl,
             request.SelectedMediaProvider,
-            request.SelectedMediaCommand);
+            request.SelectedMediaCommand,
+            request.TerminalCommand,
+            request.SelectedTerminalShell,
+            request.RunAsAdministrator);
 
         if (!validation.Succeeded)
         {
@@ -70,7 +73,10 @@ public sealed class SaveSnippetUseCase
             validation.NormalizedLaunchUrl,
             validation.MediaProvider,
             validation.MediaCommand,
-            request.PasteShortcutMode);
+            request.PasteShortcutMode,
+            validation.NormalizedTerminalCommand,
+            validation.TerminalShell,
+            validation.RunAsAdministrator);
 
         var snippet = request.SnippetId.HasValue
             ? _snippetRepository.Update(request.SnippetId.Value, saveData)
@@ -314,7 +320,10 @@ public sealed record SaveSnippetRequest(
     SnippetMediaCommand SelectedMediaCommand,
     bool IsSlotEnabled,
     bool OriginalIsSlotEnabled,
-    PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV);
+    PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV,
+    string TerminalCommand = "",
+    SnippetTerminalShell SelectedTerminalShell = SnippetTerminalShell.Cmd,
+    bool RunAsAdministrator = true);
 
 public sealed record SaveSnippetResult(
     bool Succeeded,

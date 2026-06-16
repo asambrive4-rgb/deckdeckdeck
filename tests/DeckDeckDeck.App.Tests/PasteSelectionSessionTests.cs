@@ -48,7 +48,8 @@ public sealed class PasteSelectionSessionTests
             new RecordingFileLaunchGatewayAdapter(),
             new RecordingUrlLaunchGatewayAdapter(),
             new RecordingSystemMediaActionGatewayAdapter(),
-            new RecordingSpotifyMediaActionGatewayAdapter());
+            new RecordingSpotifyMediaActionGatewayAdapter(),
+            new RecordingTerminalCommandGatewayAdapter());
 
         session.Start();
         var pasteTask = ExecuteWithCapturedCompletionAsync(

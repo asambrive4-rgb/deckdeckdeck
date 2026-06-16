@@ -32,6 +32,7 @@ internal static class MainViewModelFactory
             services.UrlLaunchGatewayAdapter,
             services.SystemMediaActionGatewayAdapter,
             services.SpotifyMediaActionGatewayAdapter,
+            services.TerminalCommandGatewayAdapter,
             services.SpotifyConnectionUseCase,
             services.ClipboardAdapter,
             getPasteTargetWindowHandle,

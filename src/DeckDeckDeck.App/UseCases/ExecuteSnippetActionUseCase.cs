@@ -9,6 +9,7 @@ public sealed class ExecuteSnippetActionUseCase
     private readonly IFileLaunchGateway _fileLaunchGateway;
     private readonly IMediaActionGateway _mediaActionGateway;
     private readonly ISpotifyMediaActionGateway _spotifyMediaActionGateway;
+    private readonly ITerminalCommandGateway _terminalCommandGateway;
     private readonly IUrlLaunchGateway _urlLaunchGateway;
 
     public ExecuteSnippetActionUseCase(
@@ -16,13 +17,15 @@ public sealed class ExecuteSnippetActionUseCase
         IFileLaunchGateway fileLaunchGateway,
         IUrlLaunchGateway urlLaunchGateway,
         IMediaActionGateway mediaActionGateway,
-        ISpotifyMediaActionGateway spotifyMediaActionGateway)
+        ISpotifyMediaActionGateway spotifyMediaActionGateway,
+        ITerminalCommandGateway terminalCommandGateway)
     {
         _clipboardPasteGateway = clipboardPasteGateway;
         _fileLaunchGateway = fileLaunchGateway;
         _urlLaunchGateway = urlLaunchGateway;
         _mediaActionGateway = mediaActionGateway;
         _spotifyMediaActionGateway = spotifyMediaActionGateway;
+        _terminalCommandGateway = terminalCommandGateway;
     }
 
     public async Task<ExecuteSnippetActionResult> ExecuteAsync(
@@ -39,6 +42,9 @@ public sealed class ExecuteSnippetActionUseCase
                     request.Snippet,
                     request.Settings,
                     cancellationToken),
+                SnippetActionType.TerminalCommand => ExecuteTerminalCommandSnippet(
+                    request.Snippet,
+                    request.Settings),
                 _ => await PasteTextSnippetAsync(request)
             };
         }
@@ -220,6 +226,54 @@ public sealed class ExecuteSnippetActionUseCase
         return ExecuteSnippetActionResult.Failure(
             statusMessage: $"{snippet.Title} 미디어 제어 실패: {message}",
             logMessage: $"Media action failed for snippet {snippet.Id}: {message}",
+            exception: exception);
+    }
+
+    private ExecuteSnippetActionResult ExecuteTerminalCommandSnippet(
+        Snippet snippet,
+        AppSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(snippet.TerminalCommand))
+        {
+            return ReportTerminalCommandFailure(snippet, "실행할 터미널 명령이 없습니다.");
+        }
+
+        var shell = snippet.TerminalShell ?? SnippetTerminalShell.Cmd;
+
+        try
+        {
+            var executed = _terminalCommandGateway.TryExecute(
+                snippet.TerminalCommand,
+                shell,
+                snippet.RunAsAdministrator);
+            if (!executed)
+            {
+                return ReportTerminalCommandFailure(
+                    snippet,
+                    "터미널 명령을 시작하지 못했습니다.");
+            }
+
+            return ExecuteSnippetActionResult.Success(
+                shouldHideWindow: settings.AutoHideAfterPaste,
+                statusMessage: $"{snippet.Title} 터미널 명령 실행됨");
+        }
+        catch (Exception ex)
+        {
+            return ReportTerminalCommandFailure(
+                snippet,
+                "터미널 명령을 실행하지 못했습니다.",
+                ex);
+        }
+    }
+
+    private static ExecuteSnippetActionResult ReportTerminalCommandFailure(
+        Snippet snippet,
+        string message,
+        Exception? exception = null)
+    {
+        return ExecuteSnippetActionResult.Failure(
+            statusMessage: $"{snippet.Title} 터미널 명령 실행 실패: {message}",
+            logMessage: $"Terminal command failed for snippet {snippet.Id}: {message}",
             exception: exception);
     }
 }

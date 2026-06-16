@@ -7,15 +7,15 @@
                 <ResourceDictionary Source="/DeckDeckDeck.App;component/Resources/Theme.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-            <Style x:Key="Deck.ActionTypeToggleStyle" TargetType="{x:Type RadioButton}">
-                <Setter Property="Margin" Value="0,0,8,0" />
-                <Setter Property="MinHeight" Value="36" />
-                <Setter Property="Padding" Value="{StaticResource Deck.Padding.Control}" />
+             <Style x:Key="Deck.ActionTypeToggleStyle" TargetType="{x:Type RadioButton}">
+                <Setter Property="Margin" Value="0,0,6,6" />
+                <Setter Property="MinHeight" Value="28" />
+                <Setter Property="Padding" Value="10,4" />
                 <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
                 <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
                 <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
                 <Setter Property="Cursor" Value="Hand" />
-                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontSize" Value="12.5" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
                 <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
@@ -29,7 +29,7 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="{StaticResource Deck.Radius.Control}"
+                                    CornerRadius="14"
                                     SnapsToDevicePixels="True">
                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                                   RecognizesAccessKey="True"
@@ -69,197 +69,250 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
-                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="슬롯 명" />
-                    <TextBox Height="36"
-                             Style="{StaticResource Deck.TextBoxStyle}"
-                             Text="{Binding SnippetTitle, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
-
-                <StackPanel Grid.Row="1"
-                            Style="{StaticResource Deck.FieldGroupSpacedStyle}">
-                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="실행 타입" />
-                    <UniformGrid Columns="2">
-                        <RadioButton Content="문구 붙여넣기"
-                                     GroupName="SnippetActionType"
-                                     IsChecked="{Binding IsPasteTextAction, Mode=TwoWay}"
-                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                        <RadioButton Content="파일/바로 가기 실행"
-                                     GroupName="SnippetActionType"
-                                     IsChecked="{Binding IsLaunchFileAction, Mode=TwoWay}"
-                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                        <RadioButton Content="웹 주소 열기"
-                                     GroupName="SnippetActionType"
-                                     IsChecked="{Binding IsLaunchUrlAction, Mode=TwoWay}"
-                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                        <RadioButton Content="음악/미디어 제어"
-                                     GroupName="SnippetActionType"
-                                     IsChecked="{Binding IsMediaAction, Mode=TwoWay}"
-                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                    </UniformGrid>
-                </StackPanel>
-
-                <StackPanel Grid.Row="2"
-                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
-                            Visibility="{Binding IsPasteTextAction, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="붙여넣을 문구" />
-                    <TextBox MinHeight="180"
-                             MaxHeight="280"
-                             AcceptsReturn="True"
-                             AcceptsTab="True"
-                             Style="{StaticResource Deck.TextBoxStyle}"
-                             Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
-                             TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto" />
-                    <TextBlock Margin="0,12,0,6"
-                               Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="붙여넣기 방식" />
-                    <ComboBox ItemsSource="{Binding PasteShortcutModeOptions}"
-                              SelectedValue="{Binding PasteShortcutMode, Mode=TwoWay}"
-                              SelectedValuePath="Mode"
-                              DisplayMemberPath="Label"
-                              Style="{StaticResource Deck.ComboBoxStyle}" />
-                </StackPanel>
-
-                <StackPanel Grid.Row="2"
-                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
-                            Visibility="{Binding IsLaunchFileAction, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="실행할 파일, 폴더 또는 바로 가기" />
-                    <TextBox Height="36"
-                             Style="{StaticResource Deck.TextBoxStyle}"
-                             Text="{Binding LaunchPath, UpdateSourceTrigger=PropertyChanged}" />
-                    <StackPanel Margin="0,8,0,0"
-                                Orientation="Horizontal">
-                        <Button Command="{Binding ChooseLaunchFileCommand}"
-                                Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                Content="파일/바로 가기 선택" />
-                        <Button Margin="8,0,0,0"
-                                Command="{Binding ChooseLaunchFolderCommand}"
-                                Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                Content="폴더 선택" />
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel Grid.Row="2"
-                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
-                            Visibility="{Binding IsLaunchUrlAction, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="열 웹페이지 주소" />
-                    <TextBox Height="36"
-                             Style="{StaticResource Deck.TextBoxStyle}"
-                             Text="{Binding LaunchUrl, UpdateSourceTrigger=PropertyChanged}" />
-                </StackPanel>
-
-                <StackPanel Grid.Row="2"
-                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
-                            Visibility="{Binding IsMediaAction, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="제어 대상" />
-                    <ComboBox ItemsSource="{Binding MediaProviderOptions}"
-                              SelectedValue="{Binding SelectedMediaProvider, Mode=TwoWay}"
-                              SelectedValuePath="Provider"
-                              DisplayMemberPath="Label"
-                              Style="{StaticResource Deck.ComboBoxStyle}" />
-                    <TextBlock Margin="0,10,0,6"
-                               Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="미디어 명령" />
-                    <ComboBox ItemsSource="{Binding MediaCommandOptions}"
-                              SelectedValue="{Binding SelectedMediaCommand, Mode=TwoWay}"
-                              SelectedValuePath="Command"
-                              DisplayMemberPath="Label"
-                              Style="{StaticResource Deck.ComboBoxStyle}" />
-                    <TextBlock Margin="0,8,0,0"
-                               Foreground="{StaticResource Deck.Brush.Text.Secondary}"
-                               Text="{Binding SpotifyMediaConnectionNotice}"
-                               TextWrapping="Wrap"
-                               Visibility="{Binding ShowSpotifyMediaConnectionNotice, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                </StackPanel>
-
-                <StackPanel Grid.Row="3"
-                            Style="{StaticResource Deck.FieldGroupSpacedStyle}">
-                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="설명" />
-                    <TextBox Height="70"
-                             AcceptsReturn="True"
-                             Style="{StaticResource Deck.TextBoxStyle}"
-                             Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
-                             TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto" />
-                </StackPanel>
-
-                <CheckBox Grid.Row="4"
-                          Margin="0,14,0,0"
-                          Content="이 슬롯 사용"
-                          Style="{StaticResource Deck.CheckBoxStyle}"
-                          IsChecked="{Binding IsSlotEnabled}" />
-
-                <StackPanel Grid.Row="5"
-                            Style="{StaticResource Deck.FieldGroupSpacedStyle}">
-                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="이미지" />
-                    <DockPanel LastChildFill="False">
-                        <Border AllowDrop="True"
-                                DragOver="ImageDropTarget_DragOver"
-                                Drop="ImageDropTarget_Drop"
-                                Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
-                            <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=96}"
-                                   IsHitTestVisible="False"
-                                   Stretch="Uniform" />
-                        </Border>
-                        <StackPanel Margin="12,0,0,0"
-                                    VerticalAlignment="Center">
-                            <Button Command="{Binding ChooseImageCommand}"
-                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                    Content="이미지 선택" />
-                            <Button Margin="0,8,0,0"
-                                    Command="{Binding RemoveImageCommand}"
-                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                    Content="이미지 제거"
-                                    IsEnabled="{Binding HasImage}" />
+                <!-- 카드 1: 기본 정보 -->
+                <Border Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                        Margin="0,0,0,12">
+                    <StackPanel>
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="슬롯 명" />
+                            <TextBox Height="36"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding SnippetTitle, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
-                    </DockPanel>
-                </StackPanel>
 
-                <StackPanel Grid.Row="6"
-                            Style="{StaticResource Deck.FieldGroupSpacedStyle}"
-                            IsEnabled="{Binding CanTransfer}">
-                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                               Text="슬롯 복사/이동" />
+                        <StackPanel Style="{StaticResource Deck.FieldGroupSpacedStyle}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="실행 타입" />
+                            <UniformGrid Columns="3">
+                                <RadioButton Content="문구 붙여넣기"
+                                             GroupName="SnippetActionType"
+                                             IsChecked="{Binding IsPasteTextAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="파일/바로 가기 실행"
+                                             GroupName="SnippetActionType"
+                                             IsChecked="{Binding IsLaunchFileAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="웹 주소 열기"
+                                             GroupName="SnippetActionType"
+                                             IsChecked="{Binding IsLaunchUrlAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="음악/미디어 제어"
+                                             GroupName="SnippetActionType"
+                                             IsChecked="{Binding IsMediaAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="터미널 명령 실행"
+                                             GroupName="SnippetActionType"
+                                             IsChecked="{Binding IsTerminalCommandAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                            </UniformGrid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 카드 2: 상세 설정 -->
+                <Border Grid.Row="1"
+                        Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                        Margin="0,0,0,12">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                        <!-- 붙여넣을 문구 -->
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsPasteTextAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="붙여넣을 문구" />
+                            <TextBox MinHeight="80"
+                                     MaxHeight="180"
+                                     AcceptsReturn="True"
+                                     AcceptsTab="True"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+                            <TextBlock Margin="0,12,0,6"
+                                       Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="붙여넣기 방식" />
+                            <ComboBox ItemsSource="{Binding PasteShortcutModeOptions}"
+                                      SelectedValue="{Binding PasteShortcutMode, Mode=TwoWay}"
+                                      SelectedValuePath="Mode"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                        </StackPanel>
 
-                        <ComboBox ItemsSource="{Binding TransferTargetSlots}"
-                                  SelectedItem="{Binding SelectedTransferTarget}"
-                                  DisplayMemberPath="Label"
-                                  Style="{StaticResource Deck.ComboBoxStyle}" />
-                        <Button Grid.Column="1"
-                                Margin="12,0,0,0"
-                                Command="{Binding CopySnippetCommand}"
-                                Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                Content="슬롯 복사" />
-                        <Button Grid.Column="2"
-                                Margin="8,0,0,0"
-                                Command="{Binding MoveSnippetCommand}"
-                                Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                Content="슬롯 이동" />
+                        <!-- 파일/바로 가기 실행 -->
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsLaunchFileAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="실행할 파일, 폴더 또는 바로 가기" />
+                            <TextBox Height="36"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding LaunchPath, UpdateSourceTrigger=PropertyChanged}" />
+                            <StackPanel Margin="0,8,0,0"
+                                        Orientation="Horizontal">
+                                <Button Command="{Binding ChooseLaunchFileCommand}"
+                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                        Content="파일/바로 가기 선택" />
+                                <Button Margin="8,0,0,0"
+                                        Command="{Binding ChooseLaunchFolderCommand}"
+                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                        Content="폴더 선택" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- 웹 주소 열기 -->
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsLaunchUrlAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="열 웹페이지 주소" />
+                            <TextBox Height="36"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding LaunchUrl, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <!-- 음악/미디어 제어 -->
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsMediaAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="제어 대상" />
+                            <ComboBox ItemsSource="{Binding MediaProviderOptions}"
+                                      SelectedValue="{Binding SelectedMediaProvider, Mode=TwoWay}"
+                                      SelectedValuePath="Provider"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                            <TextBlock Margin="0,10,0,6"
+                                       Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="미디어 명령" />
+                            <ComboBox ItemsSource="{Binding MediaCommandOptions}"
+                                      SelectedValue="{Binding SelectedMediaCommand, Mode=TwoWay}"
+                                      SelectedValuePath="Command"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                            <TextBlock Margin="0,8,0,0"
+                                       Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                       Text="{Binding SpotifyMediaConnectionNotice}"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding ShowSpotifyMediaConnectionNotice, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </StackPanel>
+
+                        <!-- 터미널 명령 실행 -->
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsTerminalCommandAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="실행 셸" />
+                            <ComboBox ItemsSource="{Binding TerminalShellOptions}"
+                                      SelectedValue="{Binding SelectedTerminalShell, Mode=TwoWay}"
+                                      SelectedValuePath="Shell"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                            <CheckBox Margin="0,10,0,8"
+                                      Content="관리자 권한으로 실행"
+                                      Style="{StaticResource Deck.CheckBoxStyle}"
+                                      IsChecked="{Binding RunAsAdministrator}" />
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="터미널 명령" />
+                            <TextBox MinHeight="80"
+                                     MaxHeight="180"
+                                     AcceptsReturn="True"
+                                     AcceptsTab="True"
+                                     FontFamily="Cascadia Code, Consolas"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding TerminalCommand, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+                            <TextBlock Margin="0,8,0,0"
+                                       Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                       Text="신뢰하는 명령만 저장하고 실행하세요. 관리자 권한 실행 시 Windows 확인창이 표시될 수 있습니다."
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
                     </Grid>
-                </StackPanel>
+                </Border>
 
-                <TextBlock Grid.Row="7"
-                           Margin="0,14,0,0"
+                <!-- 카드 3: 기타 옵션 -->
+                <Border Grid.Row="2"
+                        Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                        Margin="0,0,0,12">
+                    <StackPanel>
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="설명" />
+                            <TextBox MinHeight="46"
+                                     MaxHeight="80"
+                                     AcceptsReturn="True"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+                        </StackPanel>
+
+                        <CheckBox Margin="0,12,0,12"
+                                  Content="이 슬롯 사용"
+                                  Style="{StaticResource Deck.CheckBoxStyle}"
+                                  IsChecked="{Binding IsSlotEnabled}" />
+
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="이미지" />
+                            <DockPanel LastChildFill="False">
+                                <Border AllowDrop="True"
+                                        DragOver="ImageDropTarget_DragOver"
+                                        Drop="ImageDropTarget_Drop"
+                                        Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
+                                    <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=96}"
+                                           IsHitTestVisible="False"
+                                           Stretch="Uniform" />
+                                </Border>
+                                <StackPanel Margin="12,0,0,0"
+                                            VerticalAlignment="Center">
+                                    <Button Command="{Binding ChooseImageCommand}"
+                                            Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                            Content="이미지 선택" />
+                                    <Button Margin="0,8,0,0"
+                                            Command="{Binding RemoveImageCommand}"
+                                            Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                            Content="이미지 제거"
+                                            IsEnabled="{Binding HasImage}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 카드 4: 슬롯 복사/이동 -->
+                <Border Grid.Row="3"
+                        Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                        Margin="0,0,0,12"
+                        IsEnabled="{Binding CanTransfer}">
+                    <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                        <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                   Text="슬롯 복사/이동" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <ComboBox ItemsSource="{Binding TransferTargetSlots}"
+                                      SelectedItem="{Binding SelectedTransferTarget}"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                            <Button Grid.Column="1"
+                                    Margin="12,0,0,0"
+                                    Command="{Binding CopySnippetCommand}"
+                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                    Content="슬롯 복사" />
+                            <Button Grid.Column="2"
+                                    Margin="8,0,0,0"
+                                    Command="{Binding MoveSnippetCommand}"
+                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                    Content="슬롯 이동" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Grid.Row="4"
+                           Margin="0,4,0,0"
                            Style="{StaticResource Deck.ErrorTextStyle}"
                            Text="{Binding ErrorMessage}"
                            TextWrapping="Wrap" />

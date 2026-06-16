@@ -38,9 +38,12 @@ public sealed class SnippetEditViewModel : ObservableObject
     private IReadOnlyList<SnippetMediaCommandOption> _mediaCommandOptions = SnippetMediaCommandOption.SystemCommands;
     private SnippetMediaProvider _mediaProvider = SnippetMediaProvider.System;
     private PasteShortcutMode _pasteShortcutMode = PasteShortcutMode.CtrlV;
+    private bool _runAsAdministrator = true;
     private SnippetTransferTargetSlot? _selectedTransferTarget;
     private SlotImageMode _slotImageMode = SlotImageMode.Auto;
     private string _snippetTitle = string.Empty;
+    private string _terminalCommand = string.Empty;
+    private SnippetTerminalShell _terminalShell = SnippetTerminalShell.Cmd;
 
     public SnippetEditViewModel(
         Category category,
@@ -86,6 +89,11 @@ public sealed class SnippetEditViewModel : ObservableObject
         _pasteShortcutMode = snippet?.PasteShortcutMode ?? PasteShortcutMode.CtrlV;
         _launchPath = snippet?.LaunchPath ?? string.Empty;
         _launchUrl = snippet?.LaunchUrl ?? string.Empty;
+        _terminalCommand = snippet?.TerminalCommand ?? string.Empty;
+        _terminalShell = snippet?.TerminalShell ?? SnippetTerminalShell.Cmd;
+        _runAsAdministrator = snippet?.ActionType == SnippetActionType.TerminalCommand
+            ? snippet.RunAsAdministrator
+            : true;
         _mediaProvider = snippet?.MediaProvider ?? SnippetMediaProvider.System;
         _mediaCommandOptions = SnippetMediaCommandOption.ForProvider(_mediaProvider);
         _mediaCommand = SnippetMediaCommandOption.GetValidCommandForProvider(
@@ -133,6 +141,9 @@ public sealed class SnippetEditViewModel : ObservableObject
     public IReadOnlyList<PasteShortcutModeOption> PasteShortcutModeOptions { get; } =
         PasteShortcutModeOption.All;
 
+    public IReadOnlyList<TerminalShellOption> TerminalShellOptions { get; } =
+        TerminalShellOption.All;
+
     public IReadOnlyList<SnippetMediaCommandOption> MediaCommandOptions
     {
         get => _mediaCommandOptions;
@@ -177,6 +188,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             OnPropertyChanged(nameof(IsLaunchFileAction));
             OnPropertyChanged(nameof(IsLaunchUrlAction));
             OnPropertyChanged(nameof(IsMediaAction));
+            OnPropertyChanged(nameof(IsTerminalCommandAction));
             OnPropertyChanged(nameof(ShowSpotifyMediaConnectionNotice));
             NotifyImageChanged();
         }
@@ -226,6 +238,18 @@ public sealed class SnippetEditViewModel : ObservableObject
             if (value)
             {
                 ActionType = SnippetActionType.MediaAction;
+            }
+        }
+    }
+
+    public bool IsTerminalCommandAction
+    {
+        get => ActionType == SnippetActionType.TerminalCommand;
+        set
+        {
+            if (value)
+            {
+                ActionType = SnippetActionType.TerminalCommand;
             }
         }
     }
@@ -280,6 +304,24 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public string SpotifyMediaConnectionNotice =>
         "Spotify 연결 전에도 저장할 수 있습니다. 실행하려면 설정에서 Spotify를 연결해 주세요.";
+
+    public string TerminalCommand
+    {
+        get => _terminalCommand;
+        set => SetProperty(ref _terminalCommand, value);
+    }
+
+    public SnippetTerminalShell SelectedTerminalShell
+    {
+        get => _terminalShell;
+        set => SetProperty(ref _terminalShell, value);
+    }
+
+    public bool RunAsAdministrator
+    {
+        get => _runAsAdministrator;
+        set => SetProperty(ref _runAsAdministrator, value);
+    }
 
     public string Description
     {
@@ -400,7 +442,10 @@ public sealed class SnippetEditViewModel : ObservableObject
             SelectedMediaCommand,
             IsSlotEnabled,
             _originalIsSlotEnabled,
-            PasteShortcutMode);
+            PasteShortcutMode,
+            TerminalCommand,
+            SelectedTerminalShell,
+            RunAsAdministrator);
     }
 
     private void Cancel()
@@ -776,6 +821,25 @@ public sealed class PasteShortcutModeOption
     }
 
     public PasteShortcutMode Mode { get; }
+
+    public string Label { get; }
+}
+
+public sealed class TerminalShellOption
+{
+    public static IReadOnlyList<TerminalShellOption> All { get; } =
+    [
+        new(SnippetTerminalShell.Cmd, "cmd"),
+        new(SnippetTerminalShell.PowerShell, "PowerShell")
+    ];
+
+    public TerminalShellOption(SnippetTerminalShell shell, string label)
+    {
+        Shell = shell;
+        Label = label;
+    }
+
+    public SnippetTerminalShell Shell { get; }
 
     public string Label { get; }
 }

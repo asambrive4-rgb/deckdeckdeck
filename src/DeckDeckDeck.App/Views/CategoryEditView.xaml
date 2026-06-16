@@ -21,94 +21,105 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
-                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                           Text="이름" />
-                <TextBox Height="36"
-                         Style="{StaticResource Deck.TextBoxStyle}"
-                         Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
-            </StackPanel>
-
-            <StackPanel Grid.Row="1"
-                        Style="{StaticResource Deck.FieldGroupSpacedStyle}">
-                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                           Text="설명" />
-                <TextBox Height="90"
-                         AcceptsReturn="True"
-                         Style="{StaticResource Deck.TextBoxStyle}"
-                         Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
-                         TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto" />
-            </StackPanel>
-
-            <CheckBox Grid.Row="2"
-                      Margin="0,14,0,0"
-                      Content="이 슬롯 사용"
-                      Style="{StaticResource Deck.CheckBoxStyle}"
-                      IsChecked="{Binding IsSlotEnabled}" />
-
-            <StackPanel Grid.Row="3"
-                        Style="{StaticResource Deck.FieldGroupSpacedStyle}">
-                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                           Text="이미지" />
-                <DockPanel LastChildFill="False">
-                    <Border AllowDrop="True"
-                            DragOver="ImageDropTarget_DragOver"
-                            Drop="ImageDropTarget_Drop"
-                            Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
-                        <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=96}"
-                               IsHitTestVisible="False"
-                               Stretch="Uniform" />
-                    </Border>
-                    <StackPanel Margin="12,0,0,0"
-                                VerticalAlignment="Center">
-                        <Button Command="{Binding ChooseImageCommand}"
-                                Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                Content="이미지 선택" />
-                        <Button Margin="0,8,0,0"
-                                Command="{Binding RemoveImageCommand}"
-                                Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                Content="이미지 제거"
-                                IsEnabled="{Binding HasImage}" />
+            <!-- 카드 1: 기본 정보 -->
+            <Border Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                    Margin="0,0,0,12">
+                <StackPanel>
+                    <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                        <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                   Text="이름" />
+                        <TextBox Height="36"
+                                 Style="{StaticResource Deck.TextBoxStyle}"
+                                 Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
-                </DockPanel>
-            </StackPanel>
 
-            <StackPanel Grid.Row="4"
-                        Style="{StaticResource Deck.FieldGroupSpacedStyle}"
-                        IsEnabled="{Binding CanTransfer}">
-                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                           Text="카테고리 복사/이동" />
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                    <StackPanel Style="{StaticResource Deck.FieldGroupSpacedStyle}">
+                        <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                   Text="설명" />
+                        <TextBox MinHeight="46"
+                                 MaxHeight="80"
+                                 AcceptsReturn="True"
+                                 Style="{StaticResource Deck.TextBoxStyle}"
+                                 Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                                 TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto" />
+                    </StackPanel>
 
-                    <ComboBox ItemsSource="{Binding TransferTargetSlots}"
-                              SelectedItem="{Binding SelectedTransferTarget}"
-                              DisplayMemberPath="Label"
-                              Style="{StaticResource Deck.ComboBoxStyle}" />
-                    <Button Grid.Column="1"
-                            Margin="12,0,0,0"
-                            Command="{Binding CopyCategoryCommand}"
-                            Style="{StaticResource Deck.ImageActionButtonStyle}"
-                            Content="카테고리 복사" />
-                    <Button Grid.Column="2"
-                            Margin="8,0,0,0"
-                            Command="{Binding MoveCategoryCommand}"
-                            Style="{StaticResource Deck.ImageActionButtonStyle}"
-                            Content="카테고리 이동" />
-                </Grid>
-            </StackPanel>
+                    <CheckBox Margin="0,12,0,0"
+                              Content="이 슬롯 사용"
+                              Style="{StaticResource Deck.CheckBoxStyle}"
+                              IsChecked="{Binding IsSlotEnabled}" />
+                </StackPanel>
+            </Border>
 
-            <TextBlock Grid.Row="5"
-                       Margin="0,14,0,0"
+            <!-- 카드 2: 이미지 -->
+            <Border Grid.Row="1"
+                    Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                    Margin="0,0,0,12">
+                <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                               Text="이미지" />
+                    <DockPanel LastChildFill="False">
+                        <Border AllowDrop="True"
+                                DragOver="ImageDropTarget_DragOver"
+                                Drop="ImageDropTarget_Drop"
+                                Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
+                            <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=96}"
+                                   IsHitTestVisible="False"
+                                   Stretch="Uniform" />
+                        </Border>
+                        <StackPanel Margin="12,0,0,0"
+                                    VerticalAlignment="Center">
+                            <Button Command="{Binding ChooseImageCommand}"
+                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                    Content="이미지 선택" />
+                            <Button Margin="0,8,0,0"
+                                    Command="{Binding RemoveImageCommand}"
+                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                    Content="이미지 제거"
+                                    IsEnabled="{Binding HasImage}" />
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 카드 3: 카테고리 복사/이동 -->
+            <Border Grid.Row="2"
+                    Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                    Margin="0,0,0,12"
+                    IsEnabled="{Binding CanTransfer}">
+                <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                               Text="카테고리 복사/이동" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ComboBox ItemsSource="{Binding TransferTargetSlots}"
+                                  SelectedItem="{Binding SelectedTransferTarget}"
+                                  DisplayMemberPath="Label"
+                                  Style="{StaticResource Deck.ComboBoxStyle}" />
+                        <Button Grid.Column="1"
+                                Margin="12,0,0,0"
+                                Command="{Binding CopyCategoryCommand}"
+                                Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                Content="카테고리 복사" />
+                        <Button Grid.Column="2"
+                                Margin="8,0,0,0"
+                                Command="{Binding MoveCategoryCommand}"
+                                Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                Content="카테고리 이동" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Grid.Row="3"
+                       Margin="0,4,0,0"
                        Style="{StaticResource Deck.ErrorTextStyle}"
                        Text="{Binding ErrorMessage}"
                        TextWrapping="Wrap" />

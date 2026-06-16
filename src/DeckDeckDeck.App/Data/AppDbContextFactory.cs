@@ -64,6 +64,21 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "MediaCommand",
                 "ALTER TABLE Snippets ADD COLUMN MediaCommand TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "TerminalCommand",
+                "ALTER TABLE Snippets ADD COLUMN TerminalCommand TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "TerminalShell",
+                "ALTER TABLE Snippets ADD COLUMN TerminalShell TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "RunAsAdministrator",
+                "ALTER TABLE Snippets ADD COLUMN RunAsAdministrator INTEGER NOT NULL DEFAULT 1");
             var addedSlotImageMode = AddColumnIfMissing(
                 dbContext,
                 existingColumns,

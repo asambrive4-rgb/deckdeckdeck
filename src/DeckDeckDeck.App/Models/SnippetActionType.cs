@@ -5,5 +5,6 @@ public enum SnippetActionType
     PasteText,
     LaunchFile,
     LaunchUrl,
-    MediaAction
+    MediaAction,
+    TerminalCommand
 }

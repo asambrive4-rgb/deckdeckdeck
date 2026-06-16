@@ -21,6 +21,7 @@ internal sealed record AppComposition(
     IFileLaunchGateway FileLaunchGatewayAdapter,
     IUrlLaunchGateway UrlLaunchGatewayAdapter,
     IMediaActionGateway SystemMediaActionGatewayAdapter,
+    ITerminalCommandGateway TerminalCommandGatewayAdapter,
     ISpotifyConnectionGateway SpotifyConnectionGatewayAdapter,
     ISpotifyMediaActionGateway SpotifyMediaActionGatewayAdapter,
     IStoredImagePathResolver StoredImagePathResolver,
@@ -58,6 +59,7 @@ internal sealed record AppComposition(
         var spotifyMediaActionGatewayAdapter = new SpotifyMediaActionGatewayAdapter(settingsRepository);
         var clipboardAdapter = new WpfClipboardAdapter();
         var fileLaunchGatewayAdapter = new FileLaunchGatewayAdapter();
+        var terminalCommandGatewayAdapter = new TerminalCommandGatewayAdapter(appStoragePaths.TempPath);
         var systemMediaActionGatewayAdapter = new SystemMediaActionGatewayAdapter();
         var clipboardPasteGateway = new ClipboardPasteGateway(
             clipboardAdapter,
@@ -75,6 +77,7 @@ internal sealed record AppComposition(
             fileLaunchGatewayAdapter,
             urlLaunchGatewayAdapter,
             systemMediaActionGatewayAdapter,
+            terminalCommandGatewayAdapter,
             spotifyConnectionGatewayAdapter,
             spotifyMediaActionGatewayAdapter,
             storedImagePathResolver,
@@ -86,7 +89,8 @@ internal sealed record AppComposition(
                 fileLaunchGatewayAdapter,
                 urlLaunchGatewayAdapter,
                 systemMediaActionGatewayAdapter,
-                spotifyMediaActionGatewayAdapter),
+                spotifyMediaActionGatewayAdapter,
+                terminalCommandGatewayAdapter),
             new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
             new SpotifyConnectionUseCase(
                 settingsRepository,
@@ -106,6 +110,7 @@ internal sealed record AppComposition(
         IFileLaunchGateway? fileLaunchGateway,
         IUrlLaunchGateway? urlLaunchGateway,
         IMediaActionGateway? mediaActionGateway,
+        ITerminalCommandGateway? terminalCommandGateway,
         ISpotifyConnectionGateway? spotifyConnectionGateway,
         ISpotifyMediaActionGateway? spotifyMediaActionGateway,
         IStoredImagePathResolver? storedImagePathResolver,
@@ -118,6 +123,7 @@ internal sealed record AppComposition(
         var effectiveFileLaunchGatewayAdapter = fileLaunchGateway ?? new FileLaunchGatewayAdapter();
         var effectiveUrlLaunchGatewayAdapter = urlLaunchGateway ?? new UrlLaunchGatewayAdapter();
         var effectiveSystemMediaActionGatewayAdapter = mediaActionGateway ?? new SystemMediaActionGatewayAdapter();
+        var effectiveTerminalCommandGatewayAdapter = terminalCommandGateway ?? new TerminalCommandGatewayAdapter();
         var effectiveSpotifyConnectionGatewayAdapter = spotifyConnectionGateway
             ?? new SpotifyConnectionGatewayAdapter(settingsRepository, effectiveUrlLaunchGatewayAdapter);
         var effectiveSpotifyMediaActionGatewayAdapter = spotifyMediaActionGateway
@@ -137,6 +143,7 @@ internal sealed record AppComposition(
             effectiveFileLaunchGatewayAdapter,
             effectiveUrlLaunchGatewayAdapter,
             effectiveSystemMediaActionGatewayAdapter,
+            effectiveTerminalCommandGatewayAdapter,
             effectiveSpotifyConnectionGatewayAdapter,
             effectiveSpotifyMediaActionGatewayAdapter,
             effectiveStoredImagePathResolver,
@@ -148,7 +155,8 @@ internal sealed record AppComposition(
                 effectiveFileLaunchGatewayAdapter,
                 effectiveUrlLaunchGatewayAdapter,
                 effectiveSystemMediaActionGatewayAdapter,
-                effectiveSpotifyMediaActionGatewayAdapter),
+                effectiveSpotifyMediaActionGatewayAdapter,
+                effectiveTerminalCommandGatewayAdapter),
             new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
             new SpotifyConnectionUseCase(
                 settingsRepository,
@@ -162,13 +170,15 @@ internal sealed record AppComposition(
         IFileLaunchGateway fileLaunchGateway,
         IUrlLaunchGateway urlLaunchGateway,
         IMediaActionGateway mediaActionGateway,
-        ISpotifyMediaActionGateway spotifyMediaActionGateway)
+        ISpotifyMediaActionGateway spotifyMediaActionGateway,
+        ITerminalCommandGateway terminalCommandGateway)
     {
         return new ExecuteSnippetActionUseCase(
             clipboardPasteGateway,
             fileLaunchGateway,
             urlLaunchGateway,
             mediaActionGateway,
-            spotifyMediaActionGateway);
+            spotifyMediaActionGateway,
+            terminalCommandGateway);
     }
 }

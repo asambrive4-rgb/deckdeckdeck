@@ -157,6 +157,41 @@ public sealed class DataPersistenceTests
     }
 
     [Fact]
+    public void TerminalCommandSnippetPersistsAcrossDbContexts()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        services.SnippetRepository.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Reconnect Bluetooth",
+            "unused",
+            null,
+            actionType: SnippetActionType.TerminalCommand,
+            launchPath: @"C:\unused",
+            launchUrl: "https://example.com",
+            mediaProvider: SnippetMediaProvider.System,
+            mediaCommand: SnippetMediaCommand.NextTrack,
+            terminalCommand: "  echo reconnect  ",
+            terminalShell: SnippetTerminalShell.PowerShell,
+            runAsAdministrator: false);
+
+        var reloadedServices = CreateServices(services.Storage.AppDataPath);
+        var snippet = Assert.Single(reloadedServices.SnippetRepository.GetByCategoryId(category.Id));
+
+        Assert.Equal(SnippetActionType.TerminalCommand, snippet.ActionType);
+        Assert.Equal(string.Empty, snippet.Content);
+        Assert.Null(snippet.LaunchPath);
+        Assert.Null(snippet.LaunchUrl);
+        Assert.Null(snippet.MediaProvider);
+        Assert.Null(snippet.MediaCommand);
+        Assert.Equal("echo reconnect", snippet.TerminalCommand);
+        Assert.Equal(SnippetTerminalShell.PowerShell, snippet.TerminalShell);
+        Assert.False(snippet.RunAsAdministrator);
+        Assert.Null(snippet.AutoIconPath);
+    }
+
+    [Fact]
     public void SpotifyMediaActionSnippetPersistsAcrossDbContexts()
     {
         var services = CreateServices();
@@ -518,6 +553,33 @@ public sealed class DataPersistenceTests
         Assert.Null(copiedSnippet.LaunchUrl);
         Assert.Equal(SnippetMediaProvider.System, copiedSnippet.MediaProvider);
         Assert.Equal(SnippetMediaCommand.Mute, copiedSnippet.MediaCommand);
+    }
+
+    [Fact]
+    public void CopyingCategoryPreservesTerminalCommandSnippets()
+    {
+        var services = CreateServices();
+        var source = services.CategoryRepository.Create(SlotKey.Numpad4, "Tools", null);
+        services.SnippetRepository.Create(
+            source.Id,
+            SlotKey.Numpad3,
+            "Reconnect Bluetooth",
+            "unused",
+            null,
+            actionType: SnippetActionType.TerminalCommand,
+            terminalCommand: "echo reconnect",
+            terminalShell: SnippetTerminalShell.Cmd,
+            runAsAdministrator: true);
+
+        services.CategoryRepository.CopyToSlot(source.Id, SlotKey.Numpad5, imageFiles => imageFiles);
+
+        var copiedCategory = services.CategoryRepository.GetBySlotKey(SlotKey.Numpad5);
+        var copiedSnippet = Assert.Single(services.SnippetRepository.GetByCategoryId(copiedCategory!.Id));
+
+        Assert.Equal(SnippetActionType.TerminalCommand, copiedSnippet.ActionType);
+        Assert.Equal("echo reconnect", copiedSnippet.TerminalCommand);
+        Assert.Equal(SnippetTerminalShell.Cmd, copiedSnippet.TerminalShell);
+        Assert.True(copiedSnippet.RunAsAdministrator);
     }
 
     [Fact]

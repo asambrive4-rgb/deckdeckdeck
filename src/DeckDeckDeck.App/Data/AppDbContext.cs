@@ -40,6 +40,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(snippet => snippet.PasteShortcutMode).HasConversion<string>().IsRequired();
             entity.Property(snippet => snippet.MediaProvider).HasConversion<string>();
             entity.Property(snippet => snippet.MediaCommand).HasConversion<string>();
+            entity.Property(snippet => snippet.TerminalShell).HasConversion<string>();
             entity.Property(snippet => snippet.SlotImageMode).HasConversion<string>().IsRequired();
             entity.Property(snippet => snippet.Title).IsRequired();
             entity.Property(snippet => snippet.Content).IsRequired();

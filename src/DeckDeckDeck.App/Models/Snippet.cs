@@ -26,6 +26,12 @@ public sealed class Snippet
 
     public SnippetMediaCommand? MediaCommand { get; set; }
 
+    public string? TerminalCommand { get; set; }
+
+    public SnippetTerminalShell? TerminalShell { get; set; }
+
+    public bool RunAsAdministrator { get; set; } = true;
+
     public SlotImageMode SlotImageMode { get; set; } = SlotImageMode.Auto;
 
     public string? Description { get; set; }

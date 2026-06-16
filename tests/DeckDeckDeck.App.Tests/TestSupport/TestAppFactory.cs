@@ -60,6 +60,7 @@ internal static class TestAppFactory
         IFileLaunchGateway? fileLaunchService = null,
         IUrlLaunchGateway? urlLaunchService = null,
         IMediaActionGateway? mediaActionService = null,
+        ITerminalCommandGateway? terminalCommandService = null,
         ISpotifyConnectionGateway? spotifyConnectionService = null,
         ISpotifyMediaActionGateway? spotifyMediaActionGatewayAdapter = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null)
@@ -75,6 +76,7 @@ internal static class TestAppFactory
             urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter(),
             mediaActionService ?? new RecordingSystemMediaActionGatewayAdapter(),
             spotifyMediaActionGatewayAdapter ?? new RecordingSpotifyMediaActionGatewayAdapter(),
+            terminalCommandService ?? new RecordingTerminalCommandGatewayAdapter(),
             new SpotifyConnectionUseCase(
                 services.SettingsRepository,
                 spotifyConnectionService
@@ -362,6 +364,34 @@ internal sealed class RecordingSpotifyMediaActionGatewayAdapter : ISpotifyMediaA
         return Task.FromResult(Result);
     }
 }
+
+internal sealed class RecordingTerminalCommandGatewayAdapter : ITerminalCommandGateway
+{
+    public bool Result { get; set; } = true;
+
+    public Exception? Exception { get; set; }
+
+    public List<TerminalCommandCall> Calls { get; } = [];
+
+    public bool TryExecute(
+        string command,
+        SnippetTerminalShell shell,
+        bool runAsAdministrator)
+    {
+        if (Exception is not null)
+        {
+            throw Exception;
+        }
+
+        Calls.Add(new TerminalCommandCall(command, shell, runAsAdministrator));
+        return Result;
+    }
+}
+
+internal sealed record TerminalCommandCall(
+    string Command,
+    SnippetTerminalShell Shell,
+    bool RunAsAdministrator);
 
 internal sealed class RecordingAutoBackupCoordinator : IAutoBackupCoordinator
 {

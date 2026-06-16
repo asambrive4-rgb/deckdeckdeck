@@ -150,7 +150,8 @@ public sealed class UseCaseTests
             launchService,
             new RecordingUrlLaunchGatewayAdapter(),
             new RecordingSystemMediaActionGatewayAdapter(),
-            new TestSpotifyMediaActionGateway());
+            new TestSpotifyMediaActionGateway(),
+            new RecordingTerminalCommandGatewayAdapter());
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
             new Snippet
@@ -166,6 +167,41 @@ public sealed class UseCaseTests
         Assert.False(result.Succeeded);
         Assert.Contains("실행 실패", result.StatusMessage);
         Assert.Empty(pasteService.Calls);
+    }
+
+    [Fact]
+    public async Task ExecuteSnippetActionUseCaseRunsTerminalCommandWithoutCallingPaste()
+    {
+        var pasteService = new RecordingClipboardPasteGateway();
+        var terminalService = new RecordingTerminalCommandGatewayAdapter();
+        var useCase = new ExecuteSnippetActionUseCase(
+            pasteService,
+            new RecordingFileLaunchGatewayAdapter(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new TestSpotifyMediaActionGateway(),
+            terminalService);
+
+        var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
+            new Snippet
+            {
+                Id = Guid.NewGuid(),
+                Title = "Reconnect Bluetooth",
+                ActionType = SnippetActionType.TerminalCommand,
+                TerminalCommand = "echo reconnect",
+                TerminalShell = SnippetTerminalShell.PowerShell,
+                RunAsAdministrator = true
+            },
+            new AppSettings(),
+            new IntPtr(123)));
+
+        Assert.True(result.Succeeded);
+        Assert.Contains("터미널 명령 실행됨", result.StatusMessage);
+        Assert.Empty(pasteService.Calls);
+        var call = Assert.Single(terminalService.Calls);
+        Assert.Equal("echo reconnect", call.Command);
+        Assert.Equal(SnippetTerminalShell.PowerShell, call.Shell);
+        Assert.True(call.RunAsAdministrator);
     }
 
     [Fact]
