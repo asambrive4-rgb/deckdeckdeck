@@ -134,13 +134,15 @@
 
         <Button Grid.Row="0"
                 Grid.Column="0"
-                Focusable="False"
-                IsHitTestVisible="False"
-                Style="{StaticResource Deck.SlotMainButtonStyle}">
+                Command="{Binding SelectCommand}"
+                DataContext="{Binding HotkeyTile}"
+                IsEnabled="{Binding IsEnabled}"
+                Style="{StaticResource Deck.SlotMainButtonStyle}"
+                ToolTip="{Binding ToolTip}">
             <TextBlock Style="{StaticResource Deck.SlotTitleTextStyle}"
                        FontSize="13"
                        HorizontalAlignment="Center"
-                       Text="Hotkey"
+                       Text="{Binding Text}"
                        TextAlignment="Center"
                        TextWrapping="NoWrap" />
         </Button>

@@ -17,7 +17,8 @@ public sealed class HomeViewModel
         Action<Category> openCategory,
         Action<Category> editCategory,
         Action<SlotKey> createCategory,
-        Action showSettings)
+        Action showSettings,
+        Action showHotkeys)
     {
         _openCategory = openCategory;
         _editCategory = editCategory;
@@ -28,7 +29,8 @@ public sealed class HomeViewModel
             gridState.Categories,
             gridState.Settings,
             SelectCategorySlot,
-            EditCategorySlot);
+            EditCategorySlot,
+            showHotkeys);
     }
 
     public string Title => "DeckDeckDeck";

@@ -31,13 +31,18 @@ internal sealed class SnippetActionRunner
 
     public async Task ExecuteAsync(Snippet snippet)
     {
+        await ExecuteAsync(ExecutableAction.FromSnippet(snippet));
+    }
+
+    public async Task ExecuteAsync(ExecutableAction action)
+    {
         var settings = _loadSettingsUseCase.Execute();
         var completePasteSelection = _callbacks.CreatePasteSelectionCompletion();
 
         try
         {
             var preparation = _prepareSnippetActionUseCase.Execute(
-                new PrepareSnippetActionRequest(snippet, settings));
+                new PrepareSnippetActionRequest(action, settings));
             if (preparation.ShouldHideBeforeExecute)
             {
                 _callbacks.HideWindowAfterPaste();
@@ -45,7 +50,7 @@ internal sealed class SnippetActionRunner
 
             var result = await _executeSnippetActionUseCase.ExecuteAsync(
                 new ExecuteSnippetActionRequest(
-                    snippet,
+                    action,
                     settings,
                     _callbacks.GetPasteTargetWindowHandle()));
 

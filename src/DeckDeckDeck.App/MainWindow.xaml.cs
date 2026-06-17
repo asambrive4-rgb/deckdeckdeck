@@ -20,6 +20,7 @@ namespace DeckDeckDeck.App;
 public partial class MainWindow : Window
 {
     private readonly GlobalHotkeyRegistrar _globalHotkeyRegistrar = new();
+    private readonly DirectHotkeyRegistrar _directHotkeyRegistrar = new();
     private readonly NumpadCapture _numpadCapture = new();
     private readonly PasteSelectionSession _pasteSelectionSession = new();
     private readonly PaletteWindowController _paletteWindowController = new();
@@ -46,7 +47,12 @@ public partial class MainWindow : Window
         Closed += OnClosed;
         _globalHotkeyRegistrar.HotkeyPressed += OnHotkeyPressed;
         _globalHotkeyRegistrar.HotkeyLongPressed += OnHotkeyLongPressed;
+        _directHotkeyRegistrar.DirectHotkeyPressed += OnDirectHotkeyPressed;
         _numpadCapture.SlotCaptured += OnNumpadSlotCaptured;
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.DirectHotkeysChanged += OnDirectHotkeysChanged;
+        }
     }
 
     private void UseApplicationIcon()
@@ -115,7 +121,9 @@ public partial class MainWindow : Window
         _paletteWindowController.Attach(_windowHandle);
         ApplyWindowPlacement(IntPtr.Zero);
 
-        var failures = _globalHotkeyRegistrar.Start(_windowHandle);
+        var failures = _globalHotkeyRegistrar.Start(_windowHandle).ToList();
+        failures.AddRange(_directHotkeyRegistrar.Start());
+        RefreshDirectHotkeys();
 
         if (failures.Count > 0 && DataContext is MainViewModel viewModel)
         {
@@ -149,11 +157,13 @@ public partial class MainWindow : Window
         SaveWindowPlacement();
         if (DataContext is MainViewModel viewModel)
         {
+            viewModel.DirectHotkeysChanged -= OnDirectHotkeysChanged;
             viewModel.Dispose();
         }
 
         _numpadCapture.Dispose();
         _paletteWindowController.Dispose();
+        _directHotkeyRegistrar.Dispose();
         _globalHotkeyRegistrar.Dispose();
     }
 
@@ -212,6 +222,22 @@ public partial class MainWindow : Window
         HandleHotkeyLongPress(e.SlotKey);
     }
 
+    private void OnDirectHotkeyPressed(object? sender, DirectHotkeyPressedEventArgs e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(() => HandleDirectHotkey(e.HotkeyActionId));
+            return;
+        }
+
+        HandleDirectHotkey(e.HotkeyActionId);
+    }
+
+    private void OnDirectHotkeysChanged(object? sender, EventArgs e)
+    {
+        RefreshDirectHotkeys();
+    }
+
     private void HandleHotkey(SlotKey slotKey)
     {
         _lastPasteTargetWindowHandle = _windowFocusAdapter.GetForegroundWindow();
@@ -230,6 +256,17 @@ public partial class MainWindow : Window
         }
 
         viewModel.OpenCategoryFromHotkey(slotKey);
+    }
+
+    private void HandleDirectHotkey(Guid hotkeyActionId)
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        _lastPasteTargetWindowHandle = _windowFocusAdapter.GetForegroundWindow();
+        _ = ExecuteDirectHotkeySafely(viewModel, hotkeyActionId);
     }
 
     private void HandleHotkeyLongPress(SlotKey slotKey)
@@ -255,6 +292,29 @@ public partial class MainWindow : Window
     {
         _pasteSelectionSession.Start();
         _numpadCapture.Start(_windowHandle);
+    }
+
+    private async Task ExecuteDirectHotkeySafely(MainViewModel viewModel, Guid hotkeyActionId)
+    {
+        try
+        {
+            await viewModel.ExecuteDirectHotkeyAsync(hotkeyActionId);
+        }
+        catch
+        {
+            viewModel.ReportBackgroundStatus("핫키 실행 중 오류가 발생했습니다.");
+        }
+    }
+
+    private void RefreshDirectHotkeys()
+    {
+        if (DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        _directHotkeyRegistrar.Refresh(viewModel.LoadActiveDirectHotkeys());
+        _directHotkeyRegistrar.IsSuspended = viewModel.IsCapturingHotkeyInput;
     }
 
     private void EndPasteSelection()

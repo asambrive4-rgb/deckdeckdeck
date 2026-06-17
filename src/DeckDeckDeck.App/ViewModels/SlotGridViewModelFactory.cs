@@ -21,11 +21,13 @@ public sealed class SlotGridViewModelFactory
         IEnumerable<Category> categories,
         AppSettings settings,
         Action<SlotKey, Category?> onSelected,
-        Action<SlotKey, Category?> onEdit)
+        Action<SlotKey, Category?> onEdit,
+        Action? onHotkeySelected = null)
     {
         var categoriesBySlot = categories.ToDictionary(category => category.SlotKey);
 
-        return new NumpadGridViewModel(SlotKeyCatalog.All.Select(slotKey =>
+        return new NumpadGridViewModel(
+            SlotKeyCatalog.All.Select(slotKey =>
         {
             categoriesBySlot.TryGetValue(slotKey, out var category);
             return new SlotViewModel(
@@ -35,7 +37,10 @@ public sealed class SlotGridViewModelFactory
                 SlotRules.IsEnabled(slotKey, settings.EnabledCategorySlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, category),
                 selectedSlotKey => onEdit(selectedSlotKey, category));
-        }));
+        }),
+            onHotkeySelected is null
+                ? HotkeyTileViewModel.Disabled()
+                : HotkeyTileViewModel.Enabled(onHotkeySelected));
     }
 
     public NumpadGridViewModel BuildSnippetGrid(
@@ -46,7 +51,8 @@ public sealed class SlotGridViewModelFactory
     {
         var snippetsBySlot = snippets.ToDictionary(snippet => snippet.SlotKey);
 
-        return new NumpadGridViewModel(SlotKeyCatalog.All.Select(slotKey =>
+        return new NumpadGridViewModel(
+            SlotKeyCatalog.All.Select(slotKey =>
         {
             snippetsBySlot.TryGetValue(slotKey, out var snippet);
             var thumbnailPath = ResolveSnippetDisplayPath(snippet);
@@ -57,7 +63,8 @@ public sealed class SlotGridViewModelFactory
                 SlotRules.IsEnabled(slotKey, settings.EnabledSnippetSlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, snippet),
                 selectedSlotKey => onEdit(selectedSlotKey, snippet));
-        }));
+        }),
+            HotkeyTileViewModel.Disabled());
     }
 
     private string? ResolveDisplayPath(string? path)

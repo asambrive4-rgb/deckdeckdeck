@@ -58,6 +58,16 @@
                 <views:SnippetEditView />
             </Border>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:HotkeyListViewModel}">
+            <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
+                <views:HotkeyListView />
+            </Border>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:HotkeyEditViewModel}">
+            <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
+                <views:HotkeyEditView />
+            </Border>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type viewModels:SettingsViewModel}">
             <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
                 <views:SettingsView />

@@ -42,7 +42,12 @@ public sealed class ClipboardPasteGateway : IClipboardPasteGateway
         _restoreDelay = restoreDelay ?? DefaultRestoreDelay;
     }
 
-    public async Task<bool> PasteSnippetAsync(Snippet snippet, IntPtr targetWindowHandle, AppSettings settings)
+    public Task<bool> PasteSnippetAsync(Snippet snippet, IntPtr targetWindowHandle, AppSettings settings)
+    {
+        return PasteActionAsync(ExecutableAction.FromSnippet(snippet), targetWindowHandle, settings);
+    }
+
+    public async Task<bool> PasteActionAsync(ExecutableAction action, IntPtr targetWindowHandle, AppSettings settings)
     {
         if (targetWindowHandle == IntPtr.Zero)
         {
@@ -55,13 +60,13 @@ public sealed class ClipboardPasteGateway : IClipboardPasteGateway
         try
         {
             backup = _clipboardAdapter.GetDataObject();
-            _clipboardAdapter.SetText(snippet.Content);
+            _clipboardAdapter.SetText(action.Content);
             shouldRestore = settings.RestoreClipboardAfterPaste && backup is not null;
 
             _windowFocusAdapter.TryActivate(targetWindowHandle);
             await Task.Delay(_pasteDelay);
 
-            return snippet.PasteShortcutMode == PasteShortcutMode.CtrlShiftV
+            return action.PasteShortcutMode == PasteShortcutMode.CtrlShiftV
                 ? _keyboardInputAdapter.SendCtrlShiftV()
                 : _keyboardInputAdapter.SendCtrlV();
         }

@@ -151,6 +151,25 @@ public sealed class BackupGatewayTests
                 @"C:\tools\restored.exe",
                 DateTime.UtcNow,
                 123));
+        backupSource.HotkeyActionRepository.Create(new HotkeyActionSaveData(
+            "Restored Hotkey",
+            new HotkeyGesture(0x27, HotkeyModifiers.None),
+            IsEnabled: true,
+            Content: string.Empty,
+            Description: "restored direct action",
+            ImagePath: null,
+            ThumbnailPath: null,
+            SnippetActionType.MediaAction,
+            LaunchPath: string.Empty,
+            SlotImageMode.Auto,
+            AutoIcon: null,
+            LaunchUrl: null,
+            SnippetMediaProvider.System,
+            SnippetMediaCommand.NextTrack,
+            PasteShortcutMode.CtrlV,
+            TerminalCommand: string.Empty,
+            SnippetTerminalShell.Cmd,
+            RunAsAdministrator: false));
         backupSource.SettingsRepository.SetCategorySlotEnabled(SlotKey.Numpad4, false);
         var backup = backupSource.BackupGateway.CreateManualBackup(backupFolder);
         Assert.True(backup.Succeeded);
@@ -176,6 +195,11 @@ public sealed class BackupGatewayTests
         Assert.Equal("images/originals/restored.txt", restored.ImagePath);
         Assert.Equal("images/thumbnails/restored-thumb.txt", restored.ThumbnailPath);
         Assert.Equal("icon-cache/restored.txt", restoredSnippet.AutoIconPath);
+        var restoredHotkey = Assert.Single(current.HotkeyActionRepository.GetAll());
+        Assert.Equal("Restored Hotkey", restoredHotkey.Title);
+        Assert.Equal(0x27, restoredHotkey.HotkeyVirtualKey);
+        Assert.Equal(SnippetActionType.MediaAction, restoredHotkey.ActionType);
+        Assert.Equal(SnippetMediaCommand.NextTrack, restoredHotkey.MediaCommand);
         Assert.Null(current.CategoryRepository.GetBySlotKey(SlotKey.Numpad5));
         Assert.False(current.SettingsRepository.Load().EnabledCategorySlotKeys[SlotKey.Numpad4]);
         Assert.Equal("restored image", File.ReadAllText(Path.Combine(current.Storage.ImageOriginalsPath, "restored.txt")));

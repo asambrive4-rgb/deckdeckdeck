@@ -44,6 +44,10 @@ public static class Win32Constants
 
     public const ushort VkMenu = 0x12;
 
+    public const ushort VkLWin = 0x5B;
+
+    public const ushort VkRWin = 0x5C;
+
     public const ushort VkV = 0x56;
 
     public const ushort VkVolumeMute = 0xAD;

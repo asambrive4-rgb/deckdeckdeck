@@ -6,6 +6,7 @@ internal sealed class MainViewModelNavigator
 {
     private readonly MainViewModelNavigatorDependencies _dependencies;
     private readonly Action _enterEditMode;
+    private readonly Action _notifyDirectHotkeysChanged;
     private readonly MainViewModelViewFactory _viewFactory;
     private readonly Action<string> _showStatus;
     private readonly Action<object> _showViewModel;
@@ -15,13 +16,15 @@ internal sealed class MainViewModelNavigator
         MainViewModelViewFactory viewFactory,
         Action<object> showViewModel,
         Action<string> showStatus,
-        Action enterEditMode)
+        Action enterEditMode,
+        Action notifyDirectHotkeysChanged)
     {
         _dependencies = dependencies;
         _viewFactory = viewFactory;
         _showViewModel = showViewModel;
         _showStatus = showStatus;
         _enterEditMode = enterEditMode;
+        _notifyDirectHotkeysChanged = notifyDirectHotkeysChanged;
     }
 
     public void ShowHome()
@@ -30,7 +33,8 @@ internal sealed class MainViewModelNavigator
             OpenCategory,
             EditCategory,
             CreateCategory,
-            () => ShowSettings(ShowHome)));
+            () => ShowSettings(ShowHome),
+            ShowHotkeys));
         _showStatus("홈");
     }
 
@@ -103,5 +107,62 @@ internal sealed class MainViewModelNavigator
             returnTo,
             returnTo));
         _showStatus("설정");
+    }
+
+    public void ShowHotkeys()
+    {
+        _enterEditMode();
+        _showViewModel(_viewFactory.CreateHotkeyList(
+            CreateHotkey,
+            EditHotkey,
+            ShowHome,
+            ShowHotkeys,
+            NotifyHotkeysChanged));
+        _showStatus("핫키");
+    }
+
+    private void CreateHotkey()
+    {
+        _enterEditMode();
+        _showViewModel(_viewFactory.CreateHotkeyEditor(
+            action: null,
+            ShowHotkeys,
+            _ =>
+            {
+                ShowHotkeys();
+                NotifyHotkeysChanged();
+            },
+            () =>
+            {
+                ShowHotkeys();
+                NotifyHotkeysChanged();
+            },
+            NotifyHotkeysChanged));
+        _showStatus("새 핫키 만들기");
+    }
+
+    private void EditHotkey(HotkeyAction action)
+    {
+        _enterEditMode();
+        _showViewModel(_viewFactory.CreateHotkeyEditor(
+            action,
+            ShowHotkeys,
+            _ =>
+            {
+                ShowHotkeys();
+                NotifyHotkeysChanged();
+            },
+            () =>
+            {
+                ShowHotkeys();
+                NotifyHotkeysChanged();
+            },
+            NotifyHotkeysChanged));
+        _showStatus($"{action.Title} 핫키 편집");
+    }
+
+    private void NotifyHotkeysChanged()
+    {
+        _notifyDirectHotkeysChanged();
     }
 }

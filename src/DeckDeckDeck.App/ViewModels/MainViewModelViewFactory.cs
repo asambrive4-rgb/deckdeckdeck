@@ -23,7 +23,8 @@ internal sealed class MainViewModelViewFactory
         Action<Category> openCategory,
         Action<Category> editCategory,
         Action<SlotKey> createCategory,
-        Action showSettings)
+        Action showSettings,
+        Action showHotkeys)
     {
         return new HomeViewModel(
             _dependencies.LoadHomeGridUseCase.Execute(),
@@ -31,7 +32,8 @@ internal sealed class MainViewModelViewFactory
             openCategory,
             editCategory,
             createCategory,
-            showSettings);
+            showSettings,
+            showHotkeys);
     }
 
     public CategoryViewModel CreateCategory(
@@ -119,5 +121,49 @@ internal sealed class MainViewModelViewFactory
             afterSave,
             _showStatus,
             _dependencies.Logger);
+    }
+
+    public HotkeyListViewModel CreateHotkeyList(
+        Action addHotkey,
+        Action<HotkeyAction> editHotkey,
+        Action back,
+        Action reload,
+        Action notifyHotkeysChanged)
+    {
+        return new HotkeyListViewModel(
+            _dependencies.LoadHotkeyActionsUseCase.Execute(),
+            _dependencies.SaveHotkeyActionUseCase,
+            _dependencies.DeleteHotkeyActionUseCase,
+            _dependencies.DialogAdapter,
+            addHotkey,
+            editHotkey,
+            back,
+            reload,
+            notifyHotkeysChanged,
+            _showStatus);
+    }
+
+    public HotkeyEditViewModel CreateHotkeyEditor(
+        HotkeyAction? action,
+        Action cancel,
+        Action<HotkeyAction> afterSave,
+        Action afterDelete,
+        Action notifyHotkeyCaptureStateChanged)
+    {
+        return new HotkeyEditViewModel(
+            action,
+            _dependencies.LoadHotkeyActionEditorStateUseCase.Execute(),
+            _dependencies.SaveHotkeyActionUseCase,
+            _dependencies.DeleteHotkeyActionUseCase,
+            _dependencies.DialogAdapter,
+            cancel,
+            afterSave,
+            afterDelete,
+            notifyHotkeyCaptureStateChanged,
+            _showStatus,
+            _dependencies.ImageFileRepository,
+            _dependencies.Logger,
+            _dependencies.SnippetImageResolver,
+            _dependencies.StoredImagePathResolver);
     }
 }

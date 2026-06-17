@@ -25,6 +25,7 @@ public sealed class AppDbContextFactory
         using var dbContext = Create();
         dbContext.Database.EnsureCreated();
         EnsureSnippetColumns(dbContext);
+        EnsureHotkeyActionsTable(dbContext);
     }
 
     private static void EnsureSnippetColumns(AppDbContext dbContext)
@@ -109,6 +110,57 @@ public sealed class AppDbContextFactory
             {
                 BackfillSnippetImageModes(dbContext);
             }
+        }
+        finally
+        {
+            dbContext.Database.CloseConnection();
+        }
+    }
+
+    private static void EnsureHotkeyActionsTable(AppDbContext dbContext)
+    {
+        dbContext.Database.OpenConnection();
+
+        try
+        {
+            using var createTableCommand = dbContext.Database.GetDbConnection().CreateCommand();
+            createTableCommand.CommandText = """
+                CREATE TABLE IF NOT EXISTS HotkeyActions (
+                    Id TEXT NOT NULL CONSTRAINT PK_HotkeyActions PRIMARY KEY,
+                    Title TEXT NOT NULL,
+                    HotkeyVirtualKey INTEGER NULL,
+                    HotkeyModifiers INTEGER NOT NULL DEFAULT 0,
+                    IsEnabled INTEGER NOT NULL DEFAULT 1,
+                    Content TEXT NOT NULL DEFAULT '',
+                    ActionType TEXT NOT NULL DEFAULT 'PasteText',
+                    PasteShortcutMode TEXT NOT NULL DEFAULT 'CtrlV',
+                    LaunchPath TEXT NULL,
+                    LaunchUrl TEXT NULL,
+                    MediaProvider TEXT NULL,
+                    MediaCommand TEXT NULL,
+                    TerminalCommand TEXT NULL,
+                    TerminalShell TEXT NULL,
+                    RunAsAdministrator INTEGER NOT NULL DEFAULT 1,
+                    SlotImageMode TEXT NOT NULL DEFAULT 'Auto',
+                    Description TEXT NULL,
+                    ImagePath TEXT NULL,
+                    ThumbnailPath TEXT NULL,
+                    AutoIconPath TEXT NULL,
+                    AutoIconSourcePath TEXT NULL,
+                    AutoIconSourceLastWriteTimeUtc TEXT NULL,
+                    AutoIconSourceLength INTEGER NULL,
+                    CreatedAt TEXT NOT NULL,
+                    UpdatedAt TEXT NOT NULL
+                )
+                """;
+            createTableCommand.ExecuteNonQuery();
+
+            using var createIndexCommand = dbContext.Database.GetDbConnection().CreateCommand();
+            createIndexCommand.CommandText = """
+                CREATE INDEX IF NOT EXISTS IX_HotkeyActions_HotkeyVirtualKey_HotkeyModifiers
+                ON HotkeyActions (HotkeyVirtualKey, HotkeyModifiers)
+                """;
+            createIndexCommand.ExecuteNonQuery();
         }
         finally
         {

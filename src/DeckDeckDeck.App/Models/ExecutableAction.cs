@@ -1,0 +1,50 @@
+namespace DeckDeckDeck.App.Models;
+
+public sealed record ExecutableAction(
+    Guid Id,
+    string Title,
+    string Content,
+    SnippetActionType ActionType,
+    PasteShortcutMode PasteShortcutMode,
+    string? LaunchPath,
+    string? LaunchUrl,
+    SnippetMediaProvider? MediaProvider,
+    SnippetMediaCommand? MediaCommand,
+    string? TerminalCommand,
+    SnippetTerminalShell? TerminalShell,
+    bool RunAsAdministrator)
+{
+    public static ExecutableAction FromSnippet(Snippet snippet)
+    {
+        return new ExecutableAction(
+            snippet.Id,
+            snippet.Title,
+            snippet.Content,
+            snippet.ActionType,
+            snippet.PasteShortcutMode,
+            snippet.LaunchPath,
+            snippet.LaunchUrl,
+            snippet.MediaProvider,
+            snippet.MediaCommand,
+            snippet.TerminalCommand,
+            snippet.TerminalShell,
+            snippet.RunAsAdministrator);
+    }
+
+    public static ExecutableAction FromHotkeyAction(HotkeyAction action)
+    {
+        return new ExecutableAction(
+            action.Id,
+            action.Title,
+            action.Content,
+            action.ActionType,
+            action.PasteShortcutMode,
+            action.LaunchPath,
+            action.LaunchUrl,
+            action.MediaProvider,
+            action.MediaCommand,
+            action.TerminalCommand,
+            action.TerminalShell,
+            action.RunAsAdministrator);
+    }
+}

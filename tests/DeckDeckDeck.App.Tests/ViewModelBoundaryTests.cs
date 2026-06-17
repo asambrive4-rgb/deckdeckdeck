@@ -73,6 +73,7 @@ public sealed class ViewModelBoundaryTests
             opened => selectedCategory = opened,
             _ => { },
             _ => { },
+            () => { },
             () => { });
 
         viewModel.SelectSlot(SlotKey.Numpad1);

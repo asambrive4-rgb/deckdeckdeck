@@ -27,6 +27,7 @@ internal static class TestAppFactory
         var settingsService = new SettingsRepository(dbContextFactory);
         settingsService.EnsureDefaults();
         var snippetService = new SnippetRepository(dbContextFactory);
+        var hotkeyActionService = new HotkeyActionRepository(dbContextFactory);
         var loggingService = new FileLogger(storage);
         var storedImagePathResolver = new StoredImagePathResolver(storage);
         var backupService = new BackupGateway(storage, settingsService, loggingService);
@@ -40,6 +41,7 @@ internal static class TestAppFactory
             storage,
             new CategoryRepository(dbContextFactory),
             snippetService,
+            hotkeyActionService,
             settingsService,
             loggingService,
             backupService,
@@ -72,6 +74,7 @@ internal static class TestAppFactory
             new DialogAdapter(),
             services.SettingsRepository,
             services.SnippetRepository,
+            services.HotkeyActionRepository,
             services.SnippetImageResolver,
             clipboardPasteService ?? new RecordingClipboardPasteGateway(),
             fileLaunchService ?? new RecordingFileLaunchGatewayAdapter(),
@@ -198,6 +201,7 @@ internal sealed record TestServices(
     AppStoragePaths Storage,
     CategoryRepository CategoryRepository,
     SnippetRepository SnippetRepository,
+    HotkeyActionRepository HotkeyActionRepository,
     SettingsRepository SettingsRepository,
     FileLogger FileLogger,
     BackupGateway BackupGateway,
@@ -308,18 +312,18 @@ internal sealed class RecordingClipboardPasteGateway : IClipboardPasteGateway
 {
     public List<PasteCall> Calls { get; } = [];
 
-    public Task<bool> PasteSnippetAsync(Snippet snippet, IntPtr targetWindowHandle, AppSettings settings)
+    public Task<bool> PasteActionAsync(ExecutableAction action, IntPtr targetWindowHandle, AppSettings settings)
     {
-        Calls.Add(new PasteCall(snippet, targetWindowHandle, settings));
+        Calls.Add(new PasteCall(action, targetWindowHandle, settings));
         return Task.FromResult(true);
     }
 }
 
-internal sealed record PasteCall(Snippet Snippet, IntPtr TargetWindowHandle, AppSettings Settings);
+internal sealed record PasteCall(ExecutableAction Action, IntPtr TargetWindowHandle, AppSettings Settings);
 
 internal sealed class ThrowingClipboardPasteGateway : IClipboardPasteGateway
 {
-    public Task<bool> PasteSnippetAsync(Snippet snippet, IntPtr targetWindowHandle, AppSettings settings)
+    public Task<bool> PasteActionAsync(ExecutableAction action, IntPtr targetWindowHandle, AppSettings settings)
     {
         return Task.FromException<bool>(new InvalidOperationException("Paste failed."));
     }

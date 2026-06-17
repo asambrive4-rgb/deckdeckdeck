@@ -99,6 +99,36 @@ public sealed class MainViewModelNavigationTests
     }
 
     [Fact]
+    public void HomeHotkeyTileOpensHotkeyList()
+    {
+        var services = CreateServices();
+        var viewModel = CreateMainViewModel(services);
+        var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+
+        Assert.True(home.NumpadGrid.HotkeyTile.IsEnabled);
+        home.NumpadGrid.HotkeyTile.SelectCommand.Execute(null);
+
+        var list = Assert.IsType<HotkeyListViewModel>(viewModel.CurrentViewModel);
+        Assert.True(list.IsEmpty);
+        Assert.True(viewModel.ShowTopBarBackButton);
+        Assert.Same(list.BackCommand, viewModel.TopBarBackCommand);
+    }
+
+    [Fact]
+    public void CategoryHotkeyTileIsDisabled()
+    {
+        var services = CreateServices();
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var category = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+
+        Assert.False(category.NumpadGrid.HotkeyTile.IsEnabled);
+        Assert.False(category.NumpadGrid.HotkeyTile.SelectCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void HomeTopBarShowsSettingsWithoutTitleOrBack()
     {
         var services = CreateServices();

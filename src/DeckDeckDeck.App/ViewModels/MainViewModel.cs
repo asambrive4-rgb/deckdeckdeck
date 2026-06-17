@@ -10,6 +10,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 {
     private IAutoBackupCoordinator? _autoBackupCoordinator;
     private MainViewModelNavigator _navigator = null!;
+    private Func<ExecutableAction, Task> _executeActionAsync = null!;
+    private GetHotkeyActionByIdUseCase _getHotkeyActionByIdUseCase = null!;
+    private LoadHotkeyActionsUseCase _loadHotkeyActionsUseCase = null!;
     private ResolveCategoryHotkeyUseCase _resolveCategoryHotkeyUseCase = null!;
     private ILoadSettingsUseCase _loadSettingsUseCase = null!;
     private SaveWindowPlacementUseCase _saveWindowPlacementUseCase = null!;
@@ -61,6 +64,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string TopBarTitle => CurrentViewModel switch
     {
         CategoryViewModel categoryViewModel => categoryViewModel.Title,
+        HotkeyListViewModel => "핫키",
+        HotkeyEditViewModel hotkeyEditViewModel => hotkeyEditViewModel.Title,
         SettingsViewModel => "설정",
         CategoryEditViewModel categoryEditViewModel => $"카테고리 편집 / 슬롯 {categoryEditViewModel.KeyText}",
         SnippetEditViewModel snippetEditViewModel => $"실행 항목 편집 / 슬롯 {snippetEditViewModel.KeyText}",
@@ -70,6 +75,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand? TopBarBackCommand => CurrentViewModel switch
     {
         CategoryViewModel categoryViewModel => categoryViewModel.BackCommand,
+        HotkeyListViewModel hotkeyListViewModel => hotkeyListViewModel.BackCommand,
+        HotkeyEditViewModel hotkeyEditViewModel => hotkeyEditViewModel.CancelCommand,
         SettingsViewModel settingsViewModel => settingsViewModel.BackCommand,
         CategoryEditViewModel categoryEditViewModel => categoryEditViewModel.CancelCommand,
         SnippetEditViewModel snippetEditViewModel => snippetEditViewModel.CancelCommand,
@@ -88,6 +95,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public bool ShowTopBarSettingsButton => TopBarSettingsCommand is not null;
 
     public bool ShowTopBarTitle => !string.IsNullOrWhiteSpace(TopBarTitle);
+
+    public bool IsCapturingHotkeyInput =>
+        CurrentViewModel is HotkeyEditViewModel { IsCapturingHotkey: true };
+
+    public event EventHandler? DirectHotkeysChanged;
 
     public AppSettings LoadSettings()
     {
@@ -147,6 +159,30 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _loggingService?.Log(StatusMessage);
     }
 
+    public IReadOnlyList<DirectHotkeyRegistration> LoadActiveDirectHotkeys()
+    {
+        return _loadHotkeyActionsUseCase.Execute()
+            .Where(action => action.IsEnabled && action.Gesture is not null)
+            .Select(action => new DirectHotkeyRegistration(action.Id, action.Gesture!))
+            .ToList();
+    }
+
+    public async Task ExecuteDirectHotkeyAsync(Guid hotkeyActionId)
+    {
+        var action = _getHotkeyActionByIdUseCase.Execute(hotkeyActionId);
+        if (action?.IsEnabled != true)
+        {
+            return;
+        }
+
+        await _executeActionAsync(ExecutableAction.FromHotkeyAction(action));
+    }
+
+    internal void NotifyDirectHotkeysChanged()
+    {
+        DirectHotkeysChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     internal void ReportBackgroundStatus(string message)
     {
         ShowStatus(message);
@@ -185,6 +221,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _loadSettingsUseCase = dependencies.LoadSettingsUseCase;
         _saveWindowPlacementUseCase = dependencies.SaveWindowPlacementUseCase;
         _resolveCategoryHotkeyUseCase = dependencies.ResolveCategoryHotkeyUseCase;
+        _loadHotkeyActionsUseCase = dependencies.LoadHotkeyActionsUseCase;
+        _getHotkeyActionByIdUseCase = dependencies.GetHotkeyActionByIdUseCase;
         _loggingService = dependencies.Logger;
         _autoBackupCoordinator = dependencies.AutoBackupCoordinator;
 
@@ -199,13 +237,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             dependencies.NavigatorDependencies,
             actionRunner.ExecuteAsync,
             ShowStatus);
+        _executeActionAsync = actionRunner.ExecuteAsync;
 
         _navigator = new MainViewModelNavigator(
             dependencies.NavigatorDependencies,
             viewFactory,
             viewModel => CurrentViewModel = viewModel,
             ShowStatus,
-            callbacks.EnterEditMode);
+            callbacks.EnterEditMode,
+            NotifyDirectHotkeysChanged);
 
         ShowHome();
     }

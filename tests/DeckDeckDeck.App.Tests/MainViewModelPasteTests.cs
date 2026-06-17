@@ -37,7 +37,7 @@ public sealed class MainViewModelPasteTests
 
         Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
         var call = Assert.Single(pasteService.Calls);
-        Assert.Equal("Make this clearer.", call.Snippet.Content);
+        Assert.Equal("Make this clearer.", call.Action.Content);
         Assert.Equal(new IntPtr(123), call.TargetWindowHandle);
         Assert.True(hidden);
         Assert.True(completedPasteSelection);

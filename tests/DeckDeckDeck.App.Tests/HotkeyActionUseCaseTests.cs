@@ -1,0 +1,108 @@
+using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.Native;
+using DeckDeckDeck.App.UseCases;
+using static DeckDeckDeck.App.Tests.TestAppFactory;
+
+namespace DeckDeckDeck.App.Tests;
+
+public sealed class HotkeyActionUseCaseTests
+{
+    [Fact]
+    public void SaveHotkeyActionUseCaseSavesActionIndependentlyFromSnippetSlots()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var snippet = services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Slot Paste", "Hello", null);
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var useCase = new SaveHotkeyActionUseCase(services.HotkeyActionRepository, autoBackup);
+
+        var result = useCase.Execute(CreateRequest(
+            title: "Volume up",
+            gesture: new HotkeyGesture(0x27, HotkeyModifiers.None),
+            actionType: SnippetActionType.MediaAction,
+            content: string.Empty,
+            mediaCommand: SnippetMediaCommand.VolumeUp));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, autoBackup.RequestCount);
+        var action = Assert.Single(services.HotkeyActionRepository.GetAll());
+        Assert.Equal(result.HotkeyAction!.Id, action.Id);
+        Assert.Equal("Volume up", action.Title);
+        Assert.Equal(0x27, action.HotkeyVirtualKey);
+        Assert.Equal(HotkeyModifiers.None, action.HotkeyModifiers);
+        Assert.Equal(SnippetActionType.MediaAction, action.ActionType);
+        Assert.Equal(SnippetMediaCommand.VolumeUp, action.MediaCommand);
+
+        services.SnippetRepository.Delete(snippet.Id);
+
+        Assert.Null(services.SnippetRepository.GetById(snippet.Id));
+        Assert.NotNull(services.HotkeyActionRepository.GetById(action.Id));
+    }
+
+    [Fact]
+    public void SaveHotkeyActionUseCaseRejectsEnabledActionWithoutHotkey()
+    {
+        var services = CreateServices();
+        var useCase = new SaveHotkeyActionUseCase(services.HotkeyActionRepository);
+
+        var result = useCase.Execute(CreateRequest(gesture: null));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(SaveHotkeyActionUseCase.HotkeyRequiredMessage, result.ErrorMessage);
+        Assert.Empty(services.HotkeyActionRepository.GetAll());
+    }
+
+    [Fact]
+    public void SaveHotkeyActionUseCaseRejectsModifierOnlyHotkey()
+    {
+        var services = CreateServices();
+        var useCase = new SaveHotkeyActionUseCase(services.HotkeyActionRepository);
+
+        var result = useCase.Execute(CreateRequest(
+            gesture: new HotkeyGesture(Win32Constants.VkControl, HotkeyModifiers.Control)));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(SaveHotkeyActionUseCase.HotkeyModifierOnlyMessage, result.ErrorMessage);
+        Assert.Empty(services.HotkeyActionRepository.GetAll());
+    }
+
+    [Fact]
+    public void SaveHotkeyActionUseCaseAllowsDisabledActionWithoutHotkey()
+    {
+        var services = CreateServices();
+        var useCase = new SaveHotkeyActionUseCase(services.HotkeyActionRepository);
+
+        var result = useCase.Execute(CreateRequest(gesture: null, isEnabled: false));
+
+        Assert.True(result.Succeeded);
+        var action = Assert.Single(services.HotkeyActionRepository.GetAll());
+        Assert.False(action.IsEnabled);
+        Assert.Null(action.Gesture);
+    }
+
+    private static SaveHotkeyActionRequest CreateRequest(
+        string title = "Paste",
+        HotkeyGesture? gesture = null,
+        bool isEnabled = true,
+        SnippetActionType actionType = SnippetActionType.PasteText,
+        string content = "Hello",
+        SnippetMediaCommand mediaCommand = SnippetMediaCommand.PlayPause)
+    {
+        return new SaveHotkeyActionRequest(
+            HotkeyActionId: null,
+            title,
+            gesture,
+            isEnabled,
+            content,
+            Description: null,
+            ImagePath: null,
+            ThumbnailPath: null,
+            actionType,
+            LaunchPath: string.Empty,
+            SlotImageMode.Auto,
+            AutoIcon: null,
+            LaunchUrl: null,
+            SnippetMediaProvider.System,
+            mediaCommand);
+    }
+}

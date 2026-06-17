@@ -14,6 +14,8 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<Snippet> Snippets => Set<Snippet>();
 
+    public DbSet<HotkeyAction> HotkeyActions => Set<HotkeyAction>();
+
     public DbSet<SettingEntry> Settings => Set<SettingEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -50,6 +52,27 @@ public sealed class AppDbContext : DbContext
                 .WithMany(category => category.Snippets)
                 .HasForeignKey(snippet => snippet.CategoryId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HotkeyAction>(entity =>
+        {
+            entity.HasKey(action => action.Id);
+            entity.HasIndex(action => new { action.HotkeyVirtualKey, action.HotkeyModifiers });
+            entity.Property(action => action.Id).HasConversion<string>();
+            entity.Property(action => action.HotkeyModifiers).HasConversion<int>().IsRequired();
+            entity.Property(action => action.ActionType).HasConversion<string>().IsRequired();
+            entity.Property(action => action.PasteShortcutMode).HasConversion<string>().IsRequired();
+            entity.Property(action => action.MediaProvider).HasConversion<string>();
+            entity.Property(action => action.MediaCommand).HasConversion<string>();
+            entity.Property(action => action.TerminalShell).HasConversion<string>();
+            entity.Property(action => action.SlotImageMode).HasConversion<string>().IsRequired();
+            entity.Property(action => action.Title).IsRequired();
+            entity.Property(action => action.Content).IsRequired();
+            entity.Property(action => action.IsEnabled).IsRequired();
+            entity.Property(action => action.CreatedAt).IsRequired();
+            entity.Property(action => action.UpdatedAt).IsRequired();
+            entity.Ignore(action => action.Gesture);
+            entity.Ignore(action => action.HotkeyDisplayText);
         });
 
         modelBuilder.Entity<SettingEntry>(entity =>

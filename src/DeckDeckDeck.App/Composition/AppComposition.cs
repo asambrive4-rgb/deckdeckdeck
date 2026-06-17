@@ -16,6 +16,7 @@ internal sealed record AppComposition(
     DialogAdapter DialogAdapter,
     SettingsRepository SettingsRepository,
     SnippetRepository SnippetRepository,
+    HotkeyActionRepository HotkeyActionRepository,
     SnippetImageResolver? SnippetImageResolver,
     IClipboardPasteGateway ClipboardPasteGateway,
     IFileLaunchGateway FileLaunchGatewayAdapter,
@@ -49,6 +50,7 @@ internal sealed record AppComposition(
         var backupGateway = new BackupGateway(appStoragePaths, settingsRepository, fileLogger);
         var imageFileRepository = new ImageFileRepository(appStoragePaths);
         var snippetRepository = new SnippetRepository(dbContextFactory);
+        var hotkeyActionRepository = new HotkeyActionRepository(dbContextFactory);
         var fileIconCacheRepository = new FileIconCacheRepository(
             appStoragePaths,
             new ShellFileIconExtractor(),
@@ -72,6 +74,7 @@ internal sealed record AppComposition(
             new DialogAdapter(),
             settingsRepository,
             snippetRepository,
+            hotkeyActionRepository,
             snippetImageResolver,
             clipboardPasteGateway,
             fileLaunchGatewayAdapter,
@@ -105,6 +108,7 @@ internal sealed record AppComposition(
         DialogAdapter dialogAdapter,
         SettingsRepository settingsRepository,
         SnippetRepository snippetRepository,
+        HotkeyActionRepository hotkeyActionRepository,
         SnippetImageResolver? snippetImageResolver,
         IClipboardPasteGateway? clipboardPasteGateway,
         IFileLaunchGateway? fileLaunchGateway,
@@ -138,6 +142,7 @@ internal sealed record AppComposition(
             dialogAdapter,
             settingsRepository,
             snippetRepository,
+            hotkeyActionRepository,
             snippetImageResolver,
             effectiveClipboardPasteGateway,
             effectiveFileLaunchGatewayAdapter,
@@ -177,12 +182,18 @@ internal sealed record AppComposition(
             SnippetRepository,
             SettingsRepository,
             autoBackupCoordinator);
+        var saveHotkeyActionUseCase = new SaveHotkeyActionUseCase(
+            HotkeyActionRepository,
+            autoBackupCoordinator);
         var navigatorDependencies = new MainViewModelNavigatorDependencies(
             new LoadHomeGridUseCase(CategoryRepository, SettingsRepository),
             new LoadCategoryGridUseCase(SnippetRepository, SettingsRepository),
             new GetCategoryByIdUseCase(CategoryRepository),
             new LoadCategoryEditorStateUseCase(CategoryRepository, SettingsRepository),
             new LoadSnippetEditorStateUseCase(SnippetRepository, SettingsRepository),
+            new LoadHotkeyActionsUseCase(HotkeyActionRepository),
+            new GetHotkeyActionByIdUseCase(HotkeyActionRepository),
+            new LoadHotkeyActionEditorStateUseCase(SettingsRepository),
             saveCategoryUseCase,
             new DeleteCategoryUseCase(
                 CategoryRepository,
@@ -205,6 +216,11 @@ internal sealed record AppComposition(
                 saveSnippetUseCase,
                 ImageFileRepository,
                 autoBackupCoordinator),
+            saveHotkeyActionUseCase,
+            new DeleteHotkeyActionUseCase(
+                HotkeyActionRepository,
+                ImageFileRepository,
+                autoBackupCoordinator),
             loadSettingsUseCase,
             new SaveSettingsUseCase(SettingsRepository, BackupGateway, autoBackupCoordinator),
             new CreateManualBackupUseCase(BackupGateway),
@@ -223,6 +239,8 @@ internal sealed record AppComposition(
             loadSettingsUseCase,
             new SaveWindowPlacementUseCase(SettingsRepository, FileLogger),
             ResolveCategoryHotkeyUseCase,
+            new LoadHotkeyActionsUseCase(HotkeyActionRepository),
+            new GetHotkeyActionByIdUseCase(HotkeyActionRepository),
             new PrepareSnippetActionUseCase(),
             ExecuteSnippetActionUseCase,
             FileLogger,

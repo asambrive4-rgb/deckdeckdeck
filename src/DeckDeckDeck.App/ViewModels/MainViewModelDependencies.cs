@@ -8,6 +8,8 @@ internal sealed record MainViewModelDependencies(
     ILoadSettingsUseCase LoadSettingsUseCase,
     SaveWindowPlacementUseCase SaveWindowPlacementUseCase,
     ResolveCategoryHotkeyUseCase ResolveCategoryHotkeyUseCase,
+    LoadHotkeyActionsUseCase LoadHotkeyActionsUseCase,
+    GetHotkeyActionByIdUseCase GetHotkeyActionByIdUseCase,
     PrepareSnippetActionUseCase PrepareSnippetActionUseCase,
     ExecuteSnippetActionUseCase ExecuteSnippetActionUseCase,
     IAppLogger? Logger,

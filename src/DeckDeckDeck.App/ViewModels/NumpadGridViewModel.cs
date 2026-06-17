@@ -1,3 +1,5 @@
+using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.ViewModels;
@@ -6,9 +8,12 @@ public sealed class NumpadGridViewModel
 {
     private readonly Dictionary<SlotKey, SlotViewModel> _slotsByKey;
 
-    public NumpadGridViewModel(IEnumerable<SlotViewModel> slots)
+    public NumpadGridViewModel(
+        IEnumerable<SlotViewModel> slots,
+        HotkeyTileViewModel? hotkeyTile = null)
     {
         Slots = slots.ToList();
+        HotkeyTile = hotkeyTile ?? HotkeyTileViewModel.Disabled();
         _slotsByKey = Slots.ToDictionary(slot => slot.SlotKey);
 
         Numpad0 = GetRequiredSlot(SlotKey.Numpad0);
@@ -29,6 +34,8 @@ public sealed class NumpadGridViewModel
     }
 
     public IReadOnlyList<SlotViewModel> Slots { get; }
+
+    public HotkeyTileViewModel HotkeyTile { get; }
 
     public SlotViewModel Numpad0 { get; }
 
@@ -78,5 +85,38 @@ public sealed class NumpadGridViewModel
         return _slotsByKey.TryGetValue(slotKey, out var slot)
             ? slot
             : throw new InvalidOperationException($"Missing numpad slot: {slotKey}");
+    }
+}
+
+public sealed class HotkeyTileViewModel
+{
+    private HotkeyTileViewModel(bool isEnabled, Action? onSelected)
+    {
+        IsEnabled = isEnabled;
+        SelectCommand = new RelayCommand(
+            () => onSelected?.Invoke(),
+            () => IsEnabled);
+    }
+
+    public string Text => "Hotkey";
+
+    public bool IsEnabled { get; }
+
+    public bool IsDisabled => !IsEnabled;
+
+    public string ToolTip => IsEnabled
+        ? "핫키 관리"
+        : "홈 화면에서만 핫키를 관리할 수 있습니다.";
+
+    public ICommand SelectCommand { get; }
+
+    public static HotkeyTileViewModel Enabled(Action onSelected)
+    {
+        return new HotkeyTileViewModel(true, onSelected);
+    }
+
+    public static HotkeyTileViewModel Disabled()
+    {
+        return new HotkeyTileViewModel(false, null);
     }
 }

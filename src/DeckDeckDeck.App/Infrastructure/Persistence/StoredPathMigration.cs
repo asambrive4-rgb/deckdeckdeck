@@ -41,6 +41,13 @@ public sealed class StoredPathMigration
             changed |= NormalizePath(value => snippet.AutoIconPath = value, snippet.AutoIconPath);
         }
 
+        foreach (var hotkeyAction in dbContext.HotkeyActions)
+        {
+            changed |= NormalizePath(value => hotkeyAction.ImagePath = value, hotkeyAction.ImagePath);
+            changed |= NormalizePath(value => hotkeyAction.ThumbnailPath = value, hotkeyAction.ThumbnailPath);
+            changed |= NormalizePath(value => hotkeyAction.AutoIconPath = value, hotkeyAction.AutoIconPath);
+        }
+
         if (changed)
         {
             dbContext.SaveChanges();

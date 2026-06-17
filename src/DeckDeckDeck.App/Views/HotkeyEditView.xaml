@@ -1,0 +1,325 @@
+<UserControl x:Class="DeckDeckDeck.App.Views.HotkeyEditView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DeckDeckDeck.App;component/Resources/Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <Style x:Key="Deck.ActionTypeToggleStyle" TargetType="{x:Type RadioButton}">
+                <Setter Property="Margin" Value="0,0,6,6" />
+                <Setter Property="MinHeight" Value="28" />
+                <Setter Property="Padding" Value="10,4" />
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+                <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FontSize" Value="12.5" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type RadioButton}">
+                            <Border x:Name="Root"
+                                    Padding="{TemplateBinding Padding}"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="14">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  RecognizesAccessKey="True"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Root" Property="Background" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Sub}" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.FocusRing}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                        Margin="0,0,0,12">
+                    <StackPanel>
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="핫키 이름" />
+                            <TextBox Height="36"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding HotkeyTitle, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Deck.FieldGroupSpacedStyle}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="전역 핫키" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button Command="{Binding BeginHotkeyCaptureCommand}"
+                                        PreviewKeyDown="HotkeyInputButton_PreviewKeyDown"
+                                        Style="{StaticResource Deck.SecondaryButtonStyle}">
+                                    <TextBlock Text="{Binding HotkeyDisplayText}"
+                                               TextAlignment="Center" />
+                                </Button>
+                                <Button Grid.Column="1"
+                                        Margin="8,0,0,0"
+                                        Command="{Binding ClearHotkeyCommand}"
+                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                        Content="초기화" />
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Deck.FieldGroupSpacedStyle}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="실행 타입" />
+                            <UniformGrid Columns="3">
+                                <RadioButton Content="문구 붙여넣기"
+                                             GroupName="HotkeyActionType"
+                                             IsChecked="{Binding IsPasteTextAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="파일/바로 가기 실행"
+                                             GroupName="HotkeyActionType"
+                                             IsChecked="{Binding IsLaunchFileAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="웹 주소 열기"
+                                             GroupName="HotkeyActionType"
+                                             IsChecked="{Binding IsLaunchUrlAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="음악/미디어 제어"
+                                             GroupName="HotkeyActionType"
+                                             IsChecked="{Binding IsMediaAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="터미널 명령 실행"
+                                             GroupName="HotkeyActionType"
+                                             IsChecked="{Binding IsTerminalCommandAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                            </UniformGrid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                        Margin="0,0,0,12">
+                    <Grid>
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsPasteTextAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="붙여넣을 문구" />
+                            <TextBox MinHeight="80"
+                                     MaxHeight="180"
+                                     AcceptsReturn="True"
+                                     AcceptsTab="True"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+                            <TextBlock Margin="0,12,0,6"
+                                       Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="붙여넣기 방식" />
+                            <ComboBox ItemsSource="{Binding PasteShortcutModeOptions}"
+                                      SelectedValue="{Binding PasteShortcutMode, Mode=TwoWay}"
+                                      SelectedValuePath="Mode"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsLaunchFileAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="실행할 파일, 폴더 또는 바로 가기" />
+                            <TextBox Height="36"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding LaunchPath, UpdateSourceTrigger=PropertyChanged}" />
+                            <StackPanel Margin="0,8,0,0"
+                                        Orientation="Horizontal">
+                                <Button Command="{Binding ChooseLaunchFileCommand}"
+                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                        Content="파일/바로 가기 선택" />
+                                <Button Margin="8,0,0,0"
+                                        Command="{Binding ChooseLaunchFolderCommand}"
+                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                        Content="폴더 선택" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsLaunchUrlAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="열 웹페이지 주소" />
+                            <TextBox Height="36"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding LaunchUrl, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsMediaAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="제어 대상" />
+                            <ComboBox ItemsSource="{Binding MediaProviderOptions}"
+                                      SelectedValue="{Binding SelectedMediaProvider, Mode=TwoWay}"
+                                      SelectedValuePath="Provider"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                            <TextBlock Margin="0,10,0,6"
+                                       Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="미디어 명령" />
+                            <ComboBox ItemsSource="{Binding MediaCommandOptions}"
+                                      SelectedValue="{Binding SelectedMediaCommand, Mode=TwoWay}"
+                                      SelectedValuePath="Command"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                            <TextBlock Margin="0,8,0,0"
+                                       Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                       Text="{Binding SpotifyMediaConnectionNotice}"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding ShowSpotifyMediaConnectionNotice, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsTerminalCommandAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="실행 셸" />
+                            <ComboBox ItemsSource="{Binding TerminalShellOptions}"
+                                      SelectedValue="{Binding SelectedTerminalShell, Mode=TwoWay}"
+                                      SelectedValuePath="Shell"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                            <CheckBox Margin="0,10,0,8"
+                                      Content="관리자 권한으로 실행"
+                                      Style="{StaticResource Deck.CheckBoxStyle}"
+                                      IsChecked="{Binding RunAsAdministrator}" />
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="터미널 명령" />
+                            <TextBox MinHeight="80"
+                                     MaxHeight="180"
+                                     AcceptsReturn="True"
+                                     AcceptsTab="True"
+                                     FontFamily="Cascadia Code, Consolas"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding TerminalCommand, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+                            <TextBlock Margin="0,8,0,0"
+                                       Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                       Text="신뢰하는 명령만 저장하고 실행하세요. 관리자 권한 실행 시 Windows 확인창이 표시될 수 있습니다."
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Style="{StaticResource Deck.InfoPanelBorderStyle}"
+                        Margin="0,0,0,12">
+                    <StackPanel>
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="설명" />
+                            <TextBox MinHeight="46"
+                                     MaxHeight="80"
+                                     AcceptsReturn="True"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+                        </StackPanel>
+
+                        <CheckBox Margin="0,12,0,12"
+                                  Content="이 핫키 사용"
+                                  Style="{StaticResource Deck.CheckBoxStyle}"
+                                  IsChecked="{Binding IsEnabled}" />
+
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="이미지" />
+                            <DockPanel LastChildFill="False">
+                                <Border AllowDrop="True"
+                                        DragOver="ImageDropTarget_DragOver"
+                                        Drop="ImageDropTarget_Drop"
+                                        Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
+                                    <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=96}"
+                                           IsHitTestVisible="False"
+                                           Stretch="Uniform" />
+                                </Border>
+                                <StackPanel Margin="12,0,0,0"
+                                            VerticalAlignment="Center">
+                                    <Button Command="{Binding ChooseImageCommand}"
+                                            Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                            Content="이미지 선택" />
+                                    <Button Margin="0,8,0,0"
+                                            Command="{Binding RemoveImageCommand}"
+                                            Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                            Content="이미지 제거"
+                                            IsEnabled="{Binding HasImage}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Grid.Row="3"
+                           Margin="0,4,0,0"
+                           Style="{StaticResource Deck.ErrorTextStyle}"
+                           Text="{Binding ErrorMessage}"
+                           TextWrapping="Wrap" />
+            </Grid>
+        </ScrollViewer>
+
+        <Grid Grid.Row="1"
+              Style="{StaticResource Deck.FooterActionsGridStyle}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button Command="{Binding DeleteCommand}"
+                    Style="{StaticResource Deck.DangerFooterButtonStyle}"
+                    Content="삭제"
+                    IsEnabled="{Binding CanDelete}" />
+            <Button Grid.Column="2"
+                    Margin="0,0,8,0"
+                    Command="{Binding CancelCommand}"
+                    Style="{StaticResource Deck.FooterButtonStyle}"
+                    Content="취소" />
+            <Button Grid.Column="3"
+                    Command="{Binding SaveCommand}"
+                    Style="{StaticResource Deck.PrimaryFooterButtonStyle}"
+                    Content="저장" />
+        </Grid>
+    </Grid>
+</UserControl>

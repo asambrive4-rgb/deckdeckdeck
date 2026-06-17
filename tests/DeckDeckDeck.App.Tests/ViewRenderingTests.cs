@@ -204,6 +204,96 @@ public sealed class ViewRenderingTests
         Assert.Null(exception);
     }
 
+    [Fact]
+    public void HotkeyListViewLoadsForEmptyState()
+    {
+        Exception? exception = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var services = CreateServices();
+                var viewModel = new HotkeyListViewModel(
+                    [],
+                    new SaveHotkeyActionUseCase(services.HotkeyActionRepository),
+                    new DeleteHotkeyActionUseCase(services.HotkeyActionRepository, services.ImageFileRepository),
+                    new DialogAdapter(),
+                    () => { },
+                    _ => { },
+                    () => { },
+                    () => { },
+                    () => { },
+                    _ => { });
+                var view = new HotkeyListView { DataContext = viewModel };
+
+                view.Measure(new Size(560, 680));
+                view.Arrange(new Rect(0, 0, 560, 680));
+                view.UpdateLayout();
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+            }
+            finally
+            {
+                Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void HotkeyEditViewLoadsForNewAction()
+    {
+        Exception? exception = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var services = CreateServices();
+                var viewModel = new HotkeyEditViewModel(
+                    action: null,
+                    new HotkeyActionEditorState(SpotifyConnectionState.FromSettings(services.SettingsRepository.Load())),
+                    new SaveHotkeyActionUseCase(services.HotkeyActionRepository),
+                    new DeleteHotkeyActionUseCase(services.HotkeyActionRepository, services.ImageFileRepository),
+                    new DialogAdapter(),
+                    () => { },
+                    _ => { },
+                    () => { },
+                    () => { },
+                    _ => { },
+                    services.ImageFileRepository,
+                    services.FileLogger,
+                    services.SnippetImageResolver,
+                    services.StoredImagePathResolver);
+                var view = new HotkeyEditView { DataContext = viewModel };
+
+                view.Measure(new Size(560, 680));
+                view.Arrange(new Rect(0, 0, 560, 680));
+                view.UpdateLayout();
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+            }
+            finally
+            {
+                Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(exception);
+    }
+
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent)
         where T : DependencyObject
     {

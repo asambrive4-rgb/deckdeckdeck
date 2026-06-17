@@ -26,6 +26,24 @@ public sealed record AutoIconCacheEntry(
             snippet.AutoIconSourceLength.Value);
     }
 
+    public static AutoIconCacheEntry? FromHotkeyAction(HotkeyAction? action)
+    {
+        if (action is null
+            || string.IsNullOrWhiteSpace(action.AutoIconPath)
+            || string.IsNullOrWhiteSpace(action.AutoIconSourcePath)
+            || !action.AutoIconSourceLastWriteTimeUtc.HasValue
+            || !action.AutoIconSourceLength.HasValue)
+        {
+            return null;
+        }
+
+        return new AutoIconCacheEntry(
+            action.AutoIconPath,
+            action.AutoIconSourcePath,
+            action.AutoIconSourceLastWriteTimeUtc.Value,
+            action.AutoIconSourceLength.Value);
+    }
+
     public bool Matches(FileInfo fileInfo)
     {
         return string.Equals(

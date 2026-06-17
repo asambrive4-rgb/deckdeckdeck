@@ -102,7 +102,7 @@ internal sealed class BlockingClipboardPasteGateway : IClipboardPasteGateway
         _completed.SetResult(true);
     }
 
-    public async Task<bool> PasteSnippetAsync(Snippet snippet, IntPtr targetWindowHandle, AppSettings settings)
+    public async Task<bool> PasteActionAsync(ExecutableAction action, IntPtr targetWindowHandle, AppSettings settings)
     {
         _started.SetResult(true);
         return await _completed.Task;

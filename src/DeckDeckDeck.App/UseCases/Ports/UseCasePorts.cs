@@ -54,6 +54,19 @@ public interface ISnippetRepository
     SnippetTransferRepositoryResult MoveToSlot(Guid sourceId, SlotKey targetSlotKey);
 }
 
+public interface IHotkeyActionRepository
+{
+    IReadOnlyList<HotkeyAction> GetAll();
+
+    HotkeyAction? GetById(Guid id);
+
+    HotkeyAction Create(HotkeyActionSaveData data);
+
+    HotkeyAction Update(Guid id, HotkeyActionSaveData data);
+
+    ImageFileReference Delete(Guid id);
+}
+
 public interface ISettingsRepository
 {
     AppSettings Load();
@@ -140,7 +153,7 @@ public interface IClipboardTextWriter
 
 public interface IClipboardPasteGateway
 {
-    Task<bool> PasteSnippetAsync(Snippet snippet, IntPtr targetWindowHandle, AppSettings settings);
+    Task<bool> PasteActionAsync(ExecutableAction action, IntPtr targetWindowHandle, AppSettings settings);
 }
 
 public interface IFileLaunchGateway
@@ -192,6 +205,26 @@ public sealed record StoredImageReference(string ImagePath, string ThumbnailPath
 
 public sealed record SnippetSaveData(
     string Title,
+    string Content,
+    string? Description,
+    string? ImagePath,
+    string? ThumbnailPath,
+    SnippetActionType ActionType = SnippetActionType.PasteText,
+    string? LaunchPath = null,
+    SlotImageMode SlotImageMode = SlotImageMode.Auto,
+    AutoIconCacheEntry? AutoIcon = null,
+    string? LaunchUrl = null,
+    SnippetMediaProvider? MediaProvider = null,
+    SnippetMediaCommand? MediaCommand = null,
+    PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV,
+    string? TerminalCommand = null,
+    SnippetTerminalShell? TerminalShell = null,
+    bool RunAsAdministrator = true);
+
+public sealed record HotkeyActionSaveData(
+    string Title,
+    HotkeyGesture? Gesture,
+    bool IsEnabled,
     string Content,
     string? Description,
     string? ImagePath,

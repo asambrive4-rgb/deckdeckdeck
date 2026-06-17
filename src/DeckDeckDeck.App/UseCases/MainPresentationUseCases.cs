@@ -8,7 +8,7 @@ public sealed class PrepareSnippetActionUseCase
     public PrepareSnippetActionResult Execute(PrepareSnippetActionRequest request)
     {
         var shouldHideBeforeExecute =
-            request.Snippet.ActionType == SnippetActionType.PasteText
+            request.Action.ActionType == SnippetActionType.PasteText
             && request.Settings.AutoHideAfterPaste;
 
         return new PrepareSnippetActionResult(shouldHideBeforeExecute);
@@ -102,8 +102,14 @@ public sealed class LoadCategoryGridUseCase
 }
 
 public sealed record PrepareSnippetActionRequest(
-    Snippet Snippet,
-    AppSettings Settings);
+    ExecutableAction Action,
+    AppSettings Settings)
+{
+    public PrepareSnippetActionRequest(Snippet snippet, AppSettings settings)
+        : this(ExecutableAction.FromSnippet(snippet), settings)
+    {
+    }
+}
 
 public sealed record PrepareSnippetActionResult(bool ShouldHideBeforeExecute);
 
