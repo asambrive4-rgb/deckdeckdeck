@@ -3,6 +3,8 @@ using System.Windows.Automation;
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
+using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.UseCases.Ports;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 
 namespace DeckDeckDeck.App.Tests;
@@ -66,11 +68,50 @@ public sealed class TextInputFocusDetectorTests
     [InlineData(Win32Constants.VkUp)]
     [InlineData(Win32Constants.VkRight)]
     [InlineData(Win32Constants.VkDown)]
-    public void DirectHotkeyPassthroughPolicyOnlyMatchesUnmodifiedArrowKeys(uint virtualKey)
+    public void HotkeyGestureOnlyMatchesUnmodifiedArrowKeys(uint virtualKey)
     {
-        Assert.True(DirectHotkeyPassthroughPolicy.IsUnmodifiedArrowKey(
-            new HotkeyGesture(virtualKey, HotkeyModifiers.None)));
-        Assert.False(DirectHotkeyPassthroughPolicy.IsUnmodifiedArrowKey(
-            new HotkeyGesture(virtualKey, HotkeyModifiers.Control)));
+        Assert.True(new HotkeyGesture(virtualKey, HotkeyModifiers.None).IsUnmodifiedArrowKey);
+        Assert.False(new HotkeyGesture(virtualKey, HotkeyModifiers.Control).IsUnmodifiedArrowKey);
+    }
+
+    [Fact]
+    public void ShouldPassThroughDirectHotkeyUseCasePassesOnlyUnmodifiedArrowInTextInput()
+    {
+        var useCase = new ShouldPassThroughDirectHotkeyUseCase(new StubTextInputFocusDetector(true));
+
+        Assert.True(useCase.Execute(new HotkeyGesture(Win32Constants.VkRight, HotkeyModifiers.None)));
+        Assert.False(useCase.Execute(new HotkeyGesture(Win32Constants.VkRight, HotkeyModifiers.Control)));
+        Assert.False(useCase.Execute(new HotkeyGesture(0x67, HotkeyModifiers.None)));
+    }
+
+    [Fact]
+    public void ShouldPassThroughDirectHotkeyUseCaseKeepsExistingBehaviorWhenDetectionFails()
+    {
+        var useCase = new ShouldPassThroughDirectHotkeyUseCase(new ThrowingTextInputFocusDetector());
+
+        Assert.False(useCase.Execute(new HotkeyGesture(Win32Constants.VkRight, HotkeyModifiers.None)));
+    }
+
+    private sealed class StubTextInputFocusDetector : ITextInputFocusDetector
+    {
+        private readonly bool _isTextInputFocused;
+
+        public StubTextInputFocusDetector(bool isTextInputFocused)
+        {
+            _isTextInputFocused = isTextInputFocused;
+        }
+
+        public bool IsTextInputFocused()
+        {
+            return _isTextInputFocused;
+        }
+    }
+
+    private sealed class ThrowingTextInputFocusDetector : ITextInputFocusDetector
+    {
+        public bool IsTextInputFocused()
+        {
+            throw new InvalidOperationException("focus detection failed");
+        }
     }
 }

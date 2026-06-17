@@ -80,6 +80,55 @@ public sealed class HotkeyActionUseCaseTests
         Assert.Null(action.Gesture);
     }
 
+    [Fact]
+    public void SetHotkeyActionEnabledUseCaseDisablesActionAndRequestsBackup()
+    {
+        var services = CreateServices();
+        var saveUseCase = new SaveHotkeyActionUseCase(services.HotkeyActionRepository);
+        var saved = saveUseCase.Execute(CreateRequest(
+            gesture: new HotkeyGesture(Win32Constants.VkRight, HotkeyModifiers.None))).HotkeyAction!;
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var useCase = new SetHotkeyActionEnabledUseCase(services.HotkeyActionRepository, autoBackup);
+
+        var result = useCase.Execute(saved.Id, isEnabled: false);
+
+        Assert.True(result.Succeeded);
+        Assert.False(result.HotkeyAction!.IsEnabled);
+        Assert.False(services.HotkeyActionRepository.GetById(saved.Id)!.IsEnabled);
+        Assert.Equal(1, autoBackup.RequestCount);
+    }
+
+    [Fact]
+    public void SetHotkeyActionEnabledUseCaseRejectsEnablingActionWithoutHotkey()
+    {
+        var services = CreateServices();
+        var saveUseCase = new SaveHotkeyActionUseCase(services.HotkeyActionRepository);
+        var saved = saveUseCase.Execute(CreateRequest(gesture: null, isEnabled: false)).HotkeyAction!;
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var useCase = new SetHotkeyActionEnabledUseCase(services.HotkeyActionRepository, autoBackup);
+
+        var result = useCase.Execute(saved.Id, isEnabled: true);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(SaveHotkeyActionUseCase.HotkeyRequiredMessage, result.ErrorMessage);
+        Assert.False(services.HotkeyActionRepository.GetById(saved.Id)!.IsEnabled);
+        Assert.Equal(0, autoBackup.RequestCount);
+    }
+
+    [Fact]
+    public void SetHotkeyActionEnabledUseCaseReturnsFailureForMissingAction()
+    {
+        var services = CreateServices();
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var useCase = new SetHotkeyActionEnabledUseCase(services.HotkeyActionRepository, autoBackup);
+
+        var result = useCase.Execute(Guid.NewGuid(), isEnabled: false);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(SetHotkeyActionEnabledUseCase.HotkeyNotFoundMessage, result.ErrorMessage);
+        Assert.Equal(0, autoBackup.RequestCount);
+    }
+
     private static SaveHotkeyActionRequest CreateRequest(
         string title = "Paste",
         HotkeyGesture? gesture = null,

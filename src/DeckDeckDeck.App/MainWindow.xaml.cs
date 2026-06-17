@@ -11,6 +11,7 @@ using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 using DrawingIcon = System.Drawing.Icon;
@@ -20,7 +21,7 @@ namespace DeckDeckDeck.App;
 public partial class MainWindow : Window
 {
     private readonly GlobalHotkeyRegistrar _globalHotkeyRegistrar = new();
-    private readonly DirectHotkeyRegistrar _directHotkeyRegistrar = new();
+    private readonly DirectHotkeyRegistrar _directHotkeyRegistrar;
     private readonly NumpadCapture _numpadCapture = new();
     private readonly PasteSelectionSession _pasteSelectionSession = new();
     private readonly PaletteWindowController _paletteWindowController = new();
@@ -33,6 +34,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _directHotkeyRegistrar = new DirectHotkeyRegistrar(
+            new ShouldPassThroughDirectHotkeyUseCase(new TextInputFocusDetector()));
         UseApplicationIcon();
         WindowStartupLocation = WindowStartupLocation.Manual;
         DataContext = MainViewModelFactory.CreateDefault(

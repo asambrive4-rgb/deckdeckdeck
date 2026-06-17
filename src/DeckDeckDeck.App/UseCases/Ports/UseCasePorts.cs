@@ -64,6 +64,8 @@ public interface IHotkeyActionRepository
 
     HotkeyAction Update(Guid id, HotkeyActionSaveData data);
 
+    HotkeyAction SetEnabled(Guid id, bool isEnabled);
+
     ImageFileReference Delete(Guid id);
 }
 

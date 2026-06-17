@@ -19,6 +19,7 @@ internal sealed record MainViewModelNavigatorDependencies(
     DeleteSnippetUseCase DeleteSnippetUseCase,
     TransferSnippetUseCase TransferSnippetUseCase,
     SaveHotkeyActionUseCase SaveHotkeyActionUseCase,
+    SetHotkeyActionEnabledUseCase SetHotkeyActionEnabledUseCase,
     DeleteHotkeyActionUseCase DeleteHotkeyActionUseCase,
     ILoadSettingsUseCase LoadSettingsUseCase,
     ISaveSettingsUseCase SaveSettingsUseCase,

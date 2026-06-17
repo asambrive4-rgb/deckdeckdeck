@@ -1,6 +1,8 @@
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
+using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.Tests;
 
@@ -90,7 +92,7 @@ public sealed class DirectHotkeyRegistrarTests
         var pressed = new List<Guid>();
         var registrar = new DirectHotkeyRegistrar(
             _ => false,
-            new DirectHotkeyPassthroughPolicy(new StubTextInputFocusDetector(true)));
+            new ShouldPassThroughDirectHotkeyUseCase(new StubTextInputFocusDetector(true)).Execute);
         registrar.DirectHotkeyPressed += (_, e) => pressed.Add(e.HotkeyActionId);
         registrar.Refresh([
             new DirectHotkeyRegistration(
@@ -117,7 +119,7 @@ public sealed class DirectHotkeyRegistrarTests
         var pressed = new List<Guid>();
         var registrar = new DirectHotkeyRegistrar(
             _ => false,
-            new DirectHotkeyPassthroughPolicy(new StubTextInputFocusDetector(false)));
+            new ShouldPassThroughDirectHotkeyUseCase(new StubTextInputFocusDetector(false)).Execute);
         registrar.DirectHotkeyPressed += (_, e) => pressed.Add(e.HotkeyActionId);
         registrar.Refresh([
             new DirectHotkeyRegistration(
@@ -140,7 +142,7 @@ public sealed class DirectHotkeyRegistrarTests
         var pressed = new List<Guid>();
         var registrar = new DirectHotkeyRegistrar(
             key => key == Win32Constants.VkControl,
-            new DirectHotkeyPassthroughPolicy(new StubTextInputFocusDetector(true)));
+            new ShouldPassThroughDirectHotkeyUseCase(new StubTextInputFocusDetector(true)).Execute);
         registrar.DirectHotkeyPressed += (_, e) => pressed.Add(e.HotkeyActionId);
         registrar.Refresh([
             new DirectHotkeyRegistration(
@@ -163,7 +165,7 @@ public sealed class DirectHotkeyRegistrarTests
         var pressed = new List<Guid>();
         var registrar = new DirectHotkeyRegistrar(
             _ => false,
-            new DirectHotkeyPassthroughPolicy(new StubTextInputFocusDetector(true)));
+            new ShouldPassThroughDirectHotkeyUseCase(new StubTextInputFocusDetector(true)).Execute);
         registrar.DirectHotkeyPressed += (_, e) => pressed.Add(e.HotkeyActionId);
         registrar.Refresh([new DirectHotkeyRegistration(actionId, new HotkeyGesture(0x67, HotkeyModifiers.None))]);
 
@@ -180,7 +182,7 @@ public sealed class DirectHotkeyRegistrarTests
         var pressed = new List<Guid>();
         var registrar = new DirectHotkeyRegistrar(
             _ => false,
-            new DirectHotkeyPassthroughPolicy(new ThrowingTextInputFocusDetector()));
+            new ShouldPassThroughDirectHotkeyUseCase(new ThrowingTextInputFocusDetector()).Execute);
         registrar.DirectHotkeyPressed += (_, e) => pressed.Add(e.HotkeyActionId);
         registrar.Refresh([
             new DirectHotkeyRegistration(

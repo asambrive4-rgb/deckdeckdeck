@@ -215,7 +215,7 @@ public sealed class ViewRenderingTests
                 var services = CreateServices();
                 var viewModel = new HotkeyListViewModel(
                     [],
-                    new SaveHotkeyActionUseCase(services.HotkeyActionRepository),
+                    new SetHotkeyActionEnabledUseCase(services.HotkeyActionRepository),
                     new DeleteHotkeyActionUseCase(services.HotkeyActionRepository, services.ImageFileRepository),
                     new DialogAdapter(),
                     () => { },

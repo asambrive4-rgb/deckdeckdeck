@@ -132,7 +132,7 @@ internal sealed class MainViewModelViewFactory
     {
         return new HotkeyListViewModel(
             _dependencies.LoadHotkeyActionsUseCase.Execute(),
-            _dependencies.SaveHotkeyActionUseCase,
+            _dependencies.SetHotkeyActionEnabledUseCase,
             _dependencies.DeleteHotkeyActionUseCase,
             _dependencies.DialogAdapter,
             addHotkey,

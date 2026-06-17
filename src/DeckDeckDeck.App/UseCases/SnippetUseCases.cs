@@ -76,7 +76,8 @@ public sealed class SaveSnippetUseCase
             request.PasteShortcutMode,
             validation.NormalizedTerminalCommand,
             validation.TerminalShell,
-            validation.RunAsAdministrator);
+            validation.RunAsAdministrator)
+            .NormalizeForStorage();
 
         var snippet = request.SnippetId.HasValue
             ? _snippetRepository.Update(request.SnippetId.Value, saveData)

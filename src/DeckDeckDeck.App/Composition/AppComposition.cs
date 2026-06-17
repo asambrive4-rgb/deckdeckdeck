@@ -185,6 +185,9 @@ internal sealed record AppComposition(
         var saveHotkeyActionUseCase = new SaveHotkeyActionUseCase(
             HotkeyActionRepository,
             autoBackupCoordinator);
+        var setHotkeyActionEnabledUseCase = new SetHotkeyActionEnabledUseCase(
+            HotkeyActionRepository,
+            autoBackupCoordinator);
         var navigatorDependencies = new MainViewModelNavigatorDependencies(
             new LoadHomeGridUseCase(CategoryRepository, SettingsRepository),
             new LoadCategoryGridUseCase(SnippetRepository, SettingsRepository),
@@ -217,6 +220,7 @@ internal sealed record AppComposition(
                 ImageFileRepository,
                 autoBackupCoordinator),
             saveHotkeyActionUseCase,
+            setHotkeyActionEnabledUseCase,
             new DeleteHotkeyActionUseCase(
                 HotkeyActionRepository,
                 ImageFileRepository,

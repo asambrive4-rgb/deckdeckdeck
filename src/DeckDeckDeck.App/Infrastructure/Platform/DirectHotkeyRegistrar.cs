@@ -1,35 +1,36 @@
 using System.Runtime.InteropServices;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
+using DeckDeckDeck.App.UseCases;
 
 namespace DeckDeckDeck.App.Infrastructure.Platform;
 
 public sealed class DirectHotkeyRegistrar : IDisposable
 {
     private readonly Func<int, bool> _isKeyDown;
-    private readonly IDirectHotkeyPassthroughPolicy _passthroughPolicy;
+    private readonly Func<HotkeyGesture, bool> _shouldPassThrough;
     private readonly object _syncRoot = new();
     private Dictionary<HotkeyGesture, Guid> _hotkeysByGesture = new();
     private HashSet<HotkeyGesture> _pressedGestures = [];
     private User32.LowLevelKeyboardProc? _keyboardHookCallback;
     private IntPtr _keyboardHookHandle;
 
-    public DirectHotkeyRegistrar()
-        : this(IsKeyDown, new DirectHotkeyPassthroughPolicy(new TextInputFocusDetector()))
+    public DirectHotkeyRegistrar(ShouldPassThroughDirectHotkeyUseCase shouldPassThroughUseCase)
+        : this(IsKeyDown, shouldPassThroughUseCase.Execute)
     {
     }
 
     internal DirectHotkeyRegistrar(Func<int, bool> isKeyDown)
-        : this(isKeyDown, NoopDirectHotkeyPassthroughPolicy.Instance)
+        : this(isKeyDown, _ => false)
     {
     }
 
     internal DirectHotkeyRegistrar(
         Func<int, bool> isKeyDown,
-        IDirectHotkeyPassthroughPolicy passthroughPolicy)
+        Func<HotkeyGesture, bool> shouldPassThrough)
     {
         _isKeyDown = isKeyDown;
-        _passthroughPolicy = passthroughPolicy;
+        _shouldPassThrough = shouldPassThrough;
     }
 
     public event EventHandler<DirectHotkeyPressedEventArgs>? DirectHotkeyPressed;
@@ -188,7 +189,7 @@ public sealed class DirectHotkeyRegistrar : IDisposable
     {
         try
         {
-            return _passthroughPolicy.ShouldPassThrough(gesture);
+            return _shouldPassThrough(gesture);
         }
         catch
         {

@@ -51,35 +51,17 @@ public sealed class SnippetRepository : ISnippetRepository
     {
         using var dbContext = _dbContextFactory.Create();
 
+        data = data.NormalizeForStorage();
         var now = DateTime.UtcNow;
-        var storedImageMode = GetStoredSlotImageMode(data.SlotImageMode, data.ImagePath);
         var snippet = new Snippet
         {
             Id = Guid.NewGuid(),
             CategoryId = categoryId,
             SlotKey = slotKey,
-            Title = data.Title.Trim(),
-            Content = GetStoredContent(data.ActionType, data.Content),
-            ActionType = data.ActionType,
-            PasteShortcutMode = GetStoredPasteShortcutMode(data.ActionType, data.PasteShortcutMode),
-            LaunchPath = GetStoredLaunchPath(data.ActionType, data.LaunchPath),
-            LaunchUrl = GetStoredLaunchUrl(data.ActionType, data.LaunchUrl),
-            MediaProvider = GetStoredMediaProvider(data.ActionType, data.MediaProvider),
-            MediaCommand = GetStoredMediaCommand(data.ActionType, data.MediaCommand),
-            TerminalCommand = GetStoredTerminalCommand(data.ActionType, data.TerminalCommand),
-            TerminalShell = GetStoredTerminalShell(data.ActionType, data.TerminalShell),
-            RunAsAdministrator = GetStoredRunAsAdministrator(data.ActionType, data.RunAsAdministrator),
-            SlotImageMode = storedImageMode,
-            Description = NormalizeOptionalText(data.Description),
-            ImagePath = data.ImagePath,
-            ThumbnailPath = data.ThumbnailPath,
-            AutoIconPath = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon)?.IconPath,
-            AutoIconSourcePath = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon)?.SourcePath,
-            AutoIconSourceLastWriteTimeUtc = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon)?.SourceLastWriteTimeUtc,
-            AutoIconSourceLength = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon)?.SourceLength,
             CreatedAt = now,
             UpdatedAt = now
         };
+        ApplySaveData(snippet, data);
 
         dbContext.Snippets.Add(snippet);
         dbContext.SaveChanges();
@@ -134,7 +116,18 @@ public sealed class SnippetRepository : ISnippetRepository
         using var dbContext = _dbContextFactory.Create();
 
         var snippet = dbContext.Snippets.First(item => item.Id == id);
-        UpdateText(snippet, title, content, description, SnippetActionType.PasteText, null, null);
+        var data = new SnippetSaveData(
+                title,
+                content,
+                description,
+                snippet.ImagePath,
+                snippet.ThumbnailPath,
+                SnippetActionType.PasteText,
+                SlotImageMode: snippet.SlotImageMode,
+                AutoIcon: AutoIconCacheEntry.FromSnippet(snippet))
+            .NormalizeForStorage();
+        ApplySaveData(snippet, data);
+        snippet.UpdatedAt = DateTime.UtcNow;
 
         dbContext.SaveChanges();
 
@@ -147,27 +140,10 @@ public sealed class SnippetRepository : ISnippetRepository
     {
         using var dbContext = _dbContextFactory.Create();
 
+        data = data.NormalizeForStorage();
         var snippet = dbContext.Snippets.First(item => item.Id == id);
-        UpdateText(
-            snippet,
-            data.Title,
-            data.Content,
-            data.Description,
-            data.ActionType,
-            data.LaunchPath,
-            data.LaunchUrl,
-            data.MediaProvider,
-            data.MediaCommand,
-            data.PasteShortcutMode,
-            data.TerminalCommand,
-            data.TerminalShell,
-            data.RunAsAdministrator);
-        var storedImageMode = GetStoredSlotImageMode(data.SlotImageMode, data.ImagePath);
-        var storedAutoIcon = GetStoredAutoIcon(data.ActionType, storedImageMode, data.AutoIcon);
-        snippet.SlotImageMode = storedImageMode;
-        snippet.ImagePath = data.ImagePath;
-        snippet.ThumbnailPath = data.ThumbnailPath;
-        SetAutoIcon(snippet, storedAutoIcon);
+        ApplySaveData(snippet, data);
+        snippet.UpdatedAt = DateTime.UtcNow;
 
         dbContext.SaveChanges();
 
@@ -340,93 +316,6 @@ public sealed class SnippetRepository : ISnippetRepository
         return [imageFiles];
     }
 
-    private static string? NormalizeOptionalText(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
-
-    private static string GetStoredContent(SnippetActionType actionType, string content)
-    {
-        return actionType == SnippetActionType.PasteText ? content : string.Empty;
-    }
-
-    private static string? GetStoredLaunchPath(SnippetActionType actionType, string? launchPath)
-    {
-        return actionType == SnippetActionType.LaunchFile ? NormalizeOptionalText(launchPath) : null;
-    }
-
-    private static PasteShortcutMode GetStoredPasteShortcutMode(
-        SnippetActionType actionType,
-        PasteShortcutMode pasteShortcutMode)
-    {
-        return actionType == SnippetActionType.PasteText
-            ? pasteShortcutMode
-            : PasteShortcutMode.CtrlV;
-    }
-
-    private static string? GetStoredLaunchUrl(SnippetActionType actionType, string? launchUrl)
-    {
-        return actionType == SnippetActionType.LaunchUrl ? NormalizeOptionalText(launchUrl) : null;
-    }
-
-    private static SnippetMediaProvider? GetStoredMediaProvider(
-        SnippetActionType actionType,
-        SnippetMediaProvider? mediaProvider)
-    {
-        return actionType == SnippetActionType.MediaAction
-            ? mediaProvider ?? SnippetMediaProvider.System
-            : null;
-    }
-
-    private static SnippetMediaCommand? GetStoredMediaCommand(
-        SnippetActionType actionType,
-        SnippetMediaCommand? mediaCommand)
-    {
-        return actionType == SnippetActionType.MediaAction
-            ? mediaCommand ?? SnippetMediaCommand.PlayPause
-            : null;
-    }
-
-    private static string? GetStoredTerminalCommand(SnippetActionType actionType, string? terminalCommand)
-    {
-        return actionType == SnippetActionType.TerminalCommand
-            ? NormalizeOptionalText(terminalCommand)
-            : null;
-    }
-
-    private static SnippetTerminalShell? GetStoredTerminalShell(
-        SnippetActionType actionType,
-        SnippetTerminalShell? terminalShell)
-    {
-        return actionType == SnippetActionType.TerminalCommand
-            ? terminalShell ?? SnippetTerminalShell.Cmd
-            : null;
-    }
-
-    private static bool GetStoredRunAsAdministrator(
-        SnippetActionType actionType,
-        bool runAsAdministrator)
-    {
-        return actionType == SnippetActionType.TerminalCommand && runAsAdministrator;
-    }
-
-    private static SlotImageMode GetStoredSlotImageMode(SlotImageMode slotImageMode, string? imagePath)
-    {
-        return slotImageMode == SlotImageMode.Auto && !string.IsNullOrWhiteSpace(imagePath)
-            ? SlotImageMode.Custom
-            : slotImageMode;
-    }
-
-    private static AutoIconCacheEntry? GetStoredAutoIcon(
-        SnippetActionType actionType,
-        SlotImageMode slotImageMode,
-        AutoIconCacheEntry? autoIcon)
-    {
-        return actionType == SnippetActionType.LaunchFile && slotImageMode != SlotImageMode.None
-            ? autoIcon
-            : null;
-    }
-
     private static void SetAutoIcon(Snippet snippet, AutoIconCacheEntry? autoIcon)
     {
         snippet.AutoIconPath = autoIcon?.IconPath;
@@ -435,34 +324,24 @@ public sealed class SnippetRepository : ISnippetRepository
         snippet.AutoIconSourceLength = autoIcon?.SourceLength;
     }
 
-    private static void UpdateText(
-        Snippet snippet,
-        string title,
-        string content,
-        string? description,
-        SnippetActionType actionType,
-        string? launchPath,
-        string? launchUrl,
-        SnippetMediaProvider? mediaProvider = null,
-        SnippetMediaCommand? mediaCommand = null,
-        PasteShortcutMode pasteShortcutMode = PasteShortcutMode.CtrlV,
-        string? terminalCommand = null,
-        SnippetTerminalShell? terminalShell = null,
-        bool runAsAdministrator = true)
+    private static void ApplySaveData(Snippet snippet, SnippetSaveData data)
     {
-        snippet.Title = title.Trim();
-        snippet.Content = GetStoredContent(actionType, content);
-        snippet.ActionType = actionType;
-        snippet.PasteShortcutMode = GetStoredPasteShortcutMode(actionType, pasteShortcutMode);
-        snippet.LaunchPath = GetStoredLaunchPath(actionType, launchPath);
-        snippet.LaunchUrl = GetStoredLaunchUrl(actionType, launchUrl);
-        snippet.MediaProvider = GetStoredMediaProvider(actionType, mediaProvider);
-        snippet.MediaCommand = GetStoredMediaCommand(actionType, mediaCommand);
-        snippet.TerminalCommand = GetStoredTerminalCommand(actionType, terminalCommand);
-        snippet.TerminalShell = GetStoredTerminalShell(actionType, terminalShell);
-        snippet.RunAsAdministrator = GetStoredRunAsAdministrator(actionType, runAsAdministrator);
-        snippet.Description = NormalizeOptionalText(description);
-        snippet.UpdatedAt = DateTime.UtcNow;
+        snippet.Title = data.Title;
+        snippet.Content = data.Content;
+        snippet.ActionType = data.ActionType;
+        snippet.PasteShortcutMode = data.PasteShortcutMode;
+        snippet.LaunchPath = data.LaunchPath;
+        snippet.LaunchUrl = data.LaunchUrl;
+        snippet.MediaProvider = data.MediaProvider;
+        snippet.MediaCommand = data.MediaCommand;
+        snippet.TerminalCommand = data.TerminalCommand;
+        snippet.TerminalShell = data.TerminalShell;
+        snippet.RunAsAdministrator = data.RunAsAdministrator;
+        snippet.SlotImageMode = data.SlotImageMode;
+        snippet.Description = data.Description;
+        snippet.ImagePath = data.ImagePath;
+        snippet.ThumbnailPath = data.ThumbnailPath;
+        SetAutoIcon(snippet, data.AutoIcon);
     }
 
     UseCaseImageFileReference ISnippetRepository.Delete(Guid id)

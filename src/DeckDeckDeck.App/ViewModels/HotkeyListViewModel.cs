@@ -10,7 +10,7 @@ public sealed class HotkeyListViewModel
 {
     public HotkeyListViewModel(
         IReadOnlyList<HotkeyAction> actions,
-        SaveHotkeyActionUseCase saveHotkeyActionUseCase,
+        SetHotkeyActionEnabledUseCase setHotkeyActionEnabledUseCase,
         DeleteHotkeyActionUseCase deleteHotkeyActionUseCase,
         IDialogAdapter dialogAdapter,
         Action addHotkey,
@@ -24,7 +24,7 @@ public sealed class HotkeyListViewModel
         BackCommand = new RelayCommand(back);
         Items = actions.Select(action => new HotkeyActionListItemViewModel(
                 action,
-                saveHotkeyActionUseCase,
+                setHotkeyActionEnabledUseCase,
                 deleteHotkeyActionUseCase,
                 dialogAdapter,
                 editHotkey,
@@ -53,12 +53,12 @@ public sealed class HotkeyActionListItemViewModel
     private readonly Action<HotkeyAction> _editHotkey;
     private readonly Action _notifyHotkeysChanged;
     private readonly Action _reload;
-    private readonly SaveHotkeyActionUseCase _saveHotkeyActionUseCase;
+    private readonly SetHotkeyActionEnabledUseCase _setHotkeyActionEnabledUseCase;
     private readonly Action<string> _showStatus;
 
     public HotkeyActionListItemViewModel(
         HotkeyAction action,
-        SaveHotkeyActionUseCase saveHotkeyActionUseCase,
+        SetHotkeyActionEnabledUseCase setHotkeyActionEnabledUseCase,
         DeleteHotkeyActionUseCase deleteHotkeyActionUseCase,
         IDialogAdapter dialogAdapter,
         Action<HotkeyAction> editHotkey,
@@ -67,7 +67,7 @@ public sealed class HotkeyActionListItemViewModel
         Action<string> showStatus)
     {
         _action = action;
-        _saveHotkeyActionUseCase = saveHotkeyActionUseCase;
+        _setHotkeyActionEnabledUseCase = setHotkeyActionEnabledUseCase;
         _deleteHotkeyActionUseCase = deleteHotkeyActionUseCase;
         _dialogAdapter = dialogAdapter;
         _editHotkey = editHotkey;
@@ -103,7 +103,7 @@ public sealed class HotkeyActionListItemViewModel
 
     private void ToggleEnabled()
     {
-        var result = _saveHotkeyActionUseCase.Execute(BuildSaveRequest(!_action.IsEnabled));
+        var result = _setHotkeyActionEnabledUseCase.Execute(_action.Id, !_action.IsEnabled);
         if (!result.Succeeded)
         {
             _showStatus(result.ErrorMessage ?? "핫키 상태를 저장하지 못했습니다.");
@@ -131,27 +131,4 @@ public sealed class HotkeyActionListItemViewModel
         _reload();
     }
 
-    private SaveHotkeyActionRequest BuildSaveRequest(bool isEnabled)
-    {
-        return new SaveHotkeyActionRequest(
-            _action.Id,
-            _action.Title,
-            _action.Gesture,
-            isEnabled,
-            _action.Content,
-            _action.Description,
-            _action.ImagePath,
-            _action.ThumbnailPath,
-            _action.ActionType,
-            _action.LaunchPath ?? string.Empty,
-            _action.SlotImageMode,
-            AutoIconCacheEntry.FromHotkeyAction(_action),
-            _action.LaunchUrl,
-            _action.MediaProvider ?? SnippetMediaProvider.System,
-            _action.MediaCommand ?? SnippetMediaCommand.PlayPause,
-            _action.PasteShortcutMode,
-            _action.TerminalCommand ?? string.Empty,
-            _action.TerminalShell ?? SnippetTerminalShell.Cmd,
-            _action.RunAsAdministrator);
-    }
 }

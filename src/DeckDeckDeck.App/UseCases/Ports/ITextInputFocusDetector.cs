@@ -1,4 +1,4 @@
-namespace DeckDeckDeck.App.Infrastructure.Platform;
+namespace DeckDeckDeck.App.UseCases.Ports;
 
 public interface ITextInputFocusDetector
 {

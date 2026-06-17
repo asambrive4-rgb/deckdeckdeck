@@ -14,6 +14,8 @@ public sealed record HotkeyGesture(uint VirtualKey, HotkeyModifiers Modifiers)
 {
     public bool IsComplete => VirtualKey != 0 && !IsModifierVirtualKey(VirtualKey);
 
+    public bool IsUnmodifiedArrowKey => Modifiers == HotkeyModifiers.None && IsArrowVirtualKey(VirtualKey);
+
     public string DisplayText
     {
         get
@@ -48,6 +50,11 @@ public sealed record HotkeyGesture(uint VirtualKey, HotkeyModifiers Modifiers)
     {
         return virtualKey is 0x10 or 0x11 or 0x12 or 0x5B or 0x5C
             or 0xA0 or 0xA1 or 0xA2 or 0xA3 or 0xA4 or 0xA5;
+    }
+
+    public static bool IsArrowVirtualKey(uint virtualKey)
+    {
+        return virtualKey is 0x25 or 0x26 or 0x27 or 0x28;
     }
 
     public static string GetKeyDisplayText(uint virtualKey)

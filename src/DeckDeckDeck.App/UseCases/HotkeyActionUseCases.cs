@@ -113,7 +113,8 @@ public sealed class SaveHotkeyActionUseCase
             request.PasteShortcutMode,
             validation.NormalizedTerminalCommand,
             validation.TerminalShell,
-            validation.RunAsAdministrator);
+            validation.RunAsAdministrator)
+            .NormalizeForStorage();
 
         var action = request.HotkeyActionId.HasValue
             ? _hotkeyActionRepository.Update(request.HotkeyActionId.Value, saveData)
@@ -122,6 +123,41 @@ public sealed class SaveHotkeyActionUseCase
         _autoBackupRequester?.RequestAutoBackup();
 
         return SaveHotkeyActionResult.Success(action, validation.NormalizedLaunchUrl);
+    }
+}
+
+public sealed class SetHotkeyActionEnabledUseCase
+{
+    public const string HotkeyNotFoundMessage = "Hotkey action was not found.";
+
+    private readonly IAutoBackupRequester? _autoBackupRequester;
+    private readonly IHotkeyActionRepository _hotkeyActionRepository;
+
+    public SetHotkeyActionEnabledUseCase(
+        IHotkeyActionRepository hotkeyActionRepository,
+        IAutoBackupRequester? autoBackupRequester = null)
+    {
+        _hotkeyActionRepository = hotkeyActionRepository;
+        _autoBackupRequester = autoBackupRequester;
+    }
+
+    public SetHotkeyActionEnabledResult Execute(Guid hotkeyActionId, bool isEnabled)
+    {
+        var action = _hotkeyActionRepository.GetById(hotkeyActionId);
+        if (action is null)
+        {
+            return SetHotkeyActionEnabledResult.Failure(HotkeyNotFoundMessage);
+        }
+
+        if (isEnabled && action.Gesture is null)
+        {
+            return SetHotkeyActionEnabledResult.Failure(SaveHotkeyActionUseCase.HotkeyRequiredMessage);
+        }
+
+        var updatedAction = _hotkeyActionRepository.SetEnabled(hotkeyActionId, isEnabled);
+        _autoBackupRequester?.RequestAutoBackup();
+
+        return SetHotkeyActionEnabledResult.Success(updatedAction);
     }
 }
 
@@ -186,5 +222,21 @@ public sealed record SaveHotkeyActionResult(
     public static SaveHotkeyActionResult Failure(string errorMessage)
     {
         return new SaveHotkeyActionResult(false, ErrorMessage: errorMessage);
+    }
+}
+
+public sealed record SetHotkeyActionEnabledResult(
+    bool Succeeded,
+    HotkeyAction? HotkeyAction = null,
+    string? ErrorMessage = null)
+{
+    public static SetHotkeyActionEnabledResult Success(HotkeyAction action)
+    {
+        return new SetHotkeyActionEnabledResult(true, action);
+    }
+
+    public static SetHotkeyActionEnabledResult Failure(string errorMessage)
+    {
+        return new SetHotkeyActionEnabledResult(false, ErrorMessage: errorMessage);
     }
 }
