@@ -7,6 +7,7 @@ namespace DeckDeckDeck.App.Infrastructure.Platform;
 public sealed class DirectHotkeyRegistrar : IDisposable
 {
     private readonly Func<int, bool> _isKeyDown;
+    private readonly IDirectHotkeyPassthroughPolicy _passthroughPolicy;
     private readonly object _syncRoot = new();
     private Dictionary<HotkeyGesture, Guid> _hotkeysByGesture = new();
     private HashSet<HotkeyGesture> _pressedGestures = [];
@@ -14,13 +15,21 @@ public sealed class DirectHotkeyRegistrar : IDisposable
     private IntPtr _keyboardHookHandle;
 
     public DirectHotkeyRegistrar()
-        : this(IsKeyDown)
+        : this(IsKeyDown, new DirectHotkeyPassthroughPolicy(new TextInputFocusDetector()))
     {
     }
 
     internal DirectHotkeyRegistrar(Func<int, bool> isKeyDown)
+        : this(isKeyDown, NoopDirectHotkeyPassthroughPolicy.Instance)
+    {
+    }
+
+    internal DirectHotkeyRegistrar(
+        Func<int, bool> isKeyDown,
+        IDirectHotkeyPassthroughPolicy passthroughPolicy)
     {
         _isKeyDown = isKeyDown;
+        _passthroughPolicy = passthroughPolicy;
     }
 
     public event EventHandler<DirectHotkeyPressedEventArgs>? DirectHotkeyPressed;
@@ -150,6 +159,19 @@ public sealed class DirectHotkeyRegistrar : IDisposable
             {
                 return false;
             }
+        }
+
+        if (ShouldPassThrough(gesture))
+        {
+            return false;
+        }
+
+        lock (_syncRoot)
+        {
+            if (!_hotkeysByGesture.TryGetValue(gesture, out hotkeyActionId))
+            {
+                return false;
+            }
 
             shouldRaise = _pressedGestures.Add(gesture);
         }
@@ -160,6 +182,18 @@ public sealed class DirectHotkeyRegistrar : IDisposable
         }
 
         return true;
+    }
+
+    private bool ShouldPassThrough(HotkeyGesture gesture)
+    {
+        try
+        {
+            return _passthroughPolicy.ShouldPassThrough(gesture);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private bool ProcessKeyUp(uint virtualKey)

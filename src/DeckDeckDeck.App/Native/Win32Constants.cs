@@ -50,6 +50,14 @@ public static class Win32Constants
 
     public const ushort VkV = 0x56;
 
+    public const uint VkLeft = 0x25;
+
+    public const uint VkUp = 0x26;
+
+    public const uint VkRight = 0x27;
+
+    public const uint VkDown = 0x28;
+
     public const ushort VkVolumeMute = 0xAD;
 
     public const ushort VkVolumeDown = 0xAE;
