@@ -95,6 +95,8 @@ internal sealed class BlockingClipboardPasteGateway : IClipboardPasteGateway
     private readonly TaskCompletionSource<bool> _completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource<bool> _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    public List<PasteCall> Calls { get; } = [];
+
     public Task Started => _started.Task;
 
     public void Complete()
@@ -104,6 +106,7 @@ internal sealed class BlockingClipboardPasteGateway : IClipboardPasteGateway
 
     public async Task<bool> PasteActionAsync(ExecutableAction action, IntPtr targetWindowHandle, AppSettings settings)
     {
+        Calls.Add(new PasteCall(action, targetWindowHandle, settings));
         _started.SetResult(true);
         return await _completed.Task;
     }

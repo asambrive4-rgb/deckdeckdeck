@@ -60,6 +60,40 @@ public sealed class DirectHotkeyExecutionTests
         Assert.Empty(pasteService.Calls);
     }
 
+    [Fact]
+    public async Task DirectHotkeyIgnoresSecondActionWhileFirstActionIsRunning()
+    {
+        var services = CreateServices();
+        var firstHotkey = services.HotkeyActionRepository.Create(CreatePasteAction(
+            "First Direct Paste",
+            new HotkeyGesture(0x67, HotkeyModifiers.None),
+            isEnabled: true,
+            content: "First paste"));
+        var secondHotkey = services.HotkeyActionRepository.Create(CreatePasteAction(
+            "Second Direct Paste",
+            new HotkeyGesture(0x68, HotkeyModifiers.None),
+            isEnabled: true,
+            content: "Second paste"));
+        var pasteService = new BlockingClipboardPasteGateway();
+        var viewModel = CreateMainViewModel(
+            services,
+            pasteService,
+            () => new IntPtr(456),
+            () => { });
+
+        var firstTask = viewModel.ExecuteDirectHotkeyAsync(firstHotkey.Id);
+        await pasteService.Started;
+
+        await viewModel.ExecuteDirectHotkeyAsync(secondHotkey.Id);
+
+        var call = Assert.Single(pasteService.Calls);
+        Assert.Equal("First paste", call.Action.Content);
+        Assert.Equal("Action is already running.", viewModel.StatusMessage);
+
+        pasteService.Complete();
+        await firstTask;
+    }
+
     private static HotkeyActionSaveData CreatePasteAction(
         string title,
         HotkeyGesture gesture,

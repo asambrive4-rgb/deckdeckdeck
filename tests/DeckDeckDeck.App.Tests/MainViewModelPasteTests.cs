@@ -16,6 +16,21 @@ using static DeckDeckDeck.App.Tests.TestAppFactory;
 namespace DeckDeckDeck.App.Tests;
 public sealed class MainViewModelPasteTests
 {
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(10);
+        }
+
+        Assert.True(condition());
+    }
+
     [Fact]
     public void ExistingSnippetSlotPastesInsteadOfOpeningEditor()
     {
@@ -63,6 +78,39 @@ public sealed class MainViewModelPasteTests
         Assert.IsType<SnippetEditViewModel>(viewModel.CurrentViewModel);
         Assert.Empty(pasteService.Calls);
         Assert.True(enteredEditMode);
+    }
+
+    [Fact]
+    public async Task SnippetPasteIgnoresSecondSlotWhileFirstActionIsRunning()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "First", "First paste.", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad4, "Second", "Second paste.", null);
+        var pasteService = new BlockingClipboardPasteGateway();
+        var completedPasteSelections = 0;
+        var viewModel = CreateMainViewModel(
+            services,
+            pasteService,
+            () => new IntPtr(123),
+            () => { },
+            completePasteSelection: () => completedPasteSelections++);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+        await pasteService.Started;
+
+        viewModel.SelectSlot(SlotKey.Numpad4);
+
+        var call = Assert.Single(pasteService.Calls);
+        Assert.Equal("First paste.", call.Action.Content);
+        Assert.Equal(1, completedPasteSelections);
+        Assert.Equal("Action is already running.", viewModel.StatusMessage);
+
+        pasteService.Complete();
+        await WaitUntilAsync(() => completedPasteSelections == 2);
+
+        Assert.Equal(2, completedPasteSelections);
     }
 
     [Fact]

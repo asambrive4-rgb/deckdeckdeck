@@ -12,7 +12,7 @@
 데이터 안전성 MVP 이후에는 DeckDeckDeck을 단순 문구 런처가 아니라 **키보드 기반 Stream Deck**으로 확장한다.
 카드 실행 타입은 한 번에 크게 바꾸지 않고, 빠른 체감 기능부터 자동화, 컨텍스트 인식, 외부 서비스 연동 순서로 점진적으로 넓힌다.
 
-시각 디자인 기준은 계속 [DESIGN_GUIDELINES.md](DESIGN_GUIDELINES.md)를 따른다.
+시각 디자인 기준은 계속 [DESIGN_GUIDELINES.md](deckdeckdeck/docs/DESIGN_GUIDELINES.md)를 따른다.
 
 ---
 

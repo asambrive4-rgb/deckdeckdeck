@@ -194,51 +194,55 @@ public partial class MainWindow : Window
 
     private void OnHotkeyPressed(object? sender, HotkeyPressedEventArgs e)
     {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.Invoke(() => HandleHotkey(e.SlotKey));
-            return;
-        }
-
-        HandleHotkey(e.SlotKey);
+        RunOnUiThread(() => HandleHotkey(e.SlotKey));
     }
 
     private void OnNumpadSlotCaptured(object? sender, HotkeyPressedEventArgs e)
     {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.Invoke(() => SelectCapturedSlot(e.SlotKey));
-            return;
-        }
-
-        SelectCapturedSlot(e.SlotKey);
+        RunOnUiThread(() => SelectCapturedSlot(e.SlotKey));
     }
 
     private void OnHotkeyLongPressed(object? sender, HotkeyPressedEventArgs e)
     {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.Invoke(() => HandleHotkeyLongPress(e.SlotKey));
-            return;
-        }
-
-        HandleHotkeyLongPress(e.SlotKey);
+        RunOnUiThread(() => HandleHotkeyLongPress(e.SlotKey));
     }
 
     private void OnDirectHotkeyPressed(object? sender, DirectHotkeyPressedEventArgs e)
     {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.Invoke(() => HandleDirectHotkey(e.HotkeyActionId));
-            return;
-        }
-
-        HandleDirectHotkey(e.HotkeyActionId);
+        RunOnUiThread(() => HandleDirectHotkey(e.HotkeyActionId));
     }
 
     private void OnDirectHotkeysChanged(object? sender, EventArgs e)
     {
         RefreshDirectHotkeys();
+    }
+
+    private void RunOnUiThread(Action action)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            RunUiActionSafely(action);
+            return;
+        }
+
+        _ = Dispatcher.BeginInvoke(
+            () => RunUiActionSafely(action),
+            DispatcherPriority.Normal);
+    }
+
+    private void RunUiActionSafely(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch
+        {
+            if (DataContext is MainViewModel viewModel)
+            {
+                viewModel.ReportBackgroundStatus("Hotkey handling failed.");
+            }
+        }
     }
 
     private void HandleHotkey(SlotKey slotKey)

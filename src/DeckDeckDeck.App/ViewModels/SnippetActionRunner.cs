@@ -1,17 +1,22 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
+using System.Threading;
 
 namespace DeckDeckDeck.App.ViewModels;
 
 internal sealed class SnippetActionRunner
 {
+    private const int NotExecuting = 0;
+    private const int Executing = 1;
+
     private readonly MainViewModelCallbacks _callbacks;
     private readonly ExecuteSnippetActionUseCase _executeSnippetActionUseCase;
     private readonly ILoadSettingsUseCase _loadSettingsUseCase;
     private readonly IAppLogger? _logger;
     private readonly PrepareSnippetActionUseCase _prepareSnippetActionUseCase;
     private readonly Action<string> _showStatus;
+    private int _isExecuting;
 
     public SnippetActionRunner(
         ILoadSettingsUseCase loadSettingsUseCase,
@@ -36,11 +41,17 @@ internal sealed class SnippetActionRunner
 
     public async Task ExecuteAsync(ExecutableAction action)
     {
-        var settings = _loadSettingsUseCase.Execute();
         var completePasteSelection = _callbacks.CreatePasteSelectionCompletion();
+        if (Interlocked.CompareExchange(ref _isExecuting, Executing, NotExecuting) != NotExecuting)
+        {
+            completePasteSelection();
+            _showStatus("Action is already running.");
+            return;
+        }
 
         try
         {
+            var settings = _loadSettingsUseCase.Execute();
             var preparation = _prepareSnippetActionUseCase.Execute(
                 new PrepareSnippetActionRequest(action, settings));
             if (preparation.ShouldHideBeforeExecute)
@@ -68,7 +79,14 @@ internal sealed class SnippetActionRunner
         }
         finally
         {
-            completePasteSelection();
+            try
+            {
+                completePasteSelection();
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isExecuting, NotExecuting);
+            }
         }
     }
 

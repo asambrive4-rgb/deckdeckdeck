@@ -93,7 +93,7 @@ dotnet test
 ## 📄 관련 문서 (Documentation)
 
 - **제품 요구사항 명세서 (PRD)**: [PRD.md](docs/PRD.md)
-- **디자인 가이드라인**: [DESIGN_GUIDELINES.md](docs/DESIGN_GUIDELINES.md)
+- **디자인 가이드라인**: [DESIGN_GUIDELINES.md](deckdeckdeck/docs/DESIGN_GUIDELINES.md)
 - **클린 아키텍처 규칙**: [clean-architecture.mini.md](docs/clean-architecture.mini.md)
 - **소프트웨어 설계 철학**: [a-philosophy-of-software-design.mini.md](docs/a-philosophy-of-software-design.mini.md)
 - **에이전트 작업 지침**: [AGENTS.md](AGENTS.md)
