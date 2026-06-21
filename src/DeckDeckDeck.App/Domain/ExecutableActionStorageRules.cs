@@ -19,7 +19,8 @@ public static class ExecutableActionStorageRules
         PasteShortcutMode pasteShortcutMode,
         string? terminalCommand,
         SnippetTerminalShell? terminalShell,
-        bool runAsAdministrator)
+        bool runAsAdministrator,
+        FileActionMode fileActionMode)
     {
         var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
 
@@ -49,7 +50,10 @@ public static class ExecutableActionStorageRules
             actionType == SnippetActionType.TerminalCommand
                 ? terminalShell ?? SnippetTerminalShell.Cmd
                 : null,
-            actionType == SnippetActionType.TerminalCommand && runAsAdministrator);
+            actionType == SnippetActionType.TerminalCommand && runAsAdministrator,
+            actionType == SnippetActionType.LaunchFile
+                ? fileActionMode
+                : FileActionMode.Launch);
     }
 
     private static string? NormalizeOptionalText(string? value)
@@ -79,4 +83,5 @@ public sealed record ExecutableActionStorageData(
     PasteShortcutMode PasteShortcutMode,
     string? TerminalCommand,
     SnippetTerminalShell? TerminalShell,
-    bool RunAsAdministrator);
+    bool RunAsAdministrator,
+    FileActionMode FileActionMode);

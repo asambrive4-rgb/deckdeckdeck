@@ -4,10 +4,12 @@ namespace DeckDeckDeck.App.ViewModels;
 
 internal static class HotkeyActionDisplayText
 {
-    public static string GetActionTypeLabel(SnippetActionType actionType)
+    public static string GetActionTypeLabel(HotkeyAction action)
     {
-        return actionType switch
+        return action.ActionType switch
         {
+            SnippetActionType.LaunchFile when action.FileActionMode == FileActionMode.Paste =>
+                "파일 붙여넣기",
             SnippetActionType.LaunchFile => "파일/바로 가기 실행",
             SnippetActionType.LaunchUrl => "웹 주소 열기",
             SnippetActionType.MediaAction => "음악/미디어 제어",

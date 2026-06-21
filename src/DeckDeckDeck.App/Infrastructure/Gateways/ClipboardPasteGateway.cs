@@ -7,11 +7,12 @@ using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
+using System.IO;
 using System.Windows;
 
 namespace DeckDeckDeck.App.Infrastructure.Gateways;
 
-public sealed class ClipboardPasteGateway : IClipboardPasteGateway
+public sealed class ClipboardPasteGateway : IClipboardPasteGateway, IFilePasteGateway
 {
     private static readonly TimeSpan DefaultPasteDelay = TimeSpan.FromMilliseconds(80);
 
@@ -49,9 +50,45 @@ public sealed class ClipboardPasteGateway : IClipboardPasteGateway
 
     public async Task<bool> PasteActionAsync(ExecutableAction action, IntPtr targetWindowHandle, AppSettings settings)
     {
+        var result = await PasteClipboardAsync(
+            () => _clipboardAdapter.SetText(action.Content),
+            targetWindowHandle,
+            settings,
+            action.PasteShortcutMode);
+
+        return result.Succeeded;
+    }
+
+    public async Task<FilePasteGatewayResult> PasteFileAsync(
+        string filePath,
+        IntPtr targetWindowHandle,
+        AppSettings settings)
+    {
+        if (!File.Exists(filePath))
+        {
+            return FilePasteGatewayResult.FileNotFound();
+        }
+
+        var result = await PasteClipboardAsync(
+            () => _clipboardAdapter.SetFileDropList(filePath),
+            targetWindowHandle,
+            settings,
+            PasteShortcutMode.CtrlV);
+
+        return result.Succeeded
+            ? FilePasteGatewayResult.Success()
+            : FilePasteGatewayResult.Failure(result.Exception);
+    }
+
+    private async Task<ClipboardPasteAttempt> PasteClipboardAsync(
+        Action setClipboard,
+        IntPtr targetWindowHandle,
+        AppSettings settings,
+        PasteShortcutMode pasteShortcutMode)
+    {
         if (targetWindowHandle == IntPtr.Zero)
         {
-            return false;
+            return ClipboardPasteAttempt.Failure();
         }
 
         IDataObject? backup = null;
@@ -60,19 +97,23 @@ public sealed class ClipboardPasteGateway : IClipboardPasteGateway
         try
         {
             backup = _clipboardAdapter.GetDataObject();
-            _clipboardAdapter.SetText(action.Content);
+            setClipboard();
             shouldRestore = settings.RestoreClipboardAfterPaste && backup is not null;
 
             _windowFocusAdapter.TryActivate(targetWindowHandle);
             await Task.Delay(_pasteDelay);
 
-            return action.PasteShortcutMode == PasteShortcutMode.CtrlShiftV
+            var pasted = pasteShortcutMode == PasteShortcutMode.CtrlShiftV
                 ? _keyboardInputAdapter.SendCtrlShiftV()
                 : _keyboardInputAdapter.SendCtrlV();
+
+            return pasted
+                ? ClipboardPasteAttempt.Success()
+                : ClipboardPasteAttempt.Failure();
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            return ClipboardPasteAttempt.Failure(ex);
         }
         finally
         {
@@ -93,6 +134,19 @@ public sealed class ClipboardPasteGateway : IClipboardPasteGateway
         catch
         {
             // Clipboard restore is best-effort; failures must not close the app.
+        }
+    }
+
+    private sealed record ClipboardPasteAttempt(bool Succeeded, Exception? Exception = null)
+    {
+        public static ClipboardPasteAttempt Success()
+        {
+            return new ClipboardPasteAttempt(true);
+        }
+
+        public static ClipboardPasteAttempt Failure(Exception? exception = null)
+        {
+            return new ClipboardPasteAttempt(false, exception);
         }
     }
 }

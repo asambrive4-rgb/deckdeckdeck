@@ -119,6 +119,8 @@ public interface IDialogAdapter
 
     string? SelectLaunchFile();
 
+    string? SelectPasteFile();
+
     string? SelectLaunchFolder();
 
     string? SelectBackupFolder();
@@ -156,6 +158,14 @@ public interface IClipboardTextWriter
 public interface IClipboardPasteGateway
 {
     Task<bool> PasteActionAsync(ExecutableAction action, IntPtr targetWindowHandle, AppSettings settings);
+}
+
+public interface IFilePasteGateway
+{
+    Task<FilePasteGatewayResult> PasteFileAsync(
+        string filePath,
+        IntPtr targetWindowHandle,
+        AppSettings settings);
 }
 
 public interface IFileLaunchGateway
@@ -221,7 +231,8 @@ public sealed record SnippetSaveData(
     PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV,
     string? TerminalCommand = null,
     SnippetTerminalShell? TerminalShell = null,
-    bool RunAsAdministrator = true);
+    bool RunAsAdministrator = true,
+    FileActionMode FileActionMode = FileActionMode.Launch);
 
 public sealed record HotkeyActionSaveData(
     string Title,
@@ -241,7 +252,35 @@ public sealed record HotkeyActionSaveData(
     PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV,
     string? TerminalCommand = null,
     SnippetTerminalShell? TerminalShell = null,
-    bool RunAsAdministrator = true);
+    bool RunAsAdministrator = true,
+    FileActionMode FileActionMode = FileActionMode.Launch);
+
+public enum FilePasteGatewayStatus
+{
+    Succeeded,
+    FileNotFound,
+    Failed
+}
+
+public sealed record FilePasteGatewayResult(
+    FilePasteGatewayStatus Status,
+    Exception? Exception = null)
+{
+    public static FilePasteGatewayResult Success()
+    {
+        return new FilePasteGatewayResult(FilePasteGatewayStatus.Succeeded);
+    }
+
+    public static FilePasteGatewayResult FileNotFound()
+    {
+        return new FilePasteGatewayResult(FilePasteGatewayStatus.FileNotFound);
+    }
+
+    public static FilePasteGatewayResult Failure(Exception? exception = null)
+    {
+        return new FilePasteGatewayResult(FilePasteGatewayStatus.Failed, exception);
+    }
+}
 
 public sealed record CategoryTransferRepositoryResult(
     Category Category,

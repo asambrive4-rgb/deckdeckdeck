@@ -202,6 +202,41 @@ public sealed class MainViewModelPasteTests
     }
 
     [Fact]
+    public void FilePasteSnippetPastesIntoCapturedWindow()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Files", null);
+        services.SnippetRepository.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Paste notes",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.LaunchFile,
+            launchPath: @"C:\notes\memo.md",
+            fileActionMode: FileActionMode.Paste);
+        var filePasteService = new RecordingFilePasteGateway();
+        var hidden = false;
+        var completedPasteSelection = false;
+        var viewModel = CreateMainViewModel(
+            services,
+            getPasteTargetWindowHandle: () => new IntPtr(123),
+            hideWindowAfterPaste: () => hidden = true,
+            completePasteSelection: () => completedPasteSelection = true,
+            filePasteService: filePasteService);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        viewModel.SelectSlot(SlotKey.Numpad3);
+
+        var call = Assert.Single(filePasteService.Calls);
+        Assert.Equal(@"C:\notes\memo.md", call.FilePath);
+        Assert.Equal(new IntPtr(123), call.TargetWindowHandle);
+        Assert.True(hidden);
+        Assert.True(completedPasteSelection);
+        Assert.Contains("파일 붙여넣기 요청됨", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public void LaunchUrlSnippetLaunchesInsteadOfPasting()
     {
         var services = CreateServices();

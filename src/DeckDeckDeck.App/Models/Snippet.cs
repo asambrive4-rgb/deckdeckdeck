@@ -20,6 +20,8 @@ public sealed class Snippet
 
     public string? LaunchPath { get; set; }
 
+    public FileActionMode FileActionMode { get; set; } = FileActionMode.Launch;
+
     public string? LaunchUrl { get; set; }
 
     public SnippetMediaProvider? MediaProvider { get; set; }

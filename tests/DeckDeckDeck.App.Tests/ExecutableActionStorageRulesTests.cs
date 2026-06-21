@@ -36,6 +36,7 @@ public sealed class ExecutableActionStorageRulesTests
         Assert.Equal(snippet.TerminalCommand, hotkey.TerminalCommand);
         Assert.Equal(snippet.TerminalShell, hotkey.TerminalShell);
         Assert.Equal(snippet.RunAsAdministrator, hotkey.RunAsAdministrator);
+        Assert.Equal(snippet.FileActionMode, hotkey.FileActionMode);
 
         Assert.Equal("Title", snippet.Title);
         Assert.Equal("description", snippet.Description);
@@ -63,7 +64,8 @@ public sealed class ExecutableActionStorageRulesTests
             PasteShortcutMode.CtrlShiftV,
             "  echo hello  ",
             SnippetTerminalShell.PowerShell,
-            RunAsAdministrator: false);
+            RunAsAdministrator: false,
+            FileActionMode: FileActionMode.Paste);
     }
 
     private static HotkeyActionSaveData CreateHotkeyActionSaveData(
@@ -88,7 +90,8 @@ public sealed class ExecutableActionStorageRulesTests
             PasteShortcutMode.CtrlShiftV,
             "  echo hello  ",
             SnippetTerminalShell.PowerShell,
-            RunAsAdministrator: false);
+            RunAsAdministrator: false,
+            FileActionMode: FileActionMode.Paste);
     }
 
     private static void AssertExpectedExecutableFields(
@@ -109,6 +112,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Null(data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
                 Assert.Null(data.AutoIcon);
+                Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
             case SnippetActionType.LaunchFile:
                 Assert.Equal(string.Empty, data.Content);
@@ -121,6 +125,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Null(data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
                 Assert.Equal(autoIcon, data.AutoIcon);
+                Assert.Equal(FileActionMode.Paste, data.FileActionMode);
                 break;
             case SnippetActionType.LaunchUrl:
                 Assert.Equal(string.Empty, data.Content);
@@ -132,6 +137,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Null(data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
                 Assert.Null(data.AutoIcon);
+                Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
             case SnippetActionType.MediaAction:
                 Assert.Equal(string.Empty, data.Content);
@@ -143,6 +149,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Null(data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
                 Assert.Null(data.AutoIcon);
+                Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
             case SnippetActionType.TerminalCommand:
                 Assert.Equal(string.Empty, data.Content);
@@ -154,6 +161,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Equal(SnippetTerminalShell.PowerShell, data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
                 Assert.Null(data.AutoIcon);
+                Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(actionType), actionType, null);

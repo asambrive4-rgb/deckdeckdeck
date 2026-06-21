@@ -40,6 +40,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(snippet => snippet.SlotKey).HasConversion<string>().IsRequired();
             entity.Property(snippet => snippet.ActionType).HasConversion<string>().IsRequired();
             entity.Property(snippet => snippet.PasteShortcutMode).HasConversion<string>().IsRequired();
+            entity.Property(snippet => snippet.FileActionMode).HasConversion<string>().IsRequired();
             entity.Property(snippet => snippet.MediaProvider).HasConversion<string>();
             entity.Property(snippet => snippet.MediaCommand).HasConversion<string>();
             entity.Property(snippet => snippet.TerminalShell).HasConversion<string>();
@@ -62,6 +63,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(action => action.HotkeyModifiers).HasConversion<int>().IsRequired();
             entity.Property(action => action.ActionType).HasConversion<string>().IsRequired();
             entity.Property(action => action.PasteShortcutMode).HasConversion<string>().IsRequired();
+            entity.Property(action => action.FileActionMode).HasConversion<string>().IsRequired();
             entity.Property(action => action.MediaProvider).HasConversion<string>();
             entity.Property(action => action.MediaCommand).HasConversion<string>();
             entity.Property(action => action.TerminalShell).HasConversion<string>();

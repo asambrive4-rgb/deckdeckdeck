@@ -16,4 +16,6 @@ public interface IClipboardAdapter : IClipboardTextWriter
     IDataObject? GetDataObject();
 
     void SetDataObject(IDataObject dataObject);
+
+    void SetFileDropList(string filePath);
 }

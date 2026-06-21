@@ -53,6 +53,11 @@ public sealed class AppDbContextFactory
             AddColumnIfMissing(
                 dbContext,
                 existingColumns,
+                "FileActionMode",
+                "ALTER TABLE Snippets ADD COLUMN FileActionMode TEXT NOT NULL DEFAULT 'Launch'");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
                 "LaunchUrl",
                 "ALTER TABLE Snippets ADD COLUMN LaunchUrl TEXT NULL");
             AddColumnIfMissing(
@@ -135,6 +140,7 @@ public sealed class AppDbContextFactory
                     ActionType TEXT NOT NULL DEFAULT 'PasteText',
                     PasteShortcutMode TEXT NOT NULL DEFAULT 'CtrlV',
                     LaunchPath TEXT NULL,
+                    FileActionMode TEXT NOT NULL DEFAULT 'Launch',
                     LaunchUrl TEXT NULL,
                     MediaProvider TEXT NULL,
                     MediaCommand TEXT NULL,
@@ -155,6 +161,13 @@ public sealed class AppDbContextFactory
                 """;
             createTableCommand.ExecuteNonQuery();
 
+            var existingColumns = GetTableColumns(dbContext, "HotkeyActions");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "FileActionMode",
+                "ALTER TABLE HotkeyActions ADD COLUMN FileActionMode TEXT NOT NULL DEFAULT 'Launch'");
+
             using var createIndexCommand = dbContext.Database.GetDbConnection().CreateCommand();
             createIndexCommand.CommandText = """
                 CREATE INDEX IF NOT EXISTS IX_HotkeyActions_HotkeyVirtualKey_HotkeyModifiers
@@ -170,8 +183,13 @@ public sealed class AppDbContextFactory
 
     private static HashSet<string> GetSnippetColumns(AppDbContext dbContext)
     {
+        return GetTableColumns(dbContext, "Snippets");
+    }
+
+    private static HashSet<string> GetTableColumns(AppDbContext dbContext, string tableName)
+    {
         using var command = dbContext.Database.GetDbConnection().CreateCommand();
-        command.CommandText = "PRAGMA table_info(\"Snippets\")";
+        command.CommandText = $"PRAGMA table_info(\"{tableName}\")";
 
         using var reader = command.ExecuteReader();
         var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

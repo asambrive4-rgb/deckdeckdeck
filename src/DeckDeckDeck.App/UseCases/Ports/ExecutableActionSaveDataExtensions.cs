@@ -21,7 +21,8 @@ public static class ExecutableActionSaveDataExtensions
             data.PasteShortcutMode,
             data.TerminalCommand,
             data.TerminalShell,
-            data.RunAsAdministrator);
+            data.RunAsAdministrator,
+            data.FileActionMode);
 
         return data with
         {
@@ -38,7 +39,8 @@ public static class ExecutableActionSaveDataExtensions
             PasteShortcutMode = normalized.PasteShortcutMode,
             TerminalCommand = normalized.TerminalCommand,
             TerminalShell = normalized.TerminalShell,
-            RunAsAdministrator = normalized.RunAsAdministrator
+            RunAsAdministrator = normalized.RunAsAdministrator,
+            FileActionMode = normalized.FileActionMode
         };
     }
 
@@ -59,7 +61,8 @@ public static class ExecutableActionSaveDataExtensions
             data.PasteShortcutMode,
             data.TerminalCommand,
             data.TerminalShell,
-            data.RunAsAdministrator);
+            data.RunAsAdministrator,
+            data.FileActionMode);
 
         return data with
         {
@@ -76,7 +79,8 @@ public static class ExecutableActionSaveDataExtensions
             PasteShortcutMode = normalized.PasteShortcutMode,
             TerminalCommand = normalized.TerminalCommand,
             TerminalShell = normalized.TerminalShell,
-            RunAsAdministrator = normalized.RunAsAdministrator
+            RunAsAdministrator = normalized.RunAsAdministrator,
+            FileActionMode = normalized.FileActionMode
         };
     }
 }

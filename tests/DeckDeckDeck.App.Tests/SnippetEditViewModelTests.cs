@@ -115,6 +115,37 @@ public sealed class SnippetEditViewModelTests
     }
 
     [Fact]
+    public void FilePasteModeSavesPathAndUpdatesFileControls()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        Snippet? savedSnippet = null;
+        var dialogService = new StubDialogAdapter
+        {
+            PasteFile = @"C:\notes\memo.md"
+        };
+        var viewModel = CreateViewModel(
+            services,
+            category,
+            snippet => savedSnippet = snippet,
+            dialogService);
+
+        viewModel.SnippetTitle = "Paste notes";
+        viewModel.IsLaunchFileAction = true;
+        viewModel.SelectedFileActionMode = FileActionMode.Paste;
+        viewModel.ChooseLaunchFileCommand.Execute(null);
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal(FileActionMode.Paste, savedSnippet.FileActionMode);
+        Assert.Equal(@"C:\notes\memo.md", savedSnippet.LaunchPath);
+        Assert.True(viewModel.IsFilePasteMode);
+        Assert.False(viewModel.IsFileLaunchMode);
+        Assert.Equal("붙여넣을 파일", viewModel.FilePathLabel);
+        Assert.Equal("파일 선택", viewModel.FilePickerButtonText);
+    }
+
+    [Fact]
     public void LaunchUrlSavesWithNormalizedUrlAndEmptyContent()
     {
         var services = CreateServices();
@@ -611,11 +642,18 @@ public sealed class SnippetEditViewModelTests
 
         public string? LaunchFile { get; init; }
 
+        public string? PasteFile { get; init; }
+
         public string? LaunchFolder { get; init; }
 
         public override string? SelectLaunchFile()
         {
             return LaunchFile;
+        }
+
+        public override string? SelectPasteFile()
+        {
+            return PasteFile;
         }
 
         public override string? SelectLaunchFolder()

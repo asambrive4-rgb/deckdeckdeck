@@ -29,6 +29,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
     private string _content = string.Empty;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
+    private FileActionMode _fileActionMode = FileActionMode.Launch;
     private HotkeyGesture? _gesture;
     private string _hotkeyTitle = string.Empty;
     private bool _isCapturingHotkey;
@@ -84,6 +85,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
         _actionType = action?.ActionType ?? SnippetActionType.PasteText;
         _pasteShortcutMode = action?.PasteShortcutMode ?? PasteShortcutMode.CtrlV;
         _launchPath = action?.LaunchPath ?? string.Empty;
+        _fileActionMode = action?.FileActionMode ?? FileActionMode.Launch;
         _launchUrl = action?.LaunchUrl ?? string.Empty;
         _terminalCommand = action?.TerminalCommand ?? string.Empty;
         _terminalShell = action?.TerminalShell ?? SnippetTerminalShell.Cmd;
@@ -121,6 +123,9 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     public IReadOnlyList<PasteShortcutModeOption> PasteShortcutModeOptions { get; } =
         PasteShortcutModeOption.All;
+
+    public IReadOnlyList<FileActionModeOption> FileActionModeOptions { get; } =
+        FileActionModeOption.All;
 
     public IReadOnlyList<TerminalShellOption> TerminalShellOptions { get; } =
         TerminalShellOption.All;
@@ -187,6 +192,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
             OnPropertyChanged(nameof(IsLaunchUrlAction));
             OnPropertyChanged(nameof(IsMediaAction));
             OnPropertyChanged(nameof(IsTerminalCommandAction));
+            NotifyFileActionModeChanged();
             OnPropertyChanged(nameof(ShowSpotifyMediaConnectionNotice));
             NotifyImageChanged();
         }
@@ -257,6 +263,35 @@ public sealed class HotkeyEditViewModel : ObservableObject
         get => _launchPath;
         set => SetProperty(ref _launchPath, value);
     }
+
+    public FileActionMode SelectedFileActionMode
+    {
+        get => _fileActionMode;
+        set
+        {
+            if (!SetProperty(ref _fileActionMode, value))
+            {
+                return;
+            }
+
+            NotifyFileActionModeChanged();
+            UpdateAutoIconPreview();
+        }
+    }
+
+    public bool IsFileLaunchMode =>
+        IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Launch;
+
+    public bool IsFilePasteMode =>
+        IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Paste;
+
+    public string FilePathLabel => IsFilePasteMode
+        ? "붙여넣을 파일"
+        : "실행할 파일, 폴더 또는 바로 가기";
+
+    public string FilePickerButtonText => IsFilePasteMode
+        ? "파일 선택"
+        : "파일/바로 가기 선택";
 
     public string LaunchUrl
     {
@@ -478,7 +513,8 @@ public sealed class HotkeyEditViewModel : ObservableObject
             PasteShortcutMode,
             TerminalCommand,
             SelectedTerminalShell,
-            RunAsAdministrator);
+            RunAsAdministrator,
+            SelectedFileActionMode);
     }
 
     private void Cancel()
@@ -553,7 +589,9 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     private void ChooseLaunchFile()
     {
-        var selectedPath = _dialogService.SelectLaunchFile();
+        var selectedPath = IsFilePasteMode
+            ? _dialogService.SelectPasteFile()
+            : _dialogService.SelectLaunchFile();
         if (selectedPath is null)
         {
             return;
@@ -583,6 +621,14 @@ public sealed class HotkeyEditViewModel : ObservableObject
         OnPropertyChanged(nameof(ThumbnailPath));
         OnPropertyChanged(nameof(HasImage));
         OnPropertyChanged(nameof(SlotImageMode));
+    }
+
+    private void NotifyFileActionModeChanged()
+    {
+        OnPropertyChanged(nameof(IsFileLaunchMode));
+        OnPropertyChanged(nameof(IsFilePasteMode));
+        OnPropertyChanged(nameof(FilePathLabel));
+        OnPropertyChanged(nameof(FilePickerButtonText));
     }
 
     private string? GetPreviewThumbnailPath()

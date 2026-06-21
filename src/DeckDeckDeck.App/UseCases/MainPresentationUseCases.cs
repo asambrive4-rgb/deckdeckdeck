@@ -8,7 +8,9 @@ public sealed class PrepareSnippetActionUseCase
     public PrepareSnippetActionResult Execute(PrepareSnippetActionRequest request)
     {
         var shouldHideBeforeExecute =
-            request.Action.ActionType == SnippetActionType.PasteText
+            (request.Action.ActionType == SnippetActionType.PasteText
+                || request.Action.ActionType == SnippetActionType.LaunchFile
+                && request.Action.FileActionMode == FileActionMode.Paste)
             && request.Settings.AutoHideAfterPaste;
 
         return new PrepareSnippetActionResult(shouldHideBeforeExecute);

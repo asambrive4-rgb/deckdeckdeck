@@ -58,6 +58,19 @@ public class DialogAdapter : IDialogAdapter
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
+    public virtual string? SelectPasteFile()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "붙여넣을 파일 선택",
+            Filter = "모든 파일 (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
     public virtual string? SelectLaunchFolder()
     {
         using var dialog = new System.Windows.Forms.FolderBrowserDialog

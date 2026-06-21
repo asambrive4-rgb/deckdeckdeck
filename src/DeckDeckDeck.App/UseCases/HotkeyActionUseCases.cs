@@ -113,7 +113,8 @@ public sealed class SaveHotkeyActionUseCase
             request.PasteShortcutMode,
             validation.NormalizedTerminalCommand,
             validation.TerminalShell,
-            validation.RunAsAdministrator)
+            validation.RunAsAdministrator,
+            request.FileActionMode)
             .NormalizeForStorage();
 
         var action = request.HotkeyActionId.HasValue
@@ -206,7 +207,8 @@ public sealed record SaveHotkeyActionRequest(
     PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV,
     string TerminalCommand = "",
     SnippetTerminalShell SelectedTerminalShell = SnippetTerminalShell.Cmd,
-    bool RunAsAdministrator = true);
+    bool RunAsAdministrator = true,
+    FileActionMode FileActionMode = FileActionMode.Launch);
 
 public sealed record SaveHotkeyActionResult(
     bool Succeeded,

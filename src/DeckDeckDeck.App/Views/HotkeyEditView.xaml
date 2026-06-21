@@ -160,7 +160,15 @@
                         <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
                                     Visibility="{Binding IsLaunchFileAction, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="실행할 파일, 폴더 또는 바로 가기" />
+                                       Text="파일 동작" />
+                            <ComboBox ItemsSource="{Binding FileActionModeOptions}"
+                                      SelectedValue="{Binding SelectedFileActionMode, Mode=TwoWay}"
+                                      SelectedValuePath="Mode"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                            <TextBlock Margin="0,10,0,6"
+                                       Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="{Binding FilePathLabel}" />
                             <TextBox Height="36"
                                      Style="{StaticResource Deck.TextBoxStyle}"
                                      Text="{Binding LaunchPath, UpdateSourceTrigger=PropertyChanged}" />
@@ -168,12 +176,18 @@
                                         Orientation="Horizontal">
                                 <Button Command="{Binding ChooseLaunchFileCommand}"
                                         Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                        Content="파일/바로 가기 선택" />
+                                        Content="{Binding FilePickerButtonText}" />
                                 <Button Margin="8,0,0,0"
                                         Command="{Binding ChooseLaunchFolderCommand}"
                                         Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                        Content="폴더 선택" />
+                                        Content="폴더 선택"
+                                        Visibility="{Binding IsFileLaunchMode, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             </StackPanel>
+                            <TextBlock Margin="0,8,0,0"
+                                       Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                       Text="직전에 사용하던 탐색기 또는 파일 붙여넣기를 지원하는 앱에 전달합니다."
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding IsFilePasteMode, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         </StackPanel>
 
                         <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"

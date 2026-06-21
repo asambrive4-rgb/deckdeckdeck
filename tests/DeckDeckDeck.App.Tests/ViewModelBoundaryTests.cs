@@ -32,6 +32,22 @@ public sealed class ViewModelBoundaryTests
     }
 
     [Fact]
+    public void PrepareSnippetActionUseCaseHidesBeforeFilePasteWhenAutoHideIsEnabled()
+    {
+        var useCase = new PrepareSnippetActionUseCase();
+        var snippet = new Snippet
+        {
+            ActionType = SnippetActionType.LaunchFile,
+            FileActionMode = FileActionMode.Paste
+        };
+        var settings = new AppSettings { AutoHideAfterPaste = true };
+
+        var result = useCase.Execute(new PrepareSnippetActionRequest(snippet, settings));
+
+        Assert.True(result.ShouldHideBeforeExecute);
+    }
+
+    [Fact]
     public void SaveWindowPlacementUseCaseSavesPlacementThroughSettingsPort()
     {
         var settingsRepository = new RecordingSettingsRepository();

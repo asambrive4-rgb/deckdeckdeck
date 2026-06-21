@@ -85,7 +85,7 @@ public sealed class HotkeyActionListItemViewModel
 
     public string HotkeyText => _action.HotkeyDisplayText;
 
-    public string ActionTypeText => HotkeyActionDisplayText.GetActionTypeLabel(_action.ActionType);
+    public string ActionTypeText => HotkeyActionDisplayText.GetActionTypeLabel(_action);
 
     public string Summary => HotkeyActionDisplayText.GetSummary(_action);
 

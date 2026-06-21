@@ -61,6 +61,41 @@ public sealed class DirectHotkeyExecutionTests
     }
 
     [Fact]
+    public async Task DirectHotkeyExecutesFilePasteAgainstCapturedWindow()
+    {
+        var services = CreateServices();
+        var hotkey = services.HotkeyActionRepository.Create(new HotkeyActionSaveData(
+            "Paste notes",
+            new HotkeyGesture(0x67, HotkeyModifiers.None),
+            IsEnabled: true,
+            Content: string.Empty,
+            Description: null,
+            ImagePath: null,
+            ThumbnailPath: null,
+            SnippetActionType.LaunchFile,
+            LaunchPath: @"C:\notes\memo.md",
+            SlotImageMode.Auto,
+            AutoIcon: null,
+            LaunchUrl: null,
+            SnippetMediaProvider.System,
+            SnippetMediaCommand.PlayPause,
+            FileActionMode: FileActionMode.Paste));
+        var filePasteService = new RecordingFilePasteGateway();
+        var viewModel = CreateMainViewModel(
+            services,
+            getPasteTargetWindowHandle: () => new IntPtr(456),
+            hideWindowAfterPaste: () => { },
+            filePasteService: filePasteService);
+
+        await viewModel.ExecuteDirectHotkeyAsync(hotkey.Id);
+
+        var call = Assert.Single(filePasteService.Calls);
+        Assert.Equal(@"C:\notes\memo.md", call.FilePath);
+        Assert.Equal(new IntPtr(456), call.TargetWindowHandle);
+        Assert.Contains("파일 붙여넣기 요청됨", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public async Task DirectHotkeyIgnoresSecondActionWhileFirstActionIsRunning()
     {
         var services = CreateServices();

@@ -1,6 +1,7 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.ViewModels;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 
 namespace DeckDeckDeck.App.Tests;
@@ -81,6 +82,28 @@ public sealed class HotkeyActionUseCaseTests
     }
 
     [Fact]
+    public void SaveHotkeyActionUseCasePersistsFilePasteMode()
+    {
+        var services = CreateServices();
+        var useCase = new SaveHotkeyActionUseCase(services.HotkeyActionRepository);
+
+        var result = useCase.Execute(CreateRequest(
+            title: "Paste notes",
+            gesture: new HotkeyGesture(0x67, HotkeyModifiers.None),
+            actionType: SnippetActionType.LaunchFile,
+            content: string.Empty,
+            launchPath: @"C:\notes\memo.md",
+            fileActionMode: FileActionMode.Paste));
+
+        Assert.True(result.Succeeded);
+        var reloadedServices = CreateServices(services.Storage.AppDataPath);
+        var action = Assert.Single(reloadedServices.HotkeyActionRepository.GetAll());
+        Assert.Equal(FileActionMode.Paste, action.FileActionMode);
+        Assert.Equal(@"C:\notes\memo.md", action.LaunchPath);
+        Assert.Equal("파일 붙여넣기", HotkeyActionDisplayText.GetActionTypeLabel(action));
+    }
+
+    [Fact]
     public void SetHotkeyActionEnabledUseCaseDisablesActionAndRequestsBackup()
     {
         var services = CreateServices();
@@ -135,7 +158,9 @@ public sealed class HotkeyActionUseCaseTests
         bool isEnabled = true,
         SnippetActionType actionType = SnippetActionType.PasteText,
         string content = "Hello",
-        SnippetMediaCommand mediaCommand = SnippetMediaCommand.PlayPause)
+        SnippetMediaCommand mediaCommand = SnippetMediaCommand.PlayPause,
+        string launchPath = "",
+        FileActionMode fileActionMode = FileActionMode.Launch)
     {
         return new SaveHotkeyActionRequest(
             HotkeyActionId: null,
@@ -147,11 +172,12 @@ public sealed class HotkeyActionUseCaseTests
             ImagePath: null,
             ThumbnailPath: null,
             actionType,
-            LaunchPath: string.Empty,
+            LaunchPath: launchPath,
             SlotImageMode.Auto,
             AutoIcon: null,
             LaunchUrl: null,
             SnippetMediaProvider.System,
-            mediaCommand);
+            mediaCommand,
+            FileActionMode: fileActionMode);
     }
 }

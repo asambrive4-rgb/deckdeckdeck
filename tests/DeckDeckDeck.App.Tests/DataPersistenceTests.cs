@@ -87,6 +87,7 @@ public sealed class DataPersistenceTests
         var snippet = Assert.Single(reloadedServices.SnippetRepository.GetByCategoryId(category.Id));
 
         Assert.Equal(SnippetActionType.LaunchFile, snippet.ActionType);
+        Assert.Equal(FileActionMode.Launch, snippet.FileActionMode);
         Assert.Equal(string.Empty, snippet.Content);
         Assert.Equal(@"C:\notes", snippet.LaunchPath);
         Assert.Null(snippet.LaunchUrl);
@@ -98,6 +99,29 @@ public sealed class DataPersistenceTests
         Assert.Equal(autoIcon.SourcePath, snippet.AutoIconSourcePath);
         Assert.Equal(autoIcon.SourceLastWriteTimeUtc, snippet.AutoIconSourceLastWriteTimeUtc);
         Assert.Equal(autoIcon.SourceLength, snippet.AutoIconSourceLength);
+    }
+
+    [Fact]
+    public void FilePasteSnippetPersistsAcrossDbContexts()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Files", null);
+        services.SnippetRepository.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Paste notes",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.LaunchFile,
+            launchPath: @"C:\notes\memo.md",
+            fileActionMode: FileActionMode.Paste);
+
+        var reloadedServices = CreateServices(services.Storage.AppDataPath);
+        var snippet = Assert.Single(reloadedServices.SnippetRepository.GetByCategoryId(category.Id));
+
+        Assert.Equal(SnippetActionType.LaunchFile, snippet.ActionType);
+        Assert.Equal(FileActionMode.Paste, snippet.FileActionMode);
+        Assert.Equal(@"C:\notes\memo.md", snippet.LaunchPath);
     }
 
     [Fact]
@@ -249,8 +273,10 @@ public sealed class DataPersistenceTests
         var dbContextFactory = new AppDbContextFactory(storage.DatabasePath);
         dbContextFactory.EnsureCreated();
         var snippetService = new SnippetRepository(dbContextFactory);
+        var hotkeyActionService = new HotkeyActionRepository(dbContextFactory);
 
         var snippet = Assert.Single(snippetService.GetByCategoryId(categoryId));
+        var hotkeyAction = Assert.Single(hotkeyActionService.GetAll());
         Assert.Equal(snippetId, snippet.Id);
         Assert.Equal("Legacy", snippet.Title);
         Assert.Equal("Keep me", snippet.Content);
@@ -261,6 +287,10 @@ public sealed class DataPersistenceTests
         Assert.Null(snippet.MediaCommand);
         Assert.Equal(SlotImageMode.Auto, snippet.SlotImageMode);
         Assert.Equal(PasteShortcutMode.CtrlV, snippet.PasteShortcutMode);
+        Assert.Equal(FileActionMode.Launch, snippet.FileActionMode);
+        Assert.Equal(SnippetActionType.LaunchFile, hotkeyAction.ActionType);
+        Assert.Equal(FileActionMode.Launch, hotkeyAction.FileActionMode);
+        Assert.Equal(@"C:\legacy.exe", hotkeyAction.LaunchPath);
     }
 
     [Fact]
@@ -676,6 +706,7 @@ public sealed class DataPersistenceTests
         Assert.Equal(string.Empty, copiedSnippet.Content);
         Assert.Equal("Launch helper", copiedSnippet.Description);
         Assert.Equal(SnippetActionType.LaunchFile, copiedSnippet.ActionType);
+        Assert.Equal(FileActionMode.Launch, copiedSnippet.FileActionMode);
         Assert.Equal(@"C:\tools\app.exe", copiedSnippet.LaunchPath);
         Assert.Equal(SlotImageMode.Custom, copiedSnippet.SlotImageMode);
         Assert.Equal("copy-source-snippet.png", copiedSnippet.ImagePath);
@@ -733,6 +764,30 @@ public sealed class DataPersistenceTests
         var result = services.SnippetRepository.CopyToSlot(source.Id, SlotKey.Numpad5, imageFiles => imageFiles);
 
         Assert.Equal(PasteShortcutMode.CtrlShiftV, result.Snippet.PasteShortcutMode);
+    }
+
+    [Fact]
+    public void CopyingSnippetToSlotPreservesFilePasteMode()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Files", null);
+        var source = services.SnippetRepository.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "Paste notes",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.LaunchFile,
+            launchPath: @"C:\notes\memo.md",
+            fileActionMode: FileActionMode.Paste);
+
+        var result = services.SnippetRepository.CopyToSlot(
+            source.Id,
+            SlotKey.Numpad5,
+            imageFiles => imageFiles);
+
+        Assert.Equal(FileActionMode.Paste, result.Snippet.FileActionMode);
+        Assert.Equal(@"C:\notes\memo.md", result.Snippet.LaunchPath);
     }
 
     [Fact]
@@ -803,6 +858,7 @@ public sealed class DataPersistenceTests
         string? snippetImagePath = null,
         string? snippetThumbnailPath = null)
     {
+        var hotkeyActionId = Guid.NewGuid();
         using var connection = new SqliteConnection($"Data Source={databasePath}");
         connection.Open();
 
@@ -838,14 +894,50 @@ public sealed class DataPersistenceTests
 
             CREATE UNIQUE INDEX IX_Snippets_CategoryId_SlotKey ON Snippets (CategoryId, SlotKey);
 
+            CREATE TABLE HotkeyActions (
+                Id TEXT NOT NULL CONSTRAINT PK_HotkeyActions PRIMARY KEY,
+                Title TEXT NOT NULL,
+                HotkeyVirtualKey INTEGER NULL,
+                HotkeyModifiers INTEGER NOT NULL DEFAULT 0,
+                IsEnabled INTEGER NOT NULL DEFAULT 1,
+                Content TEXT NOT NULL DEFAULT '',
+                ActionType TEXT NOT NULL DEFAULT 'PasteText',
+                PasteShortcutMode TEXT NOT NULL DEFAULT 'CtrlV',
+                LaunchPath TEXT NULL,
+                LaunchUrl TEXT NULL,
+                MediaProvider TEXT NULL,
+                MediaCommand TEXT NULL,
+                TerminalCommand TEXT NULL,
+                TerminalShell TEXT NULL,
+                RunAsAdministrator INTEGER NOT NULL DEFAULT 1,
+                SlotImageMode TEXT NOT NULL DEFAULT 'Auto',
+                Description TEXT NULL,
+                ImagePath TEXT NULL,
+                ThumbnailPath TEXT NULL,
+                AutoIconPath TEXT NULL,
+                AutoIconSourcePath TEXT NULL,
+                AutoIconSourceLastWriteTimeUtc TEXT NULL,
+                AutoIconSourceLength INTEGER NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL
+            );
+
             INSERT INTO Categories (Id, SlotKey, Name, Description, ImagePath, ThumbnailPath, CreatedAt, UpdatedAt)
             VALUES ($categoryId, 'Numpad1', 'Tools', NULL, NULL, NULL, $now, $now);
 
             INSERT INTO Snippets (Id, CategoryId, SlotKey, Title, Content, Description, ImagePath, ThumbnailPath, CreatedAt, UpdatedAt)
             VALUES ($snippetId, $categoryId, 'Numpad3', 'Legacy', 'Keep me', NULL, $snippetImagePath, $snippetThumbnailPath, $now, $now);
+
+            INSERT INTO HotkeyActions (
+                Id, Title, HotkeyVirtualKey, HotkeyModifiers, IsEnabled, Content, ActionType,
+                PasteShortcutMode, LaunchPath, SlotImageMode, RunAsAdministrator, CreatedAt, UpdatedAt)
+            VALUES (
+                $hotkeyActionId, 'Legacy launch', 103, 0, 1, '', 'LaunchFile',
+                'CtrlV', 'C:\legacy.exe', 'Auto', 0, $now, $now);
             """;
         command.Parameters.AddWithValue("$categoryId", categoryId.ToString());
         command.Parameters.AddWithValue("$snippetId", snippetId.ToString());
+        command.Parameters.AddWithValue("$hotkeyActionId", hotkeyActionId.ToString());
         command.Parameters.AddWithValue("$snippetImagePath", (object?)snippetImagePath ?? DBNull.Value);
         command.Parameters.AddWithValue("$snippetThumbnailPath", (object?)snippetThumbnailPath ?? DBNull.Value);
         command.Parameters.AddWithValue("$now", DateTime.UtcNow.ToString("O"));

@@ -102,6 +102,7 @@ public sealed class HotkeyActionRepository : IHotkeyActionRepository
         action.ActionType = data.ActionType;
         action.PasteShortcutMode = data.PasteShortcutMode;
         action.LaunchPath = data.LaunchPath;
+        action.FileActionMode = data.FileActionMode;
         action.LaunchUrl = data.LaunchUrl;
         action.MediaProvider = data.MediaProvider;
         action.MediaCommand = data.MediaCommand;

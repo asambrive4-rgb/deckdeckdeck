@@ -100,5 +100,75 @@ public sealed class ClipboardPasteGatewayTests
         Assert.Equal(new IntPtr(123), focus.ActivatedHandle);
         Assert.True(keyboard.SentCtrlV);
     }
+
+    [Fact]
+    public async Task FilePasteSetsFileDropListSendsCtrlVAndRestoresClipboard()
+    {
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            var originalClipboard = new TestDataObject();
+            var clipboard = new FakeClipboardAdapter(originalClipboard);
+            var keyboard = new FakeWin32KeyboardInputAdapter();
+            var focus = new FakeWin32WindowFocusAdapter();
+            var gateway = new ClipboardPasteGateway(
+                clipboard,
+                keyboard,
+                focus,
+                TimeSpan.Zero,
+                TimeSpan.Zero);
+
+            var result = await gateway.PasteFileAsync(
+                filePath,
+                new IntPtr(123),
+                new AppSettings());
+
+            Assert.Equal(FilePasteGatewayStatus.Succeeded, result.Status);
+            Assert.Equal(filePath, Assert.Single(clipboard.SetFilePaths));
+            Assert.Equal(new IntPtr(123), focus.ActivatedHandle);
+            Assert.True(keyboard.SentCtrlV);
+            Assert.False(keyboard.SentCtrlShiftV);
+            Assert.Same(originalClipboard, clipboard.Restored);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task FilePasteRejectsMissingFileBeforeChangingClipboard()
+    {
+        var clipboard = new FakeClipboardAdapter(new TestDataObject());
+        var keyboard = new FakeWin32KeyboardInputAdapter();
+        var gateway = new ClipboardPasteGateway(
+            clipboard,
+            keyboard,
+            new FakeWin32WindowFocusAdapter(),
+            TimeSpan.Zero,
+            TimeSpan.Zero);
+
+        var result = await gateway.PasteFileAsync(
+            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")),
+            new IntPtr(123),
+            new AppSettings());
+
+        Assert.Equal(FilePasteGatewayStatus.FileNotFound, result.Status);
+        Assert.Empty(clipboard.SetFilePaths);
+        Assert.False(keyboard.SentCtrlV);
+    }
+
+    [Fact]
+    public void FileDropDataObjectUsesCopyEffect()
+    {
+        var dataObject = WpfClipboardAdapter.CreateFileDropDataObject(@"C:\notes\memo.md");
+
+        Assert.Equal(
+            [@"C:\notes\memo.md"],
+            Assert.IsType<string[]>(dataObject.GetData(DataFormats.FileDrop)));
+        var dropEffect = Assert.IsType<MemoryStream>(
+            dataObject.GetData("Preferred DropEffect"));
+        Assert.Equal([5, 0, 0, 0], dropEffect.ToArray());
+    }
 }
 

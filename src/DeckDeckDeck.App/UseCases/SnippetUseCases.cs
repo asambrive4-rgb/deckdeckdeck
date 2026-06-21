@@ -76,7 +76,8 @@ public sealed class SaveSnippetUseCase
             request.PasteShortcutMode,
             validation.NormalizedTerminalCommand,
             validation.TerminalShell,
-            validation.RunAsAdministrator)
+            validation.RunAsAdministrator,
+            request.FileActionMode)
             .NormalizeForStorage();
 
         var snippet = request.SnippetId.HasValue
@@ -324,7 +325,8 @@ public sealed record SaveSnippetRequest(
     PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV,
     string TerminalCommand = "",
     SnippetTerminalShell SelectedTerminalShell = SnippetTerminalShell.Cmd,
-    bool RunAsAdministrator = true);
+    bool RunAsAdministrator = true,
+    FileActionMode FileActionMode = FileActionMode.Launch);
 
 public sealed record SaveSnippetResult(
     bool Succeeded,

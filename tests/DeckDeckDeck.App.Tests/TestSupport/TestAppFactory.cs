@@ -60,6 +60,7 @@ internal static class TestAppFactory
         Action? completePasteSelection = null,
         Func<Action>? createPasteSelectionCompletion = null,
         IFileLaunchGateway? fileLaunchService = null,
+        IFilePasteGateway? filePasteService = null,
         IUrlLaunchGateway? urlLaunchService = null,
         IMediaActionGateway? mediaActionService = null,
         ITerminalCommandGateway? terminalCommandService = null,
@@ -90,7 +91,8 @@ internal static class TestAppFactory
             services.FileLogger,
             services.ImageFileRepository,
             new SlotGridViewModelFactory(services.StoredImagePathResolver, services.SnippetImageResolver),
-            new FakeClipboardAdapter(null));
+            new FakeClipboardAdapter(null),
+            filePasteService ?? new RecordingFilePasteGateway());
 
         return new MainViewModel(
             composition.CreateMainViewModelDependencies(autoBackupCoordinator),
@@ -255,6 +257,8 @@ internal sealed class FakeClipboardAdapter : IClipboardAdapter
 
     public List<string> SetTexts { get; } = [];
 
+    public List<string> SetFilePaths { get; } = [];
+
     public IDataObject? GetDataObject()
     {
         return Backup;
@@ -268,6 +272,11 @@ internal sealed class FakeClipboardAdapter : IClipboardAdapter
     public void SetDataObject(IDataObject dataObject)
     {
         Restored = dataObject;
+    }
+
+    public void SetFileDropList(string filePath)
+    {
+        SetFilePaths.Add(filePath);
     }
 }
 
@@ -320,6 +329,27 @@ internal sealed class RecordingClipboardPasteGateway : IClipboardPasteGateway
 }
 
 internal sealed record PasteCall(ExecutableAction Action, IntPtr TargetWindowHandle, AppSettings Settings);
+
+internal sealed class RecordingFilePasteGateway : IFilePasteGateway
+{
+    public FilePasteGatewayResult Result { get; set; } = FilePasteGatewayResult.Success();
+
+    public List<FilePasteCall> Calls { get; } = [];
+
+    public Task<FilePasteGatewayResult> PasteFileAsync(
+        string filePath,
+        IntPtr targetWindowHandle,
+        AppSettings settings)
+    {
+        Calls.Add(new FilePasteCall(filePath, targetWindowHandle, settings));
+        return Task.FromResult(Result);
+    }
+}
+
+internal sealed record FilePasteCall(
+    string FilePath,
+    IntPtr TargetWindowHandle,
+    AppSettings Settings);
 
 internal sealed class ThrowingClipboardPasteGateway : IClipboardPasteGateway
 {

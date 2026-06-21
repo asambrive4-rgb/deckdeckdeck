@@ -8,6 +8,7 @@ public sealed class ExecuteSnippetActionUseCase
     private readonly IClipboardPasteGateway _clipboardPasteGateway;
     private readonly IFileLaunchGateway _fileLaunchGateway;
     private readonly IMediaActionGateway _mediaActionGateway;
+    private readonly PasteFileUseCase _pasteFileUseCase;
     private readonly ISpotifyMediaActionGateway _spotifyMediaActionGateway;
     private readonly ITerminalCommandGateway _terminalCommandGateway;
     private readonly IUrlLaunchGateway _urlLaunchGateway;
@@ -18,7 +19,8 @@ public sealed class ExecuteSnippetActionUseCase
         IUrlLaunchGateway urlLaunchGateway,
         IMediaActionGateway mediaActionGateway,
         ISpotifyMediaActionGateway spotifyMediaActionGateway,
-        ITerminalCommandGateway terminalCommandGateway)
+        ITerminalCommandGateway terminalCommandGateway,
+        PasteFileUseCase pasteFileUseCase)
     {
         _clipboardPasteGateway = clipboardPasteGateway;
         _fileLaunchGateway = fileLaunchGateway;
@@ -26,6 +28,7 @@ public sealed class ExecuteSnippetActionUseCase
         _mediaActionGateway = mediaActionGateway;
         _spotifyMediaActionGateway = spotifyMediaActionGateway;
         _terminalCommandGateway = terminalCommandGateway;
+        _pasteFileUseCase = pasteFileUseCase;
     }
 
     public async Task<ExecuteSnippetActionResult> ExecuteAsync(
@@ -36,7 +39,9 @@ public sealed class ExecuteSnippetActionUseCase
         {
             return request.Action.ActionType switch
             {
-                SnippetActionType.LaunchFile => LaunchSnippet(request.Action, request.Settings),
+                SnippetActionType.LaunchFile => request.Action.FileActionMode == FileActionMode.Paste
+                    ? await PasteFileSnippetAsync(request, cancellationToken)
+                    : LaunchSnippet(request.Action, request.Settings),
                 SnippetActionType.LaunchUrl => LaunchUrlSnippet(request.Action, request.Settings),
                 SnippetActionType.MediaAction => await ExecuteMediaSnippetAsync(
                     request.Action,
@@ -54,6 +59,29 @@ public sealed class ExecuteSnippetActionUseCase
                 logMessage: $"Paste failed for action {request.Action.Id}.",
                 exception: ex);
         }
+    }
+
+    private async Task<ExecuteSnippetActionResult> PasteFileSnippetAsync(
+        ExecuteSnippetActionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _pasteFileUseCase.ExecuteAsync(
+            new PasteFileRequest(
+                request.Action.Id,
+                request.Action.Title,
+                request.Action.LaunchPath,
+                request.TargetWindowHandle,
+                request.Settings),
+            cancellationToken);
+
+        return result.Succeeded
+            ? ExecuteSnippetActionResult.Success(
+                shouldHideWindow: false,
+                statusMessage: result.StatusMessage)
+            : ExecuteSnippetActionResult.Failure(
+                statusMessage: result.StatusMessage,
+                logMessage: result.LogMessage,
+                exception: result.Exception);
     }
 
     private async Task<ExecuteSnippetActionResult> PasteTextSnippetAsync(

@@ -31,6 +31,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private string _content = string.Empty;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
+    private FileActionMode _fileActionMode = FileActionMode.Launch;
     private bool _isSlotEnabled;
     private string _launchPath = string.Empty;
     private string _launchUrl = string.Empty;
@@ -88,6 +89,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         _actionType = snippet?.ActionType ?? SnippetActionType.PasteText;
         _pasteShortcutMode = snippet?.PasteShortcutMode ?? PasteShortcutMode.CtrlV;
         _launchPath = snippet?.LaunchPath ?? string.Empty;
+        _fileActionMode = snippet?.FileActionMode ?? FileActionMode.Launch;
         _launchUrl = snippet?.LaunchUrl ?? string.Empty;
         _terminalCommand = snippet?.TerminalCommand ?? string.Empty;
         _terminalShell = snippet?.TerminalShell ?? SnippetTerminalShell.Cmd;
@@ -141,6 +143,9 @@ public sealed class SnippetEditViewModel : ObservableObject
     public IReadOnlyList<PasteShortcutModeOption> PasteShortcutModeOptions { get; } =
         PasteShortcutModeOption.All;
 
+    public IReadOnlyList<FileActionModeOption> FileActionModeOptions { get; } =
+        FileActionModeOption.All;
+
     public IReadOnlyList<TerminalShellOption> TerminalShellOptions { get; } =
         TerminalShellOption.All;
 
@@ -189,6 +194,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             OnPropertyChanged(nameof(IsLaunchUrlAction));
             OnPropertyChanged(nameof(IsMediaAction));
             OnPropertyChanged(nameof(IsTerminalCommandAction));
+            NotifyFileActionModeChanged();
             OnPropertyChanged(nameof(ShowSpotifyMediaConnectionNotice));
             NotifyImageChanged();
         }
@@ -259,6 +265,35 @@ public sealed class SnippetEditViewModel : ObservableObject
         get => _launchPath;
         set => SetProperty(ref _launchPath, value);
     }
+
+    public FileActionMode SelectedFileActionMode
+    {
+        get => _fileActionMode;
+        set
+        {
+            if (!SetProperty(ref _fileActionMode, value))
+            {
+                return;
+            }
+
+            NotifyFileActionModeChanged();
+            UpdateAutoIconPreview();
+        }
+    }
+
+    public bool IsFileLaunchMode =>
+        IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Launch;
+
+    public bool IsFilePasteMode =>
+        IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Paste;
+
+    public string FilePathLabel => IsFilePasteMode
+        ? "붙여넣을 파일"
+        : "실행할 파일, 폴더 또는 바로 가기";
+
+    public string FilePickerButtonText => IsFilePasteMode
+        ? "파일 선택"
+        : "파일/바로 가기 선택";
 
     public string LaunchUrl
     {
@@ -445,7 +480,8 @@ public sealed class SnippetEditViewModel : ObservableObject
             PasteShortcutMode,
             TerminalCommand,
             SelectedTerminalShell,
-            RunAsAdministrator);
+            RunAsAdministrator,
+            SelectedFileActionMode);
     }
 
     private void Cancel()
@@ -621,7 +657,9 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private void ChooseLaunchFile()
     {
-        var selectedPath = _dialogService.SelectLaunchFile();
+        var selectedPath = IsFilePasteMode
+            ? _dialogService.SelectPasteFile()
+            : _dialogService.SelectLaunchFile();
         if (selectedPath is null)
         {
             return;
@@ -651,6 +689,14 @@ public sealed class SnippetEditViewModel : ObservableObject
         OnPropertyChanged(nameof(ThumbnailPath));
         OnPropertyChanged(nameof(HasImage));
         OnPropertyChanged(nameof(SlotImageMode));
+    }
+
+    private void NotifyFileActionModeChanged()
+    {
+        OnPropertyChanged(nameof(IsFileLaunchMode));
+        OnPropertyChanged(nameof(IsFilePasteMode));
+        OnPropertyChanged(nameof(FilePathLabel));
+        OnPropertyChanged(nameof(FilePickerButtonText));
     }
 
     private string? GetPreviewThumbnailPath()
@@ -821,6 +867,25 @@ public sealed class PasteShortcutModeOption
     }
 
     public PasteShortcutMode Mode { get; }
+
+    public string Label { get; }
+}
+
+public sealed class FileActionModeOption
+{
+    public static IReadOnlyList<FileActionModeOption> All { get; } =
+    [
+        new(FileActionMode.Launch, "실행"),
+        new(FileActionMode.Paste, "파일 붙여넣기")
+    ];
+
+    public FileActionModeOption(FileActionMode mode, string label)
+    {
+        Mode = mode;
+        Label = label;
+    }
+
+    public FileActionMode Mode { get; }
 
     public string Label { get; }
 }

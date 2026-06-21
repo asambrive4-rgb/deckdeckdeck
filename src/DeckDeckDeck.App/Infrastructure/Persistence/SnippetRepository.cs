@@ -87,7 +87,8 @@ public sealed class SnippetRepository : ISnippetRepository
         PasteShortcutMode pasteShortcutMode = PasteShortcutMode.CtrlV,
         string? terminalCommand = null,
         SnippetTerminalShell? terminalShell = null,
-        bool runAsAdministrator = true)
+        bool runAsAdministrator = true,
+        FileActionMode fileActionMode = FileActionMode.Launch)
     {
         return Create(
             categoryId,
@@ -108,7 +109,8 @@ public sealed class SnippetRepository : ISnippetRepository
                 pasteShortcutMode,
                 terminalCommand,
                 terminalShell,
-                runAsAdministrator));
+                runAsAdministrator,
+                fileActionMode));
     }
 
     public Snippet Update(Guid id, string title, string content, string? description)
@@ -167,7 +169,8 @@ public sealed class SnippetRepository : ISnippetRepository
         PasteShortcutMode pasteShortcutMode = PasteShortcutMode.CtrlV,
         string? terminalCommand = null,
         SnippetTerminalShell? terminalShell = null,
-        bool runAsAdministrator = true)
+        bool runAsAdministrator = true,
+        FileActionMode fileActionMode = FileActionMode.Launch)
     {
         return Update(
             id,
@@ -187,7 +190,8 @@ public sealed class SnippetRepository : ISnippetRepository
                 pasteShortcutMode,
                 terminalCommand,
                 terminalShell,
-                runAsAdministrator));
+                runAsAdministrator,
+                fileActionMode));
     }
 
     public void UpdateAutoIcon(Guid id, AutoIconCacheEntry? autoIcon)
@@ -277,6 +281,7 @@ public sealed class SnippetRepository : ISnippetRepository
             ActionType = source.ActionType,
             PasteShortcutMode = source.PasteShortcutMode,
             LaunchPath = source.LaunchPath,
+            FileActionMode = source.FileActionMode,
             LaunchUrl = source.LaunchUrl,
             MediaProvider = source.MediaProvider,
             MediaCommand = source.MediaCommand,
@@ -331,6 +336,7 @@ public sealed class SnippetRepository : ISnippetRepository
         snippet.ActionType = data.ActionType;
         snippet.PasteShortcutMode = data.PasteShortcutMode;
         snippet.LaunchPath = data.LaunchPath;
+        snippet.FileActionMode = data.FileActionMode;
         snippet.LaunchUrl = data.LaunchUrl;
         snippet.MediaProvider = data.MediaProvider;
         snippet.MediaCommand = data.MediaCommand;

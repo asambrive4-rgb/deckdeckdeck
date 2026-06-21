@@ -19,6 +19,7 @@ internal sealed record AppComposition(
     HotkeyActionRepository HotkeyActionRepository,
     SnippetImageResolver? SnippetImageResolver,
     IClipboardPasteGateway ClipboardPasteGateway,
+    IFilePasteGateway FilePasteGateway,
     IFileLaunchGateway FileLaunchGatewayAdapter,
     IUrlLaunchGateway UrlLaunchGatewayAdapter,
     IMediaActionGateway SystemMediaActionGatewayAdapter,
@@ -77,6 +78,7 @@ internal sealed record AppComposition(
             hotkeyActionRepository,
             snippetImageResolver,
             clipboardPasteGateway,
+            clipboardPasteGateway,
             fileLaunchGatewayAdapter,
             urlLaunchGatewayAdapter,
             systemMediaActionGatewayAdapter,
@@ -93,7 +95,8 @@ internal sealed record AppComposition(
                 urlLaunchGatewayAdapter,
                 systemMediaActionGatewayAdapter,
                 spotifyMediaActionGatewayAdapter,
-                terminalCommandGatewayAdapter),
+                terminalCommandGatewayAdapter,
+                clipboardPasteGateway),
             new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
             new SpotifyConnectionUseCase(
                 settingsRepository,
@@ -121,7 +124,8 @@ internal sealed record AppComposition(
         FileLogger? fileLogger,
         ImageFileRepository? imageFileRepository,
         SlotGridViewModelFactory slotGridViewModelFactory,
-        IClipboardAdapter? clipboardAdapter)
+        IClipboardAdapter? clipboardAdapter,
+        IFilePasteGateway? filePasteGateway = null)
     {
         var effectiveClipboardPasteGateway = clipboardPasteGateway ?? new ClipboardPasteGateway();
         var effectiveFileLaunchGatewayAdapter = fileLaunchGateway ?? new FileLaunchGatewayAdapter();
@@ -135,6 +139,12 @@ internal sealed record AppComposition(
         var effectiveStoredImagePathResolver = storedImagePathResolver
             ?? new StoredImagePathResolver(new AppStoragePaths());
         var effectiveClipboardAdapter = clipboardAdapter ?? new WpfClipboardAdapter();
+        var effectiveFilePasteGateway = filePasteGateway
+            ?? effectiveClipboardPasteGateway as IFilePasteGateway
+            ?? new ClipboardPasteGateway(
+                effectiveClipboardAdapter,
+                new Win32KeyboardInputAdapter(),
+                new Win32WindowFocusAdapter());
 
         return new AppComposition(
             categoryRepository,
@@ -145,6 +155,7 @@ internal sealed record AppComposition(
             hotkeyActionRepository,
             snippetImageResolver,
             effectiveClipboardPasteGateway,
+            effectiveFilePasteGateway,
             effectiveFileLaunchGatewayAdapter,
             effectiveUrlLaunchGatewayAdapter,
             effectiveSystemMediaActionGatewayAdapter,
@@ -161,7 +172,8 @@ internal sealed record AppComposition(
                 effectiveUrlLaunchGatewayAdapter,
                 effectiveSystemMediaActionGatewayAdapter,
                 effectiveSpotifyMediaActionGatewayAdapter,
-                effectiveTerminalCommandGatewayAdapter),
+                effectiveTerminalCommandGatewayAdapter,
+                effectiveFilePasteGateway),
             new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
             new SpotifyConnectionUseCase(
                 settingsRepository,
@@ -257,7 +269,8 @@ internal sealed record AppComposition(
         IUrlLaunchGateway urlLaunchGateway,
         IMediaActionGateway mediaActionGateway,
         ISpotifyMediaActionGateway spotifyMediaActionGateway,
-        ITerminalCommandGateway terminalCommandGateway)
+        ITerminalCommandGateway terminalCommandGateway,
+        IFilePasteGateway filePasteGateway)
     {
         return new ExecuteSnippetActionUseCase(
             clipboardPasteGateway,
@@ -265,6 +278,7 @@ internal sealed record AppComposition(
             urlLaunchGateway,
             mediaActionGateway,
             spotifyMediaActionGateway,
-            terminalCommandGateway);
+            terminalCommandGateway,
+            new PasteFileUseCase(filePasteGateway));
     }
 }

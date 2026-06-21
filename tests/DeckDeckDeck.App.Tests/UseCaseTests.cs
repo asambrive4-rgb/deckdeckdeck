@@ -151,7 +151,8 @@ public sealed class UseCaseTests
             new RecordingUrlLaunchGatewayAdapter(),
             new RecordingSystemMediaActionGatewayAdapter(),
             new TestSpotifyMediaActionGateway(),
-            new RecordingTerminalCommandGatewayAdapter());
+            new RecordingTerminalCommandGatewayAdapter(),
+            new PasteFileUseCase(new RecordingFilePasteGateway()));
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
             new Snippet
@@ -170,6 +171,38 @@ public sealed class UseCaseTests
     }
 
     [Fact]
+    public async Task ExecuteSnippetActionUseCaseRoutesFilePasteWithoutLaunchingFile()
+    {
+        var filePasteGateway = new RecordingFilePasteGateway();
+        var launchService = new RecordingFileLaunchGatewayAdapter();
+        var useCase = new ExecuteSnippetActionUseCase(
+            new RecordingClipboardPasteGateway(),
+            launchService,
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new TestSpotifyMediaActionGateway(),
+            new RecordingTerminalCommandGatewayAdapter(),
+            new PasteFileUseCase(filePasteGateway));
+
+        var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
+            new Snippet
+            {
+                Id = Guid.NewGuid(),
+                Title = "Paste notes",
+                ActionType = SnippetActionType.LaunchFile,
+                FileActionMode = FileActionMode.Paste,
+                LaunchPath = @"C:\notes\memo.md"
+            },
+            new AppSettings(),
+            new IntPtr(123)));
+
+        Assert.True(result.Succeeded);
+        Assert.Contains("파일 붙여넣기 요청됨", result.StatusMessage);
+        Assert.Empty(launchService.Paths);
+        Assert.Equal(@"C:\notes\memo.md", Assert.Single(filePasteGateway.Calls).FilePath);
+    }
+
+    [Fact]
     public async Task ExecuteSnippetActionUseCaseRunsTerminalCommandWithoutCallingPaste()
     {
         var pasteService = new RecordingClipboardPasteGateway();
@@ -180,7 +213,8 @@ public sealed class UseCaseTests
             new RecordingUrlLaunchGatewayAdapter(),
             new RecordingSystemMediaActionGatewayAdapter(),
             new TestSpotifyMediaActionGateway(),
-            terminalService);
+            terminalService,
+            new PasteFileUseCase(new RecordingFilePasteGateway()));
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
             new Snippet
