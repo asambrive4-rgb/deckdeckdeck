@@ -19,6 +19,23 @@ namespace DeckDeckDeck.App.Tests;
 public sealed class DataPersistenceTests
 {
     [Fact]
+    public void RuntimeSqliteVersionIncludesSecurityFix()
+    {
+        var services = CreateServices();
+        using var connection = new SqliteConnection($"Data Source={services.Storage.DatabasePath}");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT sqlite_version()";
+
+        var versionText = Assert.IsType<string>(command.ExecuteScalar());
+        var version = Version.Parse(versionText);
+
+        Assert.True(
+            version >= new Version(3, 50, 2),
+            $"SQLite 3.50.2 or newer is required, but {version} was loaded.");
+    }
+
+    [Fact]
     public void CategoryAndSnippetPersistAcrossDbContexts()
     {
         var services = CreateServices();

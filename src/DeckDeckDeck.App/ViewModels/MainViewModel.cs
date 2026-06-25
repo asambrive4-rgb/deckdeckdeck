@@ -11,8 +11,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private IAutoBackupCoordinator? _autoBackupCoordinator;
     private MainViewModelNavigator _navigator = null!;
     private Func<ExecutableAction, Task> _executeActionAsync = null!;
-    private GetHotkeyActionByIdUseCase _getHotkeyActionByIdUseCase = null!;
-    private LoadHotkeyActionsUseCase _loadHotkeyActionsUseCase = null!;
+    private LoadDirectHotkeyRegistrationsUseCase _loadDirectHotkeyRegistrationsUseCase = null!;
+    private ResolveExecutableHotkeyActionUseCase _resolveExecutableHotkeyActionUseCase = null!;
     private ResolveCategoryHotkeyUseCase _resolveCategoryHotkeyUseCase = null!;
     private ILoadSettingsUseCase _loadSettingsUseCase = null!;
     private SaveWindowPlacementUseCase _saveWindowPlacementUseCase = null!;
@@ -161,21 +161,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<DirectHotkeyRegistration> LoadActiveDirectHotkeys()
     {
-        return _loadHotkeyActionsUseCase.Execute()
-            .Where(action => action.IsEnabled && action.Gesture is not null)
-            .Select(action => new DirectHotkeyRegistration(action.Id, action.Gesture!))
-            .ToList();
+        return _loadDirectHotkeyRegistrationsUseCase.Execute();
     }
 
     public async Task ExecuteDirectHotkeyAsync(Guid hotkeyActionId)
     {
-        var action = _getHotkeyActionByIdUseCase.Execute(hotkeyActionId);
-        if (action?.IsEnabled != true)
+        var action = _resolveExecutableHotkeyActionUseCase.Execute(hotkeyActionId);
+        if (action is null)
         {
             return;
         }
 
-        await _executeActionAsync(ExecutableAction.FromHotkeyAction(action));
+        await _executeActionAsync(action);
     }
 
     internal void NotifyDirectHotkeysChanged()
@@ -221,8 +218,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _loadSettingsUseCase = dependencies.LoadSettingsUseCase;
         _saveWindowPlacementUseCase = dependencies.SaveWindowPlacementUseCase;
         _resolveCategoryHotkeyUseCase = dependencies.ResolveCategoryHotkeyUseCase;
-        _loadHotkeyActionsUseCase = dependencies.LoadHotkeyActionsUseCase;
-        _getHotkeyActionByIdUseCase = dependencies.GetHotkeyActionByIdUseCase;
+        _loadDirectHotkeyRegistrationsUseCase = dependencies.LoadDirectHotkeyRegistrationsUseCase;
+        _resolveExecutableHotkeyActionUseCase = dependencies.ResolveExecutableHotkeyActionUseCase;
         _loggingService = dependencies.Logger;
         _autoBackupCoordinator = dependencies.AutoBackupCoordinator;
 

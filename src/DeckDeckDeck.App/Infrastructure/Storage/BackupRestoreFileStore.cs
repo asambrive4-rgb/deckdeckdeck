@@ -6,7 +6,6 @@ using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
-using DeckDeckDeck.App.ViewModels;
 using System.IO;
 using Microsoft.Data.Sqlite;
 

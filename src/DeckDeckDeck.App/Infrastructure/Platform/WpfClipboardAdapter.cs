@@ -6,7 +6,6 @@ using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
-using DeckDeckDeck.App.ViewModels;
 using System.Collections.Specialized;
 using System.IO;
 using System.Windows;

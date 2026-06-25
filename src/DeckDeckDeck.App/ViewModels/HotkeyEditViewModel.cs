@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
@@ -15,36 +16,18 @@ public sealed class HotkeyEditViewModel : ObservableObject
     private readonly Action _notifyHotkeyCaptureStateChanged;
     private readonly DeleteHotkeyActionUseCase _deleteHotkeyActionUseCase;
     private readonly IDialogAdapter _dialogService;
-    private readonly EditableImageDraft _imageState;
+    private readonly ExecutableActionEditDraft _draft;
     private readonly IAppLogger? _loggingService;
     private readonly bool _isSpotifyConnected;
     private readonly SaveHotkeyActionUseCase _saveHotkeyActionUseCase;
     private readonly Guid? _hotkeyActionId;
-    private readonly ISnippetImageResolver? _snippetImageService;
-    private readonly IStoredImagePathResolver? _storedImagePathResolver;
-    private readonly IImageFileRepository? _thumbnailService;
     private readonly Action<string> _showStatus;
-    private AutoIconCacheEntry? _autoIcon;
-    private SnippetActionType _actionType = SnippetActionType.PasteText;
-    private string _content = string.Empty;
-    private string _description = string.Empty;
     private string _errorMessage = string.Empty;
-    private FileActionMode _fileActionMode = FileActionMode.Launch;
     private HotkeyGesture? _gesture;
-    private string _hotkeyTitle = string.Empty;
     private bool _isCapturingHotkey;
     private bool _isEnabled = true;
     private bool _isSaving;
-    private string _launchPath = string.Empty;
-    private string _launchUrl = string.Empty;
-    private SnippetMediaCommand _mediaCommand = SnippetMediaCommand.PlayPause;
     private IReadOnlyList<SnippetMediaCommandOption> _mediaCommandOptions = SnippetMediaCommandOption.SystemCommands;
-    private SnippetMediaProvider _mediaProvider = SnippetMediaProvider.System;
-    private PasteShortcutMode _pasteShortcutMode = PasteShortcutMode.CtrlV;
-    private bool _runAsAdministrator = true;
-    private SlotImageMode _slotImageMode = SlotImageMode.Auto;
-    private string _terminalCommand = string.Empty;
-    private SnippetTerminalShell _terminalShell = SnippetTerminalShell.Cmd;
 
     public HotkeyEditViewModel(
         HotkeyAction? action,
@@ -71,35 +54,17 @@ public sealed class HotkeyEditViewModel : ObservableObject
         _afterDelete = afterDelete;
         _notifyHotkeyCaptureStateChanged = notifyHotkeyCaptureStateChanged;
         _showStatus = showStatus;
-        _thumbnailService = thumbnailService;
         _loggingService = loggingService;
-        _snippetImageService = snippetImageService;
-        _storedImagePathResolver = storedImagePathResolver;
-        _imageState = new EditableImageDraft(action?.ImagePath, action?.ThumbnailPath, thumbnailService);
+        _draft = ExecutableActionEditDraft.FromHotkeyAction(
+            action,
+            thumbnailService,
+            snippetImageService,
+            storedImagePathResolver);
         _isSpotifyConnected = editorState.SpotifyConnection.IsConnected;
 
-        _hotkeyTitle = action?.Title ?? string.Empty;
         _gesture = action?.Gesture;
         _isEnabled = action?.IsEnabled ?? true;
-        _content = action?.Content ?? string.Empty;
-        _actionType = action?.ActionType ?? SnippetActionType.PasteText;
-        _pasteShortcutMode = action?.PasteShortcutMode ?? PasteShortcutMode.CtrlV;
-        _launchPath = action?.LaunchPath ?? string.Empty;
-        _fileActionMode = action?.FileActionMode ?? FileActionMode.Launch;
-        _launchUrl = action?.LaunchUrl ?? string.Empty;
-        _terminalCommand = action?.TerminalCommand ?? string.Empty;
-        _terminalShell = action?.TerminalShell ?? SnippetTerminalShell.Cmd;
-        _runAsAdministrator = action?.ActionType == SnippetActionType.TerminalCommand
-            ? action.RunAsAdministrator
-            : true;
-        _mediaProvider = action?.MediaProvider ?? SnippetMediaProvider.System;
-        _mediaCommandOptions = SnippetMediaCommandOption.ForProvider(_mediaProvider);
-        _mediaCommand = SnippetMediaCommandOption.GetValidCommandForProvider(
-            _mediaProvider,
-            action?.MediaCommand ?? SnippetMediaCommand.PlayPause);
-        _slotImageMode = GetInitialSlotImageMode(action);
-        _autoIcon = AutoIconCacheEntry.FromHotkeyAction(action);
-        _description = action?.Description ?? string.Empty;
+        _mediaCommandOptions = SnippetMediaCommandOption.ForProvider(_draft.MediaProvider);
 
         SaveCommand = new RelayCommand(Save, () => !IsSaving);
         CancelCommand = new RelayCommand(Cancel);
@@ -138,8 +103,8 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     public string HotkeyTitle
     {
-        get => _hotkeyTitle;
-        set => SetProperty(ref _hotkeyTitle, value);
+        get => _draft.Title;
+        set => SetDraftValue(_draft.Title, value, static (draft, newValue) => draft.Title = newValue);
     }
 
     public string HotkeyDisplayText => IsCapturingHotkey
@@ -167,26 +132,31 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     public string Content
     {
-        get => _content;
-        set => SetProperty(ref _content, value);
+        get => _draft.Content;
+        set => SetDraftValue(_draft.Content, value, static (draft, newValue) => draft.Content = newValue);
     }
 
     public PasteShortcutMode PasteShortcutMode
     {
-        get => _pasteShortcutMode;
-        set => SetProperty(ref _pasteShortcutMode, value);
+        get => _draft.PasteShortcutMode;
+        set => SetDraftValue(
+            _draft.PasteShortcutMode,
+            value,
+            static (draft, newValue) => draft.PasteShortcutMode = newValue);
     }
 
     public SnippetActionType ActionType
     {
-        get => _actionType;
+        get => _draft.ActionType;
         private set
         {
-            if (!SetProperty(ref _actionType, value))
+            if (_draft.ActionType == value)
             {
                 return;
             }
 
+            _draft.SetActionType(value);
+            OnPropertyChanged();
             OnPropertyChanged(nameof(IsPasteTextAction));
             OnPropertyChanged(nameof(IsLaunchFileAction));
             OnPropertyChanged(nameof(IsLaunchUrlAction));
@@ -260,22 +230,34 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     public string LaunchPath
     {
-        get => _launchPath;
-        set => SetProperty(ref _launchPath, value);
-    }
-
-    public FileActionMode SelectedFileActionMode
-    {
-        get => _fileActionMode;
+        get => _draft.LaunchPath;
         set
         {
-            if (!SetProperty(ref _fileActionMode, value))
+            if (_draft.LaunchPath == value)
             {
                 return;
             }
 
+            _draft.SetLaunchPath(value);
+            OnPropertyChanged();
+            NotifyImageChanged();
+        }
+    }
+
+    public FileActionMode SelectedFileActionMode
+    {
+        get => _draft.FileActionMode;
+        set
+        {
+            if (_draft.FileActionMode == value)
+            {
+                return;
+            }
+
+            _draft.SetFileActionMode(value);
+            OnPropertyChanged();
             NotifyFileActionModeChanged();
-            UpdateAutoIconPreview();
+            NotifyImageChanged();
         }
     }
 
@@ -295,36 +277,43 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     public string LaunchUrl
     {
-        get => _launchUrl;
-        set => SetProperty(ref _launchUrl, value);
+        get => _draft.LaunchUrl;
+        set => SetDraftValue(_draft.LaunchUrl, value, static (draft, newValue) => draft.SetLaunchUrl(newValue));
     }
 
     public SnippetMediaProvider SelectedMediaProvider
     {
-        get => _mediaProvider;
+        get => _draft.MediaProvider;
         set
         {
-            if (!SetProperty(ref _mediaProvider, value))
+            if (_draft.MediaProvider == value)
             {
                 return;
             }
 
+            _draft.SetMediaProvider(value);
+            OnPropertyChanged();
             MediaCommandOptions = SnippetMediaCommandOption.ForProvider(value);
-            SelectedMediaCommand = SnippetMediaCommandOption.GetValidCommandForProvider(value, SelectedMediaCommand);
+            OnPropertyChanged(nameof(SelectedMediaCommand));
             OnPropertyChanged(nameof(IsSpotifyMediaProvider));
             OnPropertyChanged(nameof(ShowSpotifyMediaConnectionNotice));
+            NotifyImageChanged();
         }
     }
 
     public SnippetMediaCommand SelectedMediaCommand
     {
-        get => _mediaCommand;
+        get => _draft.MediaCommand;
         set
         {
-            if (SetProperty(ref _mediaCommand, value))
+            if (_draft.MediaCommand == value)
             {
-                NotifyImageChanged();
+                return;
             }
+
+            _draft.SetMediaCommand(value);
+            OnPropertyChanged();
+            NotifyImageChanged();
         }
     }
 
@@ -340,26 +329,35 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     public string TerminalCommand
     {
-        get => _terminalCommand;
-        set => SetProperty(ref _terminalCommand, value);
+        get => _draft.TerminalCommand;
+        set => SetDraftValue(
+            _draft.TerminalCommand,
+            value,
+            static (draft, newValue) => draft.TerminalCommand = newValue);
     }
 
     public SnippetTerminalShell SelectedTerminalShell
     {
-        get => _terminalShell;
-        set => SetProperty(ref _terminalShell, value);
+        get => _draft.TerminalShell;
+        set => SetDraftValue(
+            _draft.TerminalShell,
+            value,
+            static (draft, newValue) => draft.TerminalShell = newValue);
     }
 
     public bool RunAsAdministrator
     {
-        get => _runAsAdministrator;
-        set => SetProperty(ref _runAsAdministrator, value);
+        get => _draft.RunAsAdministrator;
+        set => SetDraftValue(
+            _draft.RunAsAdministrator,
+            value,
+            static (draft, newValue) => draft.RunAsAdministrator = newValue);
     }
 
     public string Description
     {
-        get => _description;
-        set => SetProperty(ref _description, value);
+        get => _draft.Description;
+        set => SetDraftValue(_draft.Description, value, static (draft, newValue) => draft.Description = newValue);
     }
 
     public string ErrorMessage
@@ -380,11 +378,11 @@ public sealed class HotkeyEditViewModel : ObservableObject
         }
     }
 
-    public string? ThumbnailPath => GetPreviewThumbnailPath();
+    public string? ThumbnailPath => _draft.GetPreviewThumbnailPath();
 
-    public bool HasImage => _imageState.HasImage;
+    public bool HasImage => _draft.HasImage;
 
-    public SlotImageMode SlotImageMode => _slotImageMode;
+    public SlotImageMode SlotImageMode => _draft.SlotImageMode;
 
     public ICommand SaveCommand { get; }
 
@@ -465,7 +463,8 @@ public sealed class HotkeyEditViewModel : ObservableObject
         IsSaving = true;
         try
         {
-            var autoIcon = PrepareAutoIconForSave();
+            var autoIcon = _draft.PrepareAutoIconForSave();
+            NotifyImageChanged();
             var result = _saveHotkeyActionUseCase.Execute(BuildSaveRequest(autoIcon));
             if (!result.Succeeded)
             {
@@ -476,12 +475,11 @@ public sealed class HotkeyEditViewModel : ObservableObject
             if (ActionType == SnippetActionType.LaunchUrl
                 && !string.IsNullOrWhiteSpace(result.NormalizedLaunchUrl))
             {
-                LaunchUrl = result.NormalizedLaunchUrl;
+                ApplyNormalizedLaunchUrl(result.NormalizedLaunchUrl);
             }
 
             var action = result.HotkeyAction!;
-            _imageState.DeleteOriginalImageIfReplaced();
-            _imageState.MarkCurrentAsOriginal();
+            _draft.MarkSaved();
             ErrorMessage = string.Empty;
             _showStatus($"{action.Title} 핫키를 저장했습니다.");
             _afterSave(action);
@@ -501,11 +499,11 @@ public sealed class HotkeyEditViewModel : ObservableObject
             IsEnabled,
             Content,
             Description,
-            _imageState.ImagePath,
-            _imageState.ThumbnailPath,
+            _draft.ImagePath,
+            _draft.ThumbnailPath,
             ActionType,
             LaunchPath,
-            _slotImageMode,
+            SlotImageMode,
             autoIcon,
             LaunchUrl,
             SelectedMediaProvider,
@@ -520,7 +518,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
     private void Cancel()
     {
         IsCapturingHotkey = false;
-        _imageState.DeleteCurrentUnsavedImage();
+        _draft.DeleteCurrentUnsavedImage();
         _cancel();
     }
 
@@ -540,7 +538,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
         }
 
         IsCapturingHotkey = false;
-        _imageState.DeleteCurrentUnsavedImage();
+        _draft.DeleteCurrentUnsavedImage();
         _deleteHotkeyActionUseCase.Execute(_hotkeyActionId.Value);
         _showStatus("핫키를 삭제했습니다.");
         _afterDelete();
@@ -548,7 +546,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     private void ChooseImage()
     {
-        if (_thumbnailService is null)
+        if (!_draft.CanStoreImages)
         {
             ErrorMessage = "이미지 저장소가 준비되지 않았습니다.";
             return;
@@ -567,8 +565,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
     {
         try
         {
-            _imageState.ReplaceWithStoredImage(sourcePath);
-            _slotImageMode = SlotImageMode.Custom;
+            _draft.ReplaceImageFromPath(sourcePath);
             NotifyImageChanged();
             ErrorMessage = string.Empty;
         }
@@ -581,9 +578,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     private void RemoveImage()
     {
-        _imageState.RemoveImage();
-        _slotImageMode = SlotImageMode.Auto;
-        UpdateAutoIconPreview();
+        _draft.RemoveImage();
         NotifyImageChanged();
     }
 
@@ -598,7 +593,6 @@ public sealed class HotkeyEditViewModel : ObservableObject
         }
 
         LaunchPath = selectedPath;
-        UpdateAutoIconPreview();
         ErrorMessage = string.Empty;
     }
 
@@ -610,8 +604,8 @@ public sealed class HotkeyEditViewModel : ObservableObject
             return;
         }
 
-        LaunchPath = selectedPath;
-        _autoIcon = null;
+        _draft.SetLaunchFolderPath(selectedPath);
+        OnPropertyChanged(nameof(LaunchPath));
         ErrorMessage = string.Empty;
         NotifyImageChanged();
     }
@@ -631,69 +625,29 @@ public sealed class HotkeyEditViewModel : ObservableObject
         OnPropertyChanged(nameof(FilePickerButtonText));
     }
 
-    private string? GetPreviewThumbnailPath()
+    private bool SetDraftValue<T>(
+        T currentValue,
+        T newValue,
+        Action<ExecutableActionEditDraft, T> apply,
+        [CallerMemberName] string? propertyName = null)
     {
-        return _slotImageMode switch
+        if (EqualityComparer<T>.Default.Equals(currentValue, newValue))
         {
-            SlotImageMode.Custom => ResolveDisplayPath(_imageState.ThumbnailPath),
-            SlotImageMode.Auto when ActionType == SnippetActionType.LaunchFile =>
-                ResolveDisplayPath(_autoIcon?.IconPath),
-            SlotImageMode.Auto when ActionType == SnippetActionType.MediaAction =>
-                MediaIconResourcePaths.GetIconResourcePath(SelectedMediaCommand),
-            _ => null
-        };
+            return false;
+        }
+
+        apply(_draft, newValue);
+        OnPropertyChanged(propertyName);
+        return true;
     }
 
-    private string? ResolveDisplayPath(string? storedPath)
+    private void ApplyNormalizedLaunchUrl(string? normalizedLaunchUrl)
     {
-        return _storedImagePathResolver?.ResolveDisplayPath(storedPath) ?? storedPath;
-    }
-
-    private AutoIconCacheEntry? PrepareAutoIconForSave()
-    {
-        if (_slotImageMode == SlotImageMode.None)
+        var previousLaunchUrl = LaunchUrl;
+        _draft.ApplyNormalizedLaunchUrl(normalizedLaunchUrl);
+        if (previousLaunchUrl != LaunchUrl)
         {
-            _autoIcon = null;
-            return null;
+            OnPropertyChanged(nameof(LaunchUrl));
         }
-
-        if (_snippetImageService is null)
-        {
-            return ActionType == SnippetActionType.LaunchFile ? _autoIcon : null;
-        }
-
-        _autoIcon = _snippetImageService.PrepareAutoIcon(ActionType, LaunchPath, _autoIcon);
-        NotifyImageChanged();
-
-        return _autoIcon;
-    }
-
-    private void UpdateAutoIconPreview()
-    {
-        if (_slotImageMode == SlotImageMode.None)
-        {
-            _autoIcon = null;
-            NotifyImageChanged();
-            return;
-        }
-
-        if (_snippetImageService is not null)
-        {
-            _autoIcon = _snippetImageService.PrepareAutoIcon(ActionType, LaunchPath, _autoIcon);
-        }
-
-        NotifyImageChanged();
-    }
-
-    private static SlotImageMode GetInitialSlotImageMode(HotkeyAction? action)
-    {
-        if (action is null)
-        {
-            return SlotImageMode.Auto;
-        }
-
-        return action.SlotImageMode == SlotImageMode.Auto && !string.IsNullOrWhiteSpace(action.ImagePath)
-            ? SlotImageMode.Custom
-            : action.SlotImageMode;
     }
 }

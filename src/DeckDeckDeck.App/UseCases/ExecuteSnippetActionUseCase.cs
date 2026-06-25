@@ -7,8 +7,8 @@ public sealed class ExecuteSnippetActionUseCase
 {
     private readonly IClipboardPasteGateway _clipboardPasteGateway;
     private readonly IFileLaunchGateway _fileLaunchGateway;
+    private readonly IFilePasteGateway _filePasteGateway;
     private readonly IMediaActionGateway _mediaActionGateway;
-    private readonly PasteFileUseCase _pasteFileUseCase;
     private readonly ISpotifyMediaActionGateway _spotifyMediaActionGateway;
     private readonly ITerminalCommandGateway _terminalCommandGateway;
     private readonly IUrlLaunchGateway _urlLaunchGateway;
@@ -20,7 +20,7 @@ public sealed class ExecuteSnippetActionUseCase
         IMediaActionGateway mediaActionGateway,
         ISpotifyMediaActionGateway spotifyMediaActionGateway,
         ITerminalCommandGateway terminalCommandGateway,
-        PasteFileUseCase pasteFileUseCase)
+        IFilePasteGateway filePasteGateway)
     {
         _clipboardPasteGateway = clipboardPasteGateway;
         _fileLaunchGateway = fileLaunchGateway;
@@ -28,7 +28,7 @@ public sealed class ExecuteSnippetActionUseCase
         _mediaActionGateway = mediaActionGateway;
         _spotifyMediaActionGateway = spotifyMediaActionGateway;
         _terminalCommandGateway = terminalCommandGateway;
-        _pasteFileUseCase = pasteFileUseCase;
+        _filePasteGateway = filePasteGateway;
     }
 
     public async Task<ExecuteSnippetActionResult> ExecuteAsync(
@@ -65,23 +65,59 @@ public sealed class ExecuteSnippetActionUseCase
         ExecuteSnippetActionRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _pasteFileUseCase.ExecuteAsync(
-            new PasteFileRequest(
-                request.Action.Id,
-                request.Action.Title,
+        if (string.IsNullOrWhiteSpace(request.Action.LaunchPath))
+        {
+            return ReportFilePasteFailure(
+                request.Action,
+                "붙여넣을 파일 경로가 없습니다.");
+        }
+
+        if (request.TargetWindowHandle == IntPtr.Zero)
+        {
+            return ReportFilePasteFailure(
+                request.Action,
+                "붙여넣을 대상 창을 찾지 못했습니다.");
+        }
+
+        try
+        {
+            var gatewayResult = await _filePasteGateway.PasteFileAsync(
                 request.Action.LaunchPath,
                 request.TargetWindowHandle,
-                request.Settings),
-            cancellationToken);
+                request.Settings);
 
-        return result.Succeeded
-            ? ExecuteSnippetActionResult.Success(
-                shouldHideWindow: false,
-                statusMessage: result.StatusMessage)
-            : ExecuteSnippetActionResult.Failure(
-                statusMessage: result.StatusMessage,
-                logMessage: result.LogMessage,
-                exception: result.Exception);
+            return gatewayResult.Status switch
+            {
+                FilePasteGatewayStatus.Succeeded => ExecuteSnippetActionResult.Success(
+                    shouldHideWindow: false,
+                    statusMessage: $"{request.Action.Title} 파일 붙여넣기 요청됨"),
+                FilePasteGatewayStatus.FileNotFound => ReportFilePasteFailure(
+                    request.Action,
+                    "붙여넣을 파일을 찾지 못했습니다."),
+                _ => ReportFilePasteFailure(
+                    request.Action,
+                    "파일 붙여넣기를 요청하지 못했습니다.",
+                    gatewayResult.Exception)
+            };
+        }
+        catch (Exception ex)
+        {
+            return ReportFilePasteFailure(
+                request.Action,
+                "파일 붙여넣기를 요청하지 못했습니다.",
+                ex);
+        }
+    }
+
+    private static ExecuteSnippetActionResult ReportFilePasteFailure(
+        ExecutableAction action,
+        string message,
+        Exception? exception = null)
+    {
+        return ExecuteSnippetActionResult.Failure(
+            statusMessage: $"{action.Title} 파일 붙여넣기 실패: {message}",
+            logMessage: $"File paste failed for action {action.Id}: {message}",
+            exception: exception);
     }
 
     private async Task<ExecuteSnippetActionResult> PasteTextSnippetAsync(

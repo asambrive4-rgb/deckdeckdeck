@@ -60,6 +60,28 @@ public sealed class CleanArchitectureDependencyTests
     }
 
     [Fact]
+    public void InfrastructureDoesNotReferencePresentationOrComposition()
+    {
+        var projectRoot = FindProjectRoot();
+        var checkedFiles = Directory
+            .EnumerateFiles(
+                Path.Combine(projectRoot, "src", "DeckDeckDeck.App", "Infrastructure"),
+                "*.cs",
+                SearchOption.AllDirectories)
+            .ToList();
+        var forbiddenTokens = new[]
+        {
+            "DeckDeckDeck.App.ViewModels",
+            "DeckDeckDeck.App.Views",
+            "DeckDeckDeck.App.Composition"
+        };
+
+        var violations = FindTokenViolations(projectRoot, checkedFiles, forbiddenTokens);
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
     public void CompositionIsOnlyReferencedByCompositionRoot()
     {
         var projectRoot = FindProjectRoot();

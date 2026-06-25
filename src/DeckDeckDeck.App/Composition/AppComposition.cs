@@ -255,8 +255,8 @@ internal sealed record AppComposition(
             loadSettingsUseCase,
             new SaveWindowPlacementUseCase(SettingsRepository, FileLogger),
             ResolveCategoryHotkeyUseCase,
-            new LoadHotkeyActionsUseCase(HotkeyActionRepository),
-            new GetHotkeyActionByIdUseCase(HotkeyActionRepository),
+            new LoadDirectHotkeyRegistrationsUseCase(HotkeyActionRepository),
+            new ResolveExecutableHotkeyActionUseCase(HotkeyActionRepository),
             new PrepareSnippetActionUseCase(),
             ExecuteSnippetActionUseCase,
             FileLogger,
@@ -279,6 +279,6 @@ internal sealed record AppComposition(
             mediaActionGateway,
             spotifyMediaActionGateway,
             terminalCommandGateway,
-            new PasteFileUseCase(filePasteGateway));
+            filePasteGateway);
     }
 }

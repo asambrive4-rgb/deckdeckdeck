@@ -1,6 +1,7 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 
@@ -152,6 +153,55 @@ public sealed class HotkeyActionUseCaseTests
         Assert.Equal(0, autoBackup.RequestCount);
     }
 
+    [Fact]
+    public void LoadDirectHotkeyRegistrationsUseCaseReturnsOnlyEnabledCompleteGestures()
+    {
+        var services = CreateServices();
+        var enabled = services.HotkeyActionRepository.Create(CreateSaveData(
+            "Enabled",
+            new HotkeyGesture(Win32Constants.VkRight, HotkeyModifiers.None),
+            isEnabled: true));
+        services.HotkeyActionRepository.Create(CreateSaveData(
+            "Disabled",
+            new HotkeyGesture(Win32Constants.VkLeft, HotkeyModifiers.None),
+            isEnabled: false));
+        services.HotkeyActionRepository.Create(CreateSaveData(
+            "Modifier only",
+            new HotkeyGesture(Win32Constants.VkControl, HotkeyModifiers.Control),
+            isEnabled: true));
+        var useCase = new LoadDirectHotkeyRegistrationsUseCase(services.HotkeyActionRepository);
+
+        var registrations = useCase.Execute();
+
+        var registration = Assert.Single(registrations);
+        Assert.Equal(enabled.Id, registration.HotkeyActionId);
+        Assert.Equal(Win32Constants.VkRight, registration.Gesture.VirtualKey);
+    }
+
+    [Fact]
+    public void ResolveExecutableHotkeyActionUseCaseReturnsOnlyEnabledAction()
+    {
+        var services = CreateServices();
+        var enabled = services.HotkeyActionRepository.Create(CreateSaveData(
+            "Enabled",
+            new HotkeyGesture(Win32Constants.VkRight, HotkeyModifiers.None),
+            isEnabled: true,
+            content: "Run this"));
+        var disabled = services.HotkeyActionRepository.Create(CreateSaveData(
+            "Disabled",
+            new HotkeyGesture(Win32Constants.VkLeft, HotkeyModifiers.None),
+            isEnabled: false,
+            content: "Skip this"));
+        var useCase = new ResolveExecutableHotkeyActionUseCase(services.HotkeyActionRepository);
+
+        var executable = useCase.Execute(enabled.Id);
+        var skipped = useCase.Execute(disabled.Id);
+
+        Assert.NotNull(executable);
+        Assert.Equal("Run this", executable.Content);
+        Assert.Null(skipped);
+    }
+
     private static SaveHotkeyActionRequest CreateRequest(
         string title = "Paste",
         HotkeyGesture? gesture = null,
@@ -179,5 +229,28 @@ public sealed class HotkeyActionUseCaseTests
             SnippetMediaProvider.System,
             mediaCommand,
             FileActionMode: fileActionMode);
+    }
+
+    private static HotkeyActionSaveData CreateSaveData(
+        string title,
+        HotkeyGesture gesture,
+        bool isEnabled,
+        string content = "Hello")
+    {
+        return new HotkeyActionSaveData(
+            title,
+            gesture,
+            isEnabled,
+            content,
+            Description: null,
+            ImagePath: null,
+            ThumbnailPath: null,
+            SnippetActionType.PasteText,
+            LaunchPath: string.Empty,
+            SlotImageMode.Auto,
+            AutoIcon: null,
+            LaunchUrl: null,
+            SnippetMediaProvider.System,
+            SnippetMediaCommand.PlayPause);
     }
 }

@@ -152,7 +152,7 @@ public sealed class UseCaseTests
             new RecordingSystemMediaActionGatewayAdapter(),
             new TestSpotifyMediaActionGateway(),
             new RecordingTerminalCommandGatewayAdapter(),
-            new PasteFileUseCase(new RecordingFilePasteGateway()));
+            new RecordingFilePasteGateway());
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
             new Snippet
@@ -182,7 +182,7 @@ public sealed class UseCaseTests
             new RecordingSystemMediaActionGatewayAdapter(),
             new TestSpotifyMediaActionGateway(),
             new RecordingTerminalCommandGatewayAdapter(),
-            new PasteFileUseCase(filePasteGateway));
+            filePasteGateway);
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
             new Snippet
@@ -214,7 +214,7 @@ public sealed class UseCaseTests
             new RecordingSystemMediaActionGatewayAdapter(),
             new TestSpotifyMediaActionGateway(),
             terminalService,
-            new PasteFileUseCase(new RecordingFilePasteGateway()));
+            new RecordingFilePasteGateway());
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
             new Snippet

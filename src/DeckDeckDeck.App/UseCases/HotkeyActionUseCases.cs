@@ -34,6 +34,43 @@ public sealed class GetHotkeyActionByIdUseCase
     }
 }
 
+public sealed class LoadDirectHotkeyRegistrationsUseCase
+{
+    private readonly IHotkeyActionRepository _hotkeyActionRepository;
+
+    public LoadDirectHotkeyRegistrationsUseCase(IHotkeyActionRepository hotkeyActionRepository)
+    {
+        _hotkeyActionRepository = hotkeyActionRepository;
+    }
+
+    public IReadOnlyList<DirectHotkeyRegistration> Execute()
+    {
+        return _hotkeyActionRepository
+            .GetAll()
+            .Where(action => action.IsEnabled && action.Gesture?.IsComplete == true)
+            .Select(action => new DirectHotkeyRegistration(action.Id, action.Gesture!))
+            .ToList();
+    }
+}
+
+public sealed class ResolveExecutableHotkeyActionUseCase
+{
+    private readonly IHotkeyActionRepository _hotkeyActionRepository;
+
+    public ResolveExecutableHotkeyActionUseCase(IHotkeyActionRepository hotkeyActionRepository)
+    {
+        _hotkeyActionRepository = hotkeyActionRepository;
+    }
+
+    public ExecutableAction? Execute(Guid hotkeyActionId)
+    {
+        var action = _hotkeyActionRepository.GetById(hotkeyActionId);
+        return action?.IsEnabled == true
+            ? ExecutableAction.FromHotkeyAction(action)
+            : null;
+    }
+}
+
 public sealed class LoadHotkeyActionEditorStateUseCase
 {
     private readonly ISettingsRepository _settingsRepository;
