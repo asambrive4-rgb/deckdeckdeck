@@ -5,14 +5,10 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Composition;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
+using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases;
-using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 using DrawingIcon = System.Drawing.Icon;
 
@@ -36,12 +32,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         UseApplicationIcon();
         WindowStartupLocation = WindowStartupLocation.Manual;
-        DataContext = MainViewModelFactory.CreateDefault(
-            () => _lastPasteTargetWindowHandle,
-            HideAfterPaste,
-            EnterEditMode,
-            completePasteSelection: null,
-            createPasteSelectionCompletion: () => _pasteSelectionSession.CreateCompletion(EndPasteSelection));
         SourceInitialized += OnSourceInitialized;
         StateChanged += OnStateChanged;
         Closing += OnClosing;
@@ -49,14 +39,26 @@ public partial class MainWindow : Window
         _globalHotkeyRegistrar.HotkeyPressed += OnHotkeyPressed;
         _globalHotkeyRegistrar.HotkeyLongPressed += OnHotkeyLongPressed;
         _numpadCapture.SlotCaptured += OnNumpadSlotCaptured;
-        if (DataContext is MainViewModel viewModel)
-        {
-            _directHotkeyCoordinator = new DirectHotkeyCoordinator(
-                new DirectHotkeyRegistrar(
-                    new ShouldPassThroughDirectHotkeyUseCase(new TextInputFocusDetector())),
-                viewModel);
-            _directHotkeyCoordinator.DirectHotkeyPressed += OnDirectHotkeyPressed;
-        }
+    }
+
+    internal void AttachViewModel(MainViewModel viewModel)
+    {
+        DataContext = viewModel;
+        _directHotkeyCoordinator = new DirectHotkeyCoordinator(
+            new DirectHotkeyRegistrar(
+                new ShouldPassThroughDirectHotkeyUseCase(new TextInputFocusDetector())),
+            viewModel);
+        _directHotkeyCoordinator.DirectHotkeyPressed += OnDirectHotkeyPressed;
+    }
+
+    internal IntPtr GetPasteTargetWindowHandle()
+    {
+        return _lastPasteTargetWindowHandle;
+    }
+
+    internal Action CreatePasteSelectionCompletion()
+    {
+        return _pasteSelectionSession.CreateCompletion(EndPasteSelection);
     }
 
     private void UseApplicationIcon()
@@ -317,13 +319,13 @@ public partial class MainWindow : Window
         _numpadCapture.Stop();
     }
 
-    private void EnterEditMode()
+    internal void EnterEditMode()
     {
         EndPasteSelection();
         BringWindowToFrontForEdit();
     }
 
-    private void HideAfterPaste()
+    internal void HideAfterPaste()
     {
         EndPasteSelection();
         SaveWindowPlacement();

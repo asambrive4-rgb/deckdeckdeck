@@ -40,6 +40,21 @@ public sealed class SettingsRepositoryTests
     }
 
     [Fact]
+    public void EnsureDefaultsAddsMissingDefaultWithoutOverwritingExistingSettings()
+    {
+        var services = CreateServices();
+        var settings = services.SettingsRepository.Load();
+        settings.AutoHideAfterPaste = false;
+        services.SettingsRepository.Save(settings);
+        DeleteSettingValue(services.Storage.DatabasePath, SettingsKeys.BringWindowToFrontOnHotkey);
+
+        var reloaded = CreateServices(services.Storage.AppDataPath).SettingsRepository.Load();
+
+        Assert.True(reloaded.BringWindowToFrontOnHotkey);
+        Assert.False(reloaded.AutoHideAfterPaste);
+    }
+
+    [Fact]
     public void CategoryAndSnippetSlotEnabledSettingsAreIndependent()
     {
         var services = CreateServices();
@@ -192,5 +207,17 @@ public sealed class SettingsRepositoryTests
         command.Parameters.AddWithValue("$key", key);
 
         return Assert.IsType<string>(command.ExecuteScalar());
+    }
+
+    private static void DeleteSettingValue(string databasePath, string key)
+    {
+        SqliteConnection.ClearAllPools();
+        using var connection = new SqliteConnection($"Data Source={databasePath}");
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM Settings WHERE Key = $key";
+        command.Parameters.AddWithValue("$key", key);
+        command.ExecuteNonQuery();
     }
 }

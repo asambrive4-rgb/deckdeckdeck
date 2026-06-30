@@ -12,8 +12,10 @@ namespace DeckDeckDeck.App.Composition;
 public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
 {
     private readonly BackupGateway _backupService;
+    private readonly SemaphoreSlim _backupExecutionLock = new(1, 1);
     private readonly TimeSpan _delay;
     private readonly FileLogger? _loggingService;
+    private readonly Func<Func<BackupResult>, Task<BackupResult>> _runBackupAsync;
     private readonly object _syncRoot = new();
     private readonly SettingsRepository _settingsService;
     private readonly Action<string> _showStatus;
@@ -28,6 +30,25 @@ public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
         FileLogger? loggingService = null,
         TimeSpan? delay = null,
         SynchronizationContext? synchronizationContext = null)
+        : this(
+            backupService,
+            settingsService,
+            showStatus,
+            loggingService,
+            delay,
+            synchronizationContext,
+            static backupWork => Task.Run(backupWork))
+    {
+    }
+
+    internal AutoBackupCoordinator(
+        BackupGateway backupService,
+        SettingsRepository settingsService,
+        Action<string> showStatus,
+        FileLogger? loggingService,
+        TimeSpan? delay,
+        SynchronizationContext? synchronizationContext,
+        Func<Func<BackupResult>, Task<BackupResult>> runBackupAsync)
     {
         _backupService = backupService;
         _settingsService = settingsService;
@@ -35,6 +56,7 @@ public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
         _loggingService = loggingService;
         _delay = delay ?? TimeSpan.FromSeconds(5);
         _synchronizationContext = synchronizationContext ?? SynchronizationContext.Current;
+        _runBackupAsync = runBackupAsync;
     }
 
     public void RequestAutoBackup()
@@ -69,9 +91,13 @@ public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
 
     private async Task RunDelayedBackupAsync(CancellationTokenSource request)
     {
+        var hasExecutionLock = false;
+
         try
         {
-            await Task.Delay(_delay, request.Token);
+            await Task.Delay(_delay, request.Token).ConfigureAwait(false);
+            await _backupExecutionLock.WaitAsync(request.Token).ConfigureAwait(false);
+            hasExecutionLock = true;
 
             lock (_syncRoot)
             {
@@ -83,8 +109,7 @@ public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
                 _pendingRequest = null;
             }
 
-            var settings = _settingsService.Load();
-            var result = _backupService.CreateAutomaticBackup(settings);
+            var result = await _runBackupAsync(CreateAutomaticBackup).ConfigureAwait(false);
 
             if (!result.Succeeded && !result.Skipped)
             {
@@ -101,8 +126,19 @@ public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
         }
         finally
         {
+            if (hasExecutionLock)
+            {
+                _backupExecutionLock.Release();
+            }
+
             request.Dispose();
         }
+    }
+
+    private BackupResult CreateAutomaticBackup()
+    {
+        var settings = _settingsService.Load();
+        return _backupService.CreateAutomaticBackup(settings);
     }
 
     private void ReportStatus(string message)
@@ -116,4 +152,3 @@ public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
         _synchronizationContext.Post(_ => _showStatus(message), null);
     }
 }
-

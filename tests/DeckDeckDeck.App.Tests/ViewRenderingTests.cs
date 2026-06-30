@@ -17,6 +17,8 @@ using System.Windows.Threading;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 
 namespace DeckDeckDeck.App.Tests;
+
+[Collection(WpfViewRenderingCollection.Name)]
 public sealed class ViewRenderingTests
 {
     [Fact]
@@ -27,6 +29,7 @@ public sealed class ViewRenderingTests
         {
             try
             {
+                EnsureApplicationResources();
                 var services = CreateServices();
                 var viewModel = TestAppFactory.CreateSettingsViewModel(
                     services,
@@ -44,6 +47,7 @@ public sealed class ViewRenderingTests
             }
             finally
             {
+                ShutdownCurrentThreadApplication();
                 Dispatcher.CurrentDispatcher.InvokeShutdown();
             }
         });
@@ -63,6 +67,7 @@ public sealed class ViewRenderingTests
         {
             try
             {
+                EnsureApplicationResources();
                 var services = CreateServices();
                 var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
                 var viewModel = new SnippetEditViewModel(
@@ -102,6 +107,7 @@ public sealed class ViewRenderingTests
             }
             finally
             {
+                ShutdownCurrentThreadApplication();
                 Dispatcher.CurrentDispatcher.InvokeShutdown();
             }
         });
@@ -121,6 +127,7 @@ public sealed class ViewRenderingTests
         {
             try
             {
+                EnsureApplicationResources();
                 var slots = SlotKeyCatalog.All.Select(slotKey => new SlotViewModel(
                     slotKey,
                     slotKey == SlotKey.Numpad1 ? "GitHub" : null,
@@ -141,6 +148,7 @@ public sealed class ViewRenderingTests
             }
             finally
             {
+                ShutdownCurrentThreadApplication();
                 Dispatcher.CurrentDispatcher.InvokeShutdown();
             }
         });
@@ -160,6 +168,7 @@ public sealed class ViewRenderingTests
         {
             try
             {
+                EnsureApplicationResources();
                 var slots = SlotKeyCatalog.All.Select(slotKey => new SlotViewModel(
                     slotKey,
                     "이미지 생성 프롬프트",
@@ -193,6 +202,7 @@ public sealed class ViewRenderingTests
             }
             finally
             {
+                ShutdownCurrentThreadApplication();
                 Dispatcher.CurrentDispatcher.InvokeShutdown();
             }
         });
@@ -212,6 +222,7 @@ public sealed class ViewRenderingTests
         {
             try
             {
+                EnsureApplicationResources();
                 var services = CreateServices();
                 var viewModel = new HotkeyListViewModel(
                     [],
@@ -236,6 +247,7 @@ public sealed class ViewRenderingTests
             }
             finally
             {
+                ShutdownCurrentThreadApplication();
                 Dispatcher.CurrentDispatcher.InvokeShutdown();
             }
         });
@@ -255,6 +267,7 @@ public sealed class ViewRenderingTests
         {
             try
             {
+                EnsureApplicationResources();
                 var services = CreateServices();
                 var viewModel = new HotkeyEditViewModel(
                     action: null,
@@ -283,6 +296,7 @@ public sealed class ViewRenderingTests
             }
             finally
             {
+                ShutdownCurrentThreadApplication();
                 Dispatcher.CurrentDispatcher.InvokeShutdown();
             }
         });
@@ -309,6 +323,32 @@ public sealed class ViewRenderingTests
             {
                 yield return descendant;
             }
+        }
+    }
+
+    private static void EnsureApplicationResources()
+    {
+        var application = Application.Current ?? new Application();
+        var themeSource = new Uri(
+            "/DeckDeckDeck.App;component/Resources/Theme.xaml",
+            UriKind.Relative);
+
+        if (application.Resources.MergedDictionaries.Any(dictionary => dictionary.Source == themeSource))
+        {
+            return;
+        }
+
+        application.Resources.MergedDictionaries.Add(new ResourceDictionary
+        {
+            Source = themeSource
+        });
+    }
+
+    private static void ShutdownCurrentThreadApplication()
+    {
+        if (Application.Current?.Dispatcher.CheckAccess() == true)
+        {
+            Application.Current.Shutdown();
         }
     }
 

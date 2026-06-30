@@ -11,7 +11,23 @@ internal static class MainViewModelFactory
         Action? completePasteSelection = null,
         Func<Action>? createPasteSelectionCompletion = null)
     {
-        var services = AppComposition.CreateDefault();
+        return Create(
+            AppComposition.CreateDefault(),
+            getPasteTargetWindowHandle,
+            hideWindowAfterPaste,
+            enterEditMode,
+            completePasteSelection,
+            createPasteSelectionCompletion);
+    }
+
+    public static MainViewModel Create(
+        AppComposition services,
+        Func<IntPtr>? getPasteTargetWindowHandle = null,
+        Action? hideWindowAfterPaste = null,
+        Action? enterEditMode = null,
+        Action? completePasteSelection = null,
+        Func<Action>? createPasteSelectionCompletion = null)
+    {
         MainViewModel? viewModel = null;
         var autoBackupCoordinator = services.BackupGateway is null
             ? null

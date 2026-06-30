@@ -28,13 +28,27 @@ internal sealed class SettingEntryRepository
     public void EnsureDefaults(IEnumerable<KeyValuePair<string, string>> defaults)
     {
         using var dbContext = _dbContextFactory.Create();
+        var existingKeys = dbContext.Settings
+            .Select(setting => setting.Key)
+            .ToHashSet(StringComparer.Ordinal);
+        var added = false;
 
         foreach (var setting in defaults)
         {
-            AddIfMissing(dbContext, setting.Key, setting.Value);
+            if (existingKeys.Contains(setting.Key))
+            {
+                continue;
+            }
+
+            dbContext.Settings.Add(new SettingEntry { Key = setting.Key, Value = setting.Value });
+            existingKeys.Add(setting.Key);
+            added = true;
         }
 
-        dbContext.SaveChanges();
+        if (added)
+        {
+            dbContext.SaveChanges();
+        }
     }
 
     public void Upsert(string key, string value)
@@ -54,16 +68,6 @@ internal sealed class SettingEntryRepository
         }
 
         dbContext.SaveChanges();
-    }
-
-    private static void AddIfMissing(AppDbContext dbContext, string key, string value)
-    {
-        if (dbContext.Settings.Any(setting => setting.Key == key))
-        {
-            return;
-        }
-
-        dbContext.Settings.Add(new SettingEntry { Key = key, Value = value });
     }
 
     private static void Upsert(AppDbContext dbContext, string key, string value)

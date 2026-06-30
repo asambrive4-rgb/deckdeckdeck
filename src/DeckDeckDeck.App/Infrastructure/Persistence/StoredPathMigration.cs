@@ -9,7 +9,7 @@ using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.Infrastructure.Persistence;
 
-public sealed class StoredPathMigration
+public sealed class StoredPathMigration : IStoredPathMigrationGateway
 {
     private readonly AppDbContextFactory _dbContextFactory;
     private readonly AppStoragePaths _fileStorageService;

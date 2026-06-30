@@ -89,6 +89,7 @@ public sealed class CleanArchitectureDependencyTests
         var compositionRoot = Path.Combine(appRoot, "Composition");
         var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            Path.Combine(appRoot, "App.xaml.cs"),
             Path.Combine(appRoot, "MainWindow.xaml.cs")
         };
         var checkedFiles = Directory

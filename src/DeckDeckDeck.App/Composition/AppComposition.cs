@@ -42,11 +42,14 @@ internal sealed record AppComposition(
 
         var dbContextFactory = new AppDbContextFactory(appStoragePaths.DatabasePath);
         dbContextFactory.EnsureCreated();
-        new StoredPathMigration(dbContextFactory, appStoragePaths).NormalizeManagedPaths();
 
         var categoryRepository = new CategoryRepository(dbContextFactory);
         var settingsRepository = new SettingsRepository(dbContextFactory);
         var fileLogger = new FileLogger(appStoragePaths);
+        new StartupMaintenanceUseCase(
+            new StartupMaintenanceStateRepository(dbContextFactory),
+            new StoredPathMigration(dbContextFactory, appStoragePaths))
+            .Execute();
         var storedImagePathResolver = new StoredImagePathResolver(appStoragePaths);
         var backupGateway = new BackupGateway(appStoragePaths, settingsRepository, fileLogger);
         var imageFileRepository = new ImageFileRepository(appStoragePaths);
