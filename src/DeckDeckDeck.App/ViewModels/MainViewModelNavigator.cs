@@ -6,6 +6,7 @@ internal sealed class MainViewModelNavigator
 {
     private readonly MainViewModelNavigatorDependencies _dependencies;
     private readonly Action _enterEditMode;
+    private readonly Action _notifyDirectHotkeyCaptureStateChanged;
     private readonly Action _notifyDirectHotkeysChanged;
     private readonly MainViewModelViewFactory _viewFactory;
     private readonly Action<string> _showStatus;
@@ -17,7 +18,8 @@ internal sealed class MainViewModelNavigator
         Action<object> showViewModel,
         Action<string> showStatus,
         Action enterEditMode,
-        Action notifyDirectHotkeysChanged)
+        Action notifyDirectHotkeysChanged,
+        Action notifyDirectHotkeyCaptureStateChanged)
     {
         _dependencies = dependencies;
         _viewFactory = viewFactory;
@@ -25,6 +27,7 @@ internal sealed class MainViewModelNavigator
         _showStatus = showStatus;
         _enterEditMode = enterEditMode;
         _notifyDirectHotkeysChanged = notifyDirectHotkeysChanged;
+        _notifyDirectHotkeyCaptureStateChanged = notifyDirectHotkeyCaptureStateChanged;
     }
 
     public void ShowHome()
@@ -137,7 +140,7 @@ internal sealed class MainViewModelNavigator
                 ShowHotkeys();
                 NotifyHotkeysChanged();
             },
-            NotifyHotkeysChanged));
+            _notifyDirectHotkeyCaptureStateChanged));
         _showStatus("새 핫키 만들기");
     }
 
@@ -157,7 +160,7 @@ internal sealed class MainViewModelNavigator
                 ShowHotkeys();
                 NotifyHotkeysChanged();
             },
-            NotifyHotkeysChanged));
+            _notifyDirectHotkeyCaptureStateChanged));
         _showStatus($"{action.Title} 핫키 편집");
     }
 

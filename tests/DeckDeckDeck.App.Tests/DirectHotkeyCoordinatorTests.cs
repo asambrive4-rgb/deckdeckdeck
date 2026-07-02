@@ -44,6 +44,21 @@ public sealed class DirectHotkeyCoordinatorTests
         Assert.Equal(0x67u, registration.Gesture.VirtualKey);
     }
 
+    [Fact]
+    public void CaptureStateChangeDoesNotReloadDirectHotkeyRegistrations()
+    {
+        var services = CreateServices();
+        var viewModel = CreateMainViewModel(services, initializeHome: false);
+        using var registrar = new RecordingDirectHotkeyRegistrar();
+        using var coordinator = new DirectHotkeyCoordinator(registrar, viewModel);
+        coordinator.Start();
+        var refreshCount = registrar.RefreshCalls.Count;
+
+        viewModel.NotifyDirectHotkeyCaptureStateChanged();
+
+        Assert.Equal(refreshCount, registrar.RefreshCalls.Count);
+    }
+
     private static HotkeyActionSaveData CreatePasteAction(string title, HotkeyGesture gesture)
     {
         return new HotkeyActionSaveData(

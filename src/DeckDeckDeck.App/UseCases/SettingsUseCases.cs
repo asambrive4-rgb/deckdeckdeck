@@ -74,8 +74,13 @@ public sealed class SaveSettingsUseCase : ISaveSettingsUseCase
         latestSettings.RestoreClipboardAfterPaste = request.RestoreClipboardAfterPaste;
         latestSettings.AutoBackupEnabled = request.AutoBackupEnabled;
         latestSettings.BackupFolderPath = request.BackupFolderPath.Trim();
+        var shouldRequestAutoBackup = latestSettings.AutoBackupEnabled
+            && !string.IsNullOrWhiteSpace(latestSettings.BackupFolderPath);
         _settingsStore.Save(latestSettings);
-        _autoBackupRequester?.RequestAutoBackup();
+        if (shouldRequestAutoBackup)
+        {
+            _autoBackupRequester?.RequestAutoBackup();
+        }
 
         return SaveSettingsResult.Success();
     }

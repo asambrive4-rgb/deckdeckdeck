@@ -63,6 +63,21 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
+    public void SettingsViewModelSaveDoesNotRequestAutoBackupWhenDisabled()
+    {
+        var services = CreateServices();
+        var autoBackup = new RecordingAutoBackupCoordinator();
+        var viewModel = CreateSettingsViewModel(
+            services,
+            autoBackupRequester: autoBackup);
+        viewModel.AutoBackupEnabled = false;
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.Equal(0, autoBackup.RequestCount);
+    }
+
+    [Fact]
     public void ManualBackupCommandRunsEvenWhenAutoBackupIsDisabled()
     {
         var services = CreateServices();

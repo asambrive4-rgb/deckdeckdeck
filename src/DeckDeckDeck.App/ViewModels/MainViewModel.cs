@@ -101,6 +101,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public event EventHandler? DirectHotkeysChanged;
 
+    public event EventHandler? DirectHotkeyCaptureStateChanged;
+
     public AppSettings LoadSettings()
     {
         return _loadSettingsUseCase.Execute();
@@ -202,6 +204,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         DirectHotkeysChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    internal void NotifyDirectHotkeyCaptureStateChanged()
+    {
+        DirectHotkeyCaptureStateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     internal void ReportBackgroundStatus(string message)
     {
         ShowStatus(message);
@@ -278,6 +285,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             viewModel => CurrentViewModel = viewModel,
             ShowStatus,
             callbacks.EnterEditMode,
-            NotifyDirectHotkeysChanged);
+            NotifyDirectHotkeysChanged,
+            NotifyDirectHotkeyCaptureStateChanged);
     }
 }

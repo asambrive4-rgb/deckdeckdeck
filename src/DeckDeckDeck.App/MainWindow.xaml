@@ -26,6 +26,11 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <Style x:Key="Deck.ViewTransitionContainerStyle" TargetType="{x:Type Border}">
             <Setter Property="Opacity" Value="0" />
+            <Setter Property="CacheMode">
+                <Setter.Value>
+                    <BitmapCache />
+                </Setter.Value>
+            </Setter>
             <Style.Triggers>
                 <EventTrigger RoutedEvent="Loaded">
                     <BeginStoryboard>

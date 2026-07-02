@@ -61,6 +61,11 @@ public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
 
     public void RequestAutoBackup()
     {
+        if (!ShouldScheduleBackup())
+        {
+            return;
+        }
+
         CancellationTokenSource request;
 
         lock (_syncRoot)
@@ -139,6 +144,20 @@ public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
     {
         var settings = _settingsService.Load();
         return _backupService.CreateAutomaticBackup(settings);
+    }
+
+    private bool ShouldScheduleBackup()
+    {
+        try
+        {
+            var settings = _settingsService.Load();
+            return settings.AutoBackupEnabled && !string.IsNullOrWhiteSpace(settings.BackupFolderPath);
+        }
+        catch (Exception ex)
+        {
+            _loggingService?.Log("Automatic backup settings check failed.", ex);
+            return false;
+        }
     }
 
     private void ReportStatus(string message)

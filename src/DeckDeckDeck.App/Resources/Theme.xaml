@@ -544,6 +544,9 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{StaticResource Deck.Radius.Card}"
                             Effect="{StaticResource Deck.Effect.CardShadow}">
+                        <Border.CacheMode>
+                            <BitmapCache />
+                        </Border.CacheMode>
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                     </Border>

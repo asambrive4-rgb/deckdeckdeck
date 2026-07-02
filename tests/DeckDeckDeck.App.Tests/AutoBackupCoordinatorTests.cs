@@ -10,6 +10,7 @@ public sealed class AutoBackupCoordinatorTests
     public async Task BackupRunsThroughExecutorWhenCurrentSynchronizationContextDoesNotPump()
     {
         var services = CreateServices();
+        EnableAutoBackup(services);
         var context = new RecordingSynchronizationContext(executePostedCallbacks: false);
         var previousContext = SynchronizationContext.Current;
         var backupStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -46,6 +47,7 @@ public sealed class AutoBackupCoordinatorTests
     public async Task RequestAutoBackupReturnsBeforeBackupWorkCompletes()
     {
         var services = CreateServices();
+        EnableAutoBackup(services);
         var backupStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var allowBackupToFinish = new TaskCompletionSource<BackupResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var backupFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -84,6 +86,7 @@ public sealed class AutoBackupCoordinatorTests
     public async Task MultipleRequestsBeforeDelayRunsOnlyLatestPendingBackup()
     {
         var services = CreateServices();
+        EnableAutoBackup(services);
         var backupStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var backupCount = 0;
         var coordinator = new AutoBackupCoordinator(
@@ -119,6 +122,7 @@ public sealed class AutoBackupCoordinatorTests
     public async Task FailureStatusIsPostedToSynchronizationContext()
     {
         var services = CreateServices();
+        EnableAutoBackup(services);
         var context = new RecordingSynchronizationContext(executePostedCallbacks: true);
         var statusReceived = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var coordinator = new AutoBackupCoordinator(
@@ -148,6 +152,7 @@ public sealed class AutoBackupCoordinatorTests
     public async Task RunningBackupsAreSerialized()
     {
         var services = CreateServices();
+        EnableAutoBackup(services);
         var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var secondFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -221,6 +226,48 @@ public sealed class AutoBackupCoordinatorTests
             await secondFinished.Task.WaitAsync(TimeSpan.FromSeconds(2));
             coordinator.Dispose();
         }
+    }
+
+    [Fact]
+    public async Task RequestAutoBackupSkipsWorkWhenAutoBackupIsDisabled()
+    {
+        var services = CreateServices();
+        var backupStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var coordinator = new AutoBackupCoordinator(
+            services.BackupGateway,
+            services.SettingsRepository,
+            _ => { },
+            services.FileLogger,
+            TimeSpan.Zero,
+            synchronizationContext: null,
+            _ =>
+            {
+                backupStarted.TrySetResult();
+                return Task.FromResult(BackupResult.Skip());
+            });
+
+        try
+        {
+            coordinator.RequestAutoBackup();
+
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
+            Assert.False(backupStarted.Task.IsCompleted);
+        }
+        finally
+        {
+            coordinator.Dispose();
+        }
+    }
+
+    private static void EnableAutoBackup(TestServices services)
+    {
+        var settings = services.SettingsRepository.Load();
+        settings.AutoBackupEnabled = true;
+        settings.BackupFolderPath = Path.Combine(
+            Path.GetTempPath(),
+            "DeckDeckDeckTests",
+            Guid.NewGuid().ToString("N"));
+        services.SettingsRepository.Save(settings);
     }
 
     private sealed class RecordingSynchronizationContext : SynchronizationContext

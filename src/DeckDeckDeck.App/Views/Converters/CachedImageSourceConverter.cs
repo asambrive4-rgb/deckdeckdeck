@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Windows.Data;
@@ -15,6 +16,9 @@ namespace DeckDeckDeck.App.Views.Converters;
 public sealed class CachedImageSourceConverter : IValueConverter
 {
     private static readonly ConcurrentDictionary<CacheKey, Lazy<ImageSource?>> Cache = new();
+    private static readonly ConcurrentDictionary<string, PathProbe> PathProbeCache =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan PathProbeCacheDuration = TimeSpan.FromSeconds(2);
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -68,7 +72,8 @@ public sealed class CachedImageSourceConverter : IValueConverter
         try
         {
             var fullPath = Path.GetFullPath(path);
-            if (!File.Exists(fullPath))
+            var probe = GetPathProbe(fullPath);
+            if (!probe.Exists)
             {
                 return false;
             }
@@ -76,13 +81,45 @@ public sealed class CachedImageSourceConverter : IValueConverter
             key = new CacheKey(
                 fullPath,
                 decodePixelWidth,
-                File.GetLastWriteTimeUtc(fullPath).Ticks);
+                probe.LastWriteTicks);
             return true;
         }
         catch
         {
             return false;
         }
+    }
+
+    private static PathProbe GetPathProbe(string fullPath)
+    {
+        var now = Stopwatch.GetTimestamp();
+        if (PathProbeCache.TryGetValue(fullPath, out var cachedProbe)
+            && IsFresh(cachedProbe.ObservedAtTimestamp, now))
+        {
+            return cachedProbe;
+        }
+
+        var refreshedProbe = ProbePath(fullPath, now);
+        PathProbeCache[fullPath] = refreshedProbe;
+        return refreshedProbe;
+    }
+
+    private static PathProbe ProbePath(string fullPath, long observedAtTimestamp)
+    {
+        if (!File.Exists(fullPath))
+        {
+            return new PathProbe(false, 0, observedAtTimestamp);
+        }
+
+        return new PathProbe(
+            true,
+            File.GetLastWriteTimeUtc(fullPath).Ticks,
+            observedAtTimestamp);
+    }
+
+    private static bool IsFresh(long observedAtTimestamp, long now)
+    {
+        return Stopwatch.GetElapsedTime(observedAtTimestamp, now) <= PathProbeCacheDuration;
     }
 
     private static ImageSource? LoadImage(CacheKey key)
@@ -137,4 +174,6 @@ public sealed class CachedImageSourceConverter : IValueConverter
     }
 
     private readonly record struct CacheKey(string Path, int DecodePixelWidth, long LastWriteTicks);
+
+    private readonly record struct PathProbe(bool Exists, long LastWriteTicks, long ObservedAtTimestamp);
 }

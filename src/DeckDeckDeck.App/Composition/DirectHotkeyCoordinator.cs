@@ -16,6 +16,7 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
         _directHotkeyRegistrar = directHotkeyRegistrar;
         _viewModel = viewModel;
         _directHotkeyRegistrar.DirectHotkeyPressed += OnDirectHotkeyPressed;
+        _viewModel.DirectHotkeyCaptureStateChanged += OnDirectHotkeyCaptureStateChanged;
         _viewModel.DirectHotkeysChanged += OnDirectHotkeysChanged;
     }
 
@@ -37,9 +38,15 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
 
     public void Dispose()
     {
+        _viewModel.DirectHotkeyCaptureStateChanged -= OnDirectHotkeyCaptureStateChanged;
         _viewModel.DirectHotkeysChanged -= OnDirectHotkeysChanged;
         _directHotkeyRegistrar.DirectHotkeyPressed -= OnDirectHotkeyPressed;
         _directHotkeyRegistrar.Dispose();
+    }
+
+    private void OnDirectHotkeyCaptureStateChanged(object? sender, EventArgs e)
+    {
+        _directHotkeyRegistrar.IsSuspended = _viewModel.IsCapturingHotkeyInput;
     }
 
     private void OnDirectHotkeysChanged(object? sender, EventArgs e)
