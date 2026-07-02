@@ -461,25 +461,9 @@ public sealed class SnippetEditViewModel : ObservableObject
             CategoryId,
             SlotKey,
             _snippetId,
-            SnippetTitle,
-            Content,
-            Description,
-            _draft.ImagePath,
-            _draft.ThumbnailPath,
-            ActionType,
-            LaunchPath,
-            SlotImageMode,
-            autoIcon,
-            LaunchUrl,
-            SelectedMediaProvider,
-            SelectedMediaCommand,
             IsSlotEnabled,
             _originalIsSlotEnabled,
-            PasteShortcutMode,
-            TerminalCommand,
-            SelectedTerminalShell,
-            RunAsAdministrator,
-            SelectedFileActionMode);
+            _draft.ToSnippetSaveData(autoIcon));
     }
 
     private void Cancel()

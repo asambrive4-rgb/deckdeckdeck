@@ -17,7 +17,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private ILoadSettingsUseCase _loadSettingsUseCase = null!;
     private SaveWindowPlacementUseCase _saveWindowPlacementUseCase = null!;
     private IAppLogger? _loggingService;
-    private object _currentViewModel = null!;
+    private object? _currentViewModel;
     private string _statusMessage = "준비됨.";
 
     internal MainViewModel(
@@ -29,7 +29,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public string WindowTitle => "DeckDeckDeck";
 
-    public object CurrentViewModel
+    public object? CurrentViewModel
     {
         get => _currentViewModel;
         private set
@@ -122,9 +122,31 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _navigator.ShowHome();
     }
 
+    public void InitializeHome()
+    {
+        if (CurrentViewModel is null)
+        {
+            ShowHome();
+        }
+    }
+
+    public IReadOnlyList<string> GetVisibleThumbnailPaths()
+    {
+        return CurrentViewModel switch
+        {
+            HomeViewModel homeViewModel => GetThumbnailPaths(homeViewModel.NumpadGrid),
+            CategoryViewModel categoryViewModel => GetThumbnailPaths(categoryViewModel.NumpadGrid),
+            _ => []
+        };
+    }
+
     public void OpenHomeFromHotkey()
     {
-        ShowHome();
+        if (CurrentViewModel is not HomeViewModel)
+        {
+            ShowHome();
+        }
+
         StatusMessage = "전역 단축키로 홈을 열었습니다.";
     }
 
@@ -134,7 +156,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         switch (resolution.Kind)
         {
             case CategoryHotkeyResolutionKind.OpenExisting:
-                _navigator.OpenCategory(resolution.Category!);
+                OpenResolvedCategoryFromHotkey(resolution.Category!);
                 break;
             case CategoryHotkeyResolutionKind.CreateNew:
                 _navigator.CreateCategory(resolution.SlotKey);
@@ -200,6 +222,27 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         StatusMessage = message;
     }
 
+    private void OpenResolvedCategoryFromHotkey(Category category)
+    {
+        if (CurrentViewModel is CategoryViewModel categoryViewModel
+            && categoryViewModel.CategoryId == category.Id)
+        {
+            return;
+        }
+
+        _navigator.OpenCategory(category);
+    }
+
+    private static IReadOnlyList<string> GetThumbnailPaths(NumpadGridViewModel grid)
+    {
+        return grid.Slots
+            .Select(slot => slot.ThumbnailPath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(path => path!)
+            .ToList();
+    }
+
     private void NotifyTopBarPropertiesChanged()
     {
         OnPropertyChanged(nameof(TopBarTitle));
@@ -223,18 +266,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _loggingService = dependencies.Logger;
         _autoBackupCoordinator = dependencies.AutoBackupCoordinator;
 
-        var actionRunner = new SnippetActionRunner(
-            dependencies.LoadSettingsUseCase,
-            dependencies.PrepareSnippetActionUseCase,
-            dependencies.ExecuteSnippetActionUseCase,
-            callbacks,
-            ShowStatus,
-            dependencies.Logger);
         var viewFactory = new MainViewModelViewFactory(
             dependencies.NavigatorDependencies,
-            actionRunner.ExecuteAsync,
+            snippet => dependencies.ExecuteActionAsync(ExecutableAction.FromSnippet(snippet)),
             ShowStatus);
-        _executeActionAsync = actionRunner.ExecuteAsync;
+        _executeActionAsync = dependencies.ExecuteActionAsync;
 
         _navigator = new MainViewModelNavigator(
             dependencies.NavigatorDependencies,
@@ -243,7 +279,5 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             ShowStatus,
             callbacks.EnterEditMode,
             NotifyDirectHotkeysChanged);
-
-        ShowHome();
     }
 }

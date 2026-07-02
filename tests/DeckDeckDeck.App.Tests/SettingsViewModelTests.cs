@@ -201,7 +201,7 @@ public sealed class SettingsViewModelTests
     public void SpotifyConnectionStatusStartsDisconnected()
     {
         var services = CreateServices();
-        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository);
+        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter();
         var viewModel = CreateSettingsViewModel(services, spotifyConnectionService);
 
         Assert.False(viewModel.IsSpotifyConnected);
@@ -215,7 +215,7 @@ public sealed class SettingsViewModelTests
     {
         var services = CreateServices();
         var urlLaunchService = new RecordingUrlLaunchGatewayAdapter();
-        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository);
+        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter();
         var viewModel = CreateSettingsViewModel(services, spotifyConnectionService, urlLaunchService);
 
         viewModel.ShowSpotifyConnectionFieldsCommand.Execute(null);
@@ -232,7 +232,7 @@ public sealed class SettingsViewModelTests
         var services = CreateServices();
         var status = string.Empty;
         var clipboard = new FakeClipboardAdapter(null);
-        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository);
+        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter();
         var viewModel = CreateSettingsViewModel(
             services,
             spotifyConnectionService,
@@ -252,7 +252,7 @@ public sealed class SettingsViewModelTests
         var services = CreateServices();
         var statusMessages = new List<string>();
         var clipboard = new FakeClipboardAdapter(null);
-        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository);
+        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter();
         var viewModel = CreateSettingsViewModel(
             services,
             spotifyConnectionService,
@@ -275,7 +275,7 @@ public sealed class SettingsViewModelTests
     public async Task SpotifyStartConnectionRequiresClientId()
     {
         var services = CreateServices();
-        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository);
+        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter();
         var viewModel = CreateSettingsViewModel(services, spotifyConnectionService);
         var command = Assert.IsAssignableFrom<IAsyncRelayCommand>(viewModel.StartSpotifyConnectionCommand);
 
@@ -290,7 +290,7 @@ public sealed class SettingsViewModelTests
     {
         var services = CreateServices();
         var status = string.Empty;
-        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository);
+        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter();
         var viewModel = CreateSettingsViewModel(
             services,
             spotifyConnectionService,
@@ -321,7 +321,7 @@ public sealed class SettingsViewModelTests
         settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
         services.SettingsRepository.Save(settings);
         var status = string.Empty;
-        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository);
+        var spotifyConnectionService = new StubSpotifyConnectionGatewayAdapter();
         var viewModel = CreateSettingsViewModel(
             services,
             spotifyConnectionService,
@@ -365,7 +365,7 @@ public sealed class SettingsViewModelTests
             dialogService ?? new StubDialogAdapter(),
             CreateSpotifyConnectionUseCase(
                 services,
-                spotifyConnectionService ?? new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository),
+                spotifyConnectionService ?? new StubSpotifyConnectionGatewayAdapter(),
                 urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter()),
             clipboardService ?? new FakeClipboardAdapter(null),
             saveSettingsUseCase,
@@ -380,7 +380,7 @@ public sealed class SettingsViewModelTests
     {
         var effectiveUrlLaunchGatewayAdapter = urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter();
         var effectiveSpotifyConnectionGatewayAdapter = spotifyConnectionService
-            ?? new StubSpotifyConnectionGatewayAdapter(services.SettingsRepository);
+            ?? new StubSpotifyConnectionGatewayAdapter();
 
         return new SpotifyConnectionUseCase(
             services.SettingsRepository,
@@ -432,55 +432,25 @@ public sealed class SettingsViewModelTests
 
     private sealed class StubSpotifyConnectionGatewayAdapter : ISpotifyConnectionGateway
     {
-        private readonly SettingsRepository _settingsService;
-
-        public StubSpotifyConnectionGatewayAdapter(SettingsRepository settingsService)
-        {
-            _settingsService = settingsService;
-        }
-
         public string DashboardUrl => "https://developer.spotify.com/dashboard";
 
         public string RedirectUri => "http://127.0.0.1:53682/spotify-callback/";
 
         public List<string> ClientIds { get; } = [];
 
-        public SpotifyConnectionGatewayResult ConnectResult { get; set; } = new(true);
+        public SpotifyConnectionGatewayResult ConnectResult { get; set; } = new(
+            true,
+            AccessToken: "access-token",
+            RefreshToken: "refresh-token",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+            DisplayName: "Spotify 계정");
 
         public Task<SpotifyConnectionGatewayResult> ConnectAsync(
             string clientId,
             CancellationToken cancellationToken = default)
         {
             ClientIds.Add(clientId);
-            if (ConnectResult.Succeeded)
-            {
-                var settings = _settingsService.Load();
-                settings.SpotifyClientId = clientId;
-                settings.SpotifyAccessToken = "access-token";
-                settings.SpotifyRefreshToken = "refresh-token";
-                settings.SpotifyTokenExpiresAt = DateTimeOffset.UtcNow.AddHours(1);
-                settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
-                _settingsService.Save(settings);
-            }
-
             return Task.FromResult(ConnectResult);
-        }
-
-        public Task<SpotifyConnectionCheckResult> CheckConnectionAsync(
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new SpotifyConnectionCheckResult(SpotifyConnectionCheckState.Connected));
-        }
-
-        public void Disconnect()
-        {
-            var settings = _settingsService.Load();
-            settings.SpotifyClientId = string.Empty;
-            settings.SpotifyAccessToken = string.Empty;
-            settings.SpotifyRefreshToken = string.Empty;
-            settings.SpotifyTokenExpiresAt = null;
-            settings.SpotifyConnectedUserDisplayName = string.Empty;
-            _settingsService.Save(settings);
         }
     }
 

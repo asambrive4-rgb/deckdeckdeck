@@ -105,53 +105,43 @@ public sealed class SaveHotkeyActionUseCase
 
     public SaveHotkeyActionResult Execute(SaveHotkeyActionRequest request)
     {
-        if (request.IsEnabled && request.Gesture is null)
+        var data = request.Data;
+        if (data.IsEnabled && data.Gesture is null)
         {
             return SaveHotkeyActionResult.Failure(HotkeyRequiredMessage);
         }
 
-        if (request.Gesture is not null && !request.Gesture.IsComplete)
+        if (data.Gesture is not null && !data.Gesture.IsComplete)
         {
             return SaveHotkeyActionResult.Failure(HotkeyModifierOnlyMessage);
         }
 
         var validation = SnippetRules.ValidateForSave(
-            request.Title,
-            request.Content,
-            request.ActionType,
-            request.LaunchPath,
-            request.LaunchUrl,
-            request.SelectedMediaProvider,
-            request.SelectedMediaCommand,
-            request.TerminalCommand,
-            request.SelectedTerminalShell,
-            request.RunAsAdministrator);
+            data.Title,
+            data.Content,
+            data.ActionType,
+            data.LaunchPath,
+            data.LaunchUrl,
+            data.MediaProvider ?? SnippetMediaProvider.System,
+            data.MediaCommand ?? SnippetMediaCommand.PlayPause,
+            data.TerminalCommand,
+            data.TerminalShell ?? SnippetTerminalShell.Cmd,
+            data.RunAsAdministrator);
 
         if (!validation.Succeeded)
         {
             return SaveHotkeyActionResult.Failure(validation.ErrorMessage!);
         }
 
-        var saveData = new HotkeyActionSaveData(
-            request.Title,
-            request.Gesture,
-            request.IsEnabled,
-            request.Content,
-            request.Description,
-            request.ImagePath,
-            request.ThumbnailPath,
-            request.ActionType,
-            request.LaunchPath,
-            request.SlotImageMode,
-            request.AutoIcon,
-            validation.NormalizedLaunchUrl,
-            validation.MediaProvider,
-            validation.MediaCommand,
-            request.PasteShortcutMode,
-            validation.NormalizedTerminalCommand,
-            validation.TerminalShell,
-            validation.RunAsAdministrator,
-            request.FileActionMode)
+        var saveData = (data with
+        {
+            LaunchUrl = validation.NormalizedLaunchUrl,
+            MediaProvider = validation.MediaProvider,
+            MediaCommand = validation.MediaCommand,
+            TerminalCommand = validation.NormalizedTerminalCommand,
+            TerminalShell = validation.TerminalShell,
+            RunAsAdministrator = validation.RunAsAdministrator
+        })
             .NormalizeForStorage();
 
         var action = request.HotkeyActionId.HasValue
@@ -227,25 +217,7 @@ public sealed record HotkeyActionEditorState(SpotifyConnectionState SpotifyConne
 
 public sealed record SaveHotkeyActionRequest(
     Guid? HotkeyActionId,
-    string Title,
-    HotkeyGesture? Gesture,
-    bool IsEnabled,
-    string Content,
-    string? Description,
-    string? ImagePath,
-    string? ThumbnailPath,
-    SnippetActionType ActionType,
-    string LaunchPath,
-    SlotImageMode SlotImageMode,
-    AutoIconCacheEntry? AutoIcon,
-    string? LaunchUrl,
-    SnippetMediaProvider SelectedMediaProvider,
-    SnippetMediaCommand SelectedMediaCommand,
-    PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV,
-    string TerminalCommand = "",
-    SnippetTerminalShell SelectedTerminalShell = SnippetTerminalShell.Cmd,
-    bool RunAsAdministrator = true,
-    FileActionMode FileActionMode = FileActionMode.Launch);
+    HotkeyActionSaveData Data);
 
 public sealed record SaveHotkeyActionResult(
     bool Succeeded,

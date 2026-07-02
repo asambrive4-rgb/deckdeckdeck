@@ -89,36 +89,50 @@ public sealed class ExecutableActionEditDraftTests
         draft.TerminalCommand = "echo hello";
         draft.RunAsAdministrator = true;
 
-        var terminalData = CreateSaveData(draft).NormalizeForStorage();
+        var terminalData = draft.ToSnippetSaveData().NormalizeForStorage();
 
         draft.SetActionType(SnippetActionType.LaunchUrl);
         draft.SetLaunchUrl("https://example.com");
-        var urlData = CreateSaveData(draft).NormalizeForStorage();
+        var urlData = draft.ToSnippetSaveData().NormalizeForStorage();
 
         Assert.True(terminalData.RunAsAdministrator);
         Assert.False(urlData.RunAsAdministrator);
     }
 
-    private static SnippetSaveData CreateSaveData(ExecutableActionEditDraft draft)
+    [Fact]
+    public void ToSnippetSaveDataUsesCurrentDraftValues()
     {
-        return new SnippetSaveData(
-            "Title",
-            "Content",
-            "Description",
-            draft.ImagePath,
-            draft.ThumbnailPath,
-            draft.ActionType,
-            draft.LaunchPath,
-            draft.SlotImageMode,
-            draft.AutoIcon,
-            draft.LaunchUrl,
-            draft.MediaProvider,
-            draft.MediaCommand,
-            draft.PasteShortcutMode,
-            draft.TerminalCommand,
-            draft.TerminalShell,
-            draft.RunAsAdministrator,
-            draft.FileActionMode);
+        var draft = ExecutableActionEditDraft.FromSnippet(null, imageFileRepository: null);
+        draft.Title = "Docs";
+        draft.Content = "Hello";
+        draft.Description = "Greeting";
+        draft.SetActionType(SnippetActionType.LaunchUrl);
+        draft.SetLaunchUrl("example.com");
+        draft.ApplyNormalizedLaunchUrl("https://example.com");
+
+        var data = draft.ToSnippetSaveData();
+
+        Assert.Equal("Docs", data.Title);
+        Assert.Equal("Hello", data.Content);
+        Assert.Equal("Greeting", data.Description);
+        Assert.Equal(SnippetActionType.LaunchUrl, data.ActionType);
+        Assert.Equal("https://example.com", data.LaunchUrl);
+    }
+
+    [Fact]
+    public void ToHotkeyActionSaveDataAddsGestureAndEnabledState()
+    {
+        var draft = ExecutableActionEditDraft.FromHotkeyAction(null, imageFileRepository: null);
+        var gesture = new HotkeyGesture(0x67, HotkeyModifiers.None);
+        draft.Title = "Paste";
+        draft.Content = "Hello";
+
+        var data = draft.ToHotkeyActionSaveData(gesture, isEnabled: false);
+
+        Assert.Equal("Paste", data.Title);
+        Assert.Equal("Hello", data.Content);
+        Assert.Equal(gesture, data.Gesture);
+        Assert.False(data.IsEnabled);
     }
 
     private sealed class RecordingImageFileRepository : IImageFileRepository

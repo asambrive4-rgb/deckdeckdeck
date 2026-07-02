@@ -1,3 +1,4 @@
+using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.ViewModels;
 
 namespace DeckDeckDeck.App.Composition;
@@ -37,14 +38,25 @@ internal static class MainViewModelFactory
                 message => viewModel?.ReportBackgroundStatus(message),
                 services.FileLogger);
 
+        var callbacks = new MainViewModelCallbacks(
+            getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
+            hideWindowAfterPaste ?? (() => { }),
+            enterEditMode ?? (() => { }),
+            createPasteSelectionCompletion
+                ?? (() => completePasteSelection ?? (() => { })));
+        var actionExecutionCoordinator = new ActionExecutionCoordinator(
+            new LoadSettingsUseCase(services.SettingsRepository),
+            new PrepareSnippetActionUseCase(),
+            services.ExecuteSnippetActionUseCase,
+            callbacks,
+            message => viewModel?.ReportBackgroundStatus(message),
+            services.FileLogger);
+
         viewModel = new MainViewModel(
-            services.CreateMainViewModelDependencies(autoBackupCoordinator),
-            new MainViewModelCallbacks(
-                getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
-                hideWindowAfterPaste ?? (() => { }),
-                enterEditMode ?? (() => { }),
-                createPasteSelectionCompletion
-                    ?? (() => completePasteSelection ?? (() => { }))));
+            services.CreateMainViewModelDependencies(
+                autoBackupCoordinator,
+                actionExecutionCoordinator.ExecuteAsync),
+            callbacks);
 
         return viewModel;
     }

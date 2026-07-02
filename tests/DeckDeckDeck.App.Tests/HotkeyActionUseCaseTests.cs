@@ -214,21 +214,22 @@ public sealed class HotkeyActionUseCaseTests
     {
         return new SaveHotkeyActionRequest(
             HotkeyActionId: null,
-            title,
-            gesture,
-            isEnabled,
-            content,
-            Description: null,
-            ImagePath: null,
-            ThumbnailPath: null,
-            actionType,
-            LaunchPath: launchPath,
-            SlotImageMode.Auto,
-            AutoIcon: null,
-            LaunchUrl: null,
-            SnippetMediaProvider.System,
-            mediaCommand,
-            FileActionMode: fileActionMode);
+            Data: new HotkeyActionSaveData(
+                title,
+                gesture,
+                isEnabled,
+                content,
+                Description: null,
+                ImagePath: null,
+                ThumbnailPath: null,
+                actionType,
+                LaunchPath: launchPath,
+                SlotImageMode.Auto,
+                AutoIcon: null,
+                LaunchUrl: null,
+                SnippetMediaProvider.System,
+                mediaCommand,
+                FileActionMode: fileActionMode));
     }
 
     private static HotkeyActionSaveData CreateSaveData(

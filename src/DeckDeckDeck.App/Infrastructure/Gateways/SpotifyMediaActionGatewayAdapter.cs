@@ -1,10 +1,4 @@
-using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using System.Net;
 using System.Net.Http;
@@ -23,10 +17,10 @@ public sealed class SpotifyMediaActionGatewayAdapter : ISpotifyMediaActionGatewa
     private readonly ISpotifyAppLaunchGateway _spotifyAppLaunchService;
     private readonly TimeSpan _devicePollingDelay;
     private readonly int _devicePollingAttempts;
-    private readonly SettingsRepository _settingsService;
+    private readonly ISettingsRepository _settingsService;
 
     public SpotifyMediaActionGatewayAdapter(
-        SettingsRepository settingsService,
+        ISettingsRepository settingsService,
         HttpClient? httpClient = null,
         ISpotifyAppLaunchGateway? spotifyAppLaunchService = null,
         TimeSpan? devicePollingDelay = null,

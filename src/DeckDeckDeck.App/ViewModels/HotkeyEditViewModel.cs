@@ -494,25 +494,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
     {
         return new SaveHotkeyActionRequest(
             _hotkeyActionId,
-            HotkeyTitle,
-            _gesture,
-            IsEnabled,
-            Content,
-            Description,
-            _draft.ImagePath,
-            _draft.ThumbnailPath,
-            ActionType,
-            LaunchPath,
-            SlotImageMode,
-            autoIcon,
-            LaunchUrl,
-            SelectedMediaProvider,
-            SelectedMediaCommand,
-            PasteShortcutMode,
-            TerminalCommand,
-            SelectedTerminalShell,
-            RunAsAdministrator,
-            SelectedFileActionMode);
+            _draft.ToHotkeyActionSaveData(_gesture, IsEnabled, autoIcon));
     }
 
     private void Cancel()

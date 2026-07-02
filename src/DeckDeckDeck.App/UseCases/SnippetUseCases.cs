@@ -31,17 +31,18 @@ public sealed class SaveSnippetUseCase
         SaveSnippetRequest request,
         bool requestAutoBackup)
     {
+        var data = request.Data;
         var validation = SnippetRules.ValidateForSave(
-            request.Title,
-            request.Content,
-            request.ActionType,
-            request.LaunchPath,
-            request.LaunchUrl,
-            request.SelectedMediaProvider,
-            request.SelectedMediaCommand,
-            request.TerminalCommand,
-            request.SelectedTerminalShell,
-            request.RunAsAdministrator);
+            data.Title,
+            data.Content,
+            data.ActionType,
+            data.LaunchPath,
+            data.LaunchUrl,
+            data.MediaProvider ?? SnippetMediaProvider.System,
+            data.MediaCommand ?? SnippetMediaCommand.PlayPause,
+            data.TerminalCommand,
+            data.TerminalShell ?? SnippetTerminalShell.Cmd,
+            data.RunAsAdministrator);
 
         if (!validation.Succeeded)
         {
@@ -60,24 +61,15 @@ public sealed class SaveSnippetUseCase
             return SaveSnippetResult.Failure(slotSaveResult.ErrorMessage!);
         }
 
-        var saveData = new SnippetSaveData(
-            request.Title,
-            request.Content,
-            request.Description,
-            request.ImagePath,
-            request.ThumbnailPath,
-            request.ActionType,
-            request.LaunchPath,
-            request.SlotImageMode,
-            request.AutoIcon,
-            validation.NormalizedLaunchUrl,
-            validation.MediaProvider,
-            validation.MediaCommand,
-            request.PasteShortcutMode,
-            validation.NormalizedTerminalCommand,
-            validation.TerminalShell,
-            validation.RunAsAdministrator,
-            request.FileActionMode)
+        var saveData = (data with
+        {
+            LaunchUrl = validation.NormalizedLaunchUrl,
+            MediaProvider = validation.MediaProvider,
+            MediaCommand = validation.MediaCommand,
+            TerminalCommand = validation.NormalizedTerminalCommand,
+            TerminalShell = validation.TerminalShell,
+            RunAsAdministrator = validation.RunAsAdministrator
+        })
             .NormalizeForStorage();
 
         var snippet = request.SnippetId.HasValue
@@ -308,25 +300,9 @@ public sealed record SaveSnippetRequest(
     Guid CategoryId,
     SlotKey SlotKey,
     Guid? SnippetId,
-    string Title,
-    string Content,
-    string? Description,
-    string? ImagePath,
-    string? ThumbnailPath,
-    SnippetActionType ActionType,
-    string LaunchPath,
-    SlotImageMode SlotImageMode,
-    AutoIconCacheEntry? AutoIcon,
-    string? LaunchUrl,
-    SnippetMediaProvider SelectedMediaProvider,
-    SnippetMediaCommand SelectedMediaCommand,
     bool IsSlotEnabled,
     bool OriginalIsSlotEnabled,
-    PasteShortcutMode PasteShortcutMode = PasteShortcutMode.CtrlV,
-    string TerminalCommand = "",
-    SnippetTerminalShell SelectedTerminalShell = SnippetTerminalShell.Cmd,
-    bool RunAsAdministrator = true,
-    FileActionMode FileActionMode = FileActionMode.Launch);
+    SnippetSaveData Data);
 
 public sealed record SaveSnippetResult(
     bool Succeeded,

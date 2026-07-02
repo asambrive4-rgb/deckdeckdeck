@@ -38,6 +38,8 @@ public sealed class CategoryViewModel
 
     public string Title { get; }
 
+    public Guid CategoryId => _category.Id;
+
     public string Subtitle { get; }
 
     public NumpadGridViewModel NumpadGrid { get; }

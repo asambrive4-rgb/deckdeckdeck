@@ -97,4 +97,8 @@ public sealed record SpotifyMediaActionGatewayResult(
 
 public sealed record SpotifyConnectionGatewayResult(
     bool Succeeded,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    string? AccessToken = null,
+    string? RefreshToken = null,
+    DateTimeOffset? ExpiresAt = null,
+    string? DisplayName = null);

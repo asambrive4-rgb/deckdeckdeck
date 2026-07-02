@@ -216,6 +216,55 @@ public sealed class ExecutableActionEditDraft
         return _autoIcon;
     }
 
+    public SnippetSaveData ToSnippetSaveData(AutoIconCacheEntry? autoIcon = null)
+    {
+        return new SnippetSaveData(
+            Title,
+            Content,
+            Description,
+            ImagePath,
+            ThumbnailPath,
+            ActionType,
+            LaunchPath,
+            SlotImageMode,
+            autoIcon ?? _autoIcon,
+            LaunchUrl,
+            MediaProvider,
+            MediaCommand,
+            PasteShortcutMode,
+            TerminalCommand,
+            TerminalShell,
+            RunAsAdministrator,
+            FileActionMode);
+    }
+
+    public HotkeyActionSaveData ToHotkeyActionSaveData(
+        HotkeyGesture? gesture,
+        bool isEnabled,
+        AutoIconCacheEntry? autoIcon = null)
+    {
+        return new HotkeyActionSaveData(
+            Title,
+            gesture,
+            isEnabled,
+            Content,
+            Description,
+            ImagePath,
+            ThumbnailPath,
+            ActionType,
+            LaunchPath,
+            SlotImageMode,
+            autoIcon ?? _autoIcon,
+            LaunchUrl,
+            MediaProvider,
+            MediaCommand,
+            PasteShortcutMode,
+            TerminalCommand,
+            TerminalShell,
+            RunAsAdministrator,
+            FileActionMode);
+    }
+
     public void UpdateAutoIconPreview()
     {
         if (SlotImageMode == SlotImageMode.None)

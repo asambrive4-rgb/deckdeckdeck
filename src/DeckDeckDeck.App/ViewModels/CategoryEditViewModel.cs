@@ -14,14 +14,12 @@ public sealed class CategoryEditViewModel : ObservableObject
     private readonly Action _cancel;
     private readonly DeleteCategoryUseCase _deleteCategoryUseCase;
     private readonly IDialogAdapter _dialogService;
-    private readonly EditableImageDraft _imageState;
+    private readonly CategoryEditDraft _draft;
     private readonly IAppLogger? _loggingService;
     private readonly Guid? _categoryId;
-    private readonly IStoredImagePathResolver? _storedImagePathResolver;
     private bool _originalIsSlotEnabled;
     private readonly SaveCategoryUseCase _saveCategoryUseCase;
     private readonly Action<string> _showStatus;
-    private readonly IImageFileRepository? _thumbnailService;
     private readonly TransferCategoryUseCase _transferCategoryUseCase;
     private string _description = string.Empty;
     private string _errorMessage = string.Empty;
@@ -53,13 +51,14 @@ public sealed class CategoryEditViewModel : ObservableObject
         _transferCategoryUseCase = transferCategoryUseCase;
         _dialogService = dialogService;
         _loggingService = loggingService;
-        _storedImagePathResolver = storedImagePathResolver;
         _cancel = cancel;
         _afterSave = afterSave;
         _afterDelete = afterDelete;
         _showStatus = showStatus;
-        _thumbnailService = thumbnailService;
-        _imageState = new EditableImageDraft(category?.ImagePath, category?.ThumbnailPath, thumbnailService);
+        _draft = CategoryEditDraft.FromCategory(
+            category,
+            thumbnailService,
+            storedImagePathResolver);
 
         _name = category?.Name ?? string.Empty;
         _description = category?.Description ?? string.Empty;
@@ -120,9 +119,9 @@ public sealed class CategoryEditViewModel : ObservableObject
         private set => SetProperty(ref _errorMessage, value);
     }
 
-    public string? ThumbnailPath => ResolveDisplayPath(_imageState.ThumbnailPath);
+    public string? ThumbnailPath => _draft.PreviewThumbnailPath;
 
-    public bool HasImage => _imageState.HasImage;
+    public bool HasImage => _draft.HasImage;
 
     public ICommand SaveCommand { get; }
 
@@ -173,7 +172,7 @@ public sealed class CategoryEditViewModel : ObservableObject
         if (result.SavedSlotOnly)
         {
             _originalIsSlotEnabled = IsSlotEnabled;
-            _imageState.DeleteCurrentUnsavedImage();
+            _draft.DeleteCurrentUnsavedImage();
             _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
             _cancel();
             return null;
@@ -181,8 +180,7 @@ public sealed class CategoryEditViewModel : ObservableObject
 
         var category = result.Category!;
 
-        _imageState.DeleteOriginalImageIfReplaced();
-        _imageState.MarkCurrentAsOriginal();
+        _draft.MarkSaved();
         _originalIsSlotEnabled = IsSlotEnabled;
         ErrorMessage = string.Empty;
 
@@ -196,15 +194,15 @@ public sealed class CategoryEditViewModel : ObservableObject
             _categoryId,
             Name,
             Description,
-            _imageState.ImagePath,
-            _imageState.ThumbnailPath,
+            _draft.ImagePath,
+            _draft.ThumbnailPath,
             IsSlotEnabled,
             _originalIsSlotEnabled);
     }
 
     private void Cancel()
     {
-        _imageState.DeleteCurrentUnsavedImage();
+        _draft.DeleteCurrentUnsavedImage();
         _cancel();
     }
 
@@ -224,7 +222,7 @@ public sealed class CategoryEditViewModel : ObservableObject
             return;
         }
 
-        _imageState.DeleteCurrentUnsavedImage();
+        _draft.DeleteCurrentUnsavedImage();
         _deleteCategoryUseCase.Execute(_categoryId.Value);
 
         _showStatus("카테고리를 삭제했습니다.");
@@ -288,8 +286,7 @@ public sealed class CategoryEditViewModel : ObservableObject
             }
 
             var transferredCategory = result.Category!;
-            _imageState.DeleteOriginalImageIfReplaced();
-            _imageState.MarkCurrentAsOriginal();
+            _draft.MarkSaved();
             _originalIsSlotEnabled = IsSlotEnabled;
             _afterSave(transferredCategory);
             _showStatus(getStatusMessage(targetSlotKey));
@@ -318,7 +315,7 @@ public sealed class CategoryEditViewModel : ObservableObject
 
     private void ChooseImage()
     {
-        if (_thumbnailService is null)
+        if (!_draft.CanStoreImages)
         {
             ErrorMessage = "이미지 저장소가 준비되지 않았습니다.";
             return;
@@ -337,7 +334,7 @@ public sealed class CategoryEditViewModel : ObservableObject
     {
         try
         {
-            _imageState.ReplaceWithStoredImage(sourcePath);
+            _draft.ReplaceImageFromPath(sourcePath);
             NotifyImageChanged();
             ErrorMessage = string.Empty;
         }
@@ -350,7 +347,7 @@ public sealed class CategoryEditViewModel : ObservableObject
 
     private void RemoveImage()
     {
-        _imageState.RemoveImage();
+        _draft.RemoveImage();
         NotifyImageChanged();
     }
 
@@ -358,11 +355,6 @@ public sealed class CategoryEditViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ThumbnailPath));
         OnPropertyChanged(nameof(HasImage));
-    }
-
-    private string? ResolveDisplayPath(string? storedPath)
-    {
-        return _storedImagePathResolver?.ResolveDisplayPath(storedPath) ?? storedPath;
     }
 
     private static IReadOnlyList<CategoryTransferTargetSlot> BuildTransferTargetSlots(

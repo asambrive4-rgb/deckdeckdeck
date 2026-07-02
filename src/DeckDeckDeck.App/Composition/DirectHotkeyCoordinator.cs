@@ -5,11 +5,12 @@ namespace DeckDeckDeck.App.Composition;
 
 internal sealed class DirectHotkeyCoordinator : IDisposable
 {
-    private readonly DirectHotkeyRegistrar _directHotkeyRegistrar;
+    private readonly IDirectHotkeyRegistrar _directHotkeyRegistrar;
     private readonly MainViewModel _viewModel;
+    private bool _isStarted;
 
     public DirectHotkeyCoordinator(
-        DirectHotkeyRegistrar directHotkeyRegistrar,
+        IDirectHotkeyRegistrar directHotkeyRegistrar,
         MainViewModel viewModel)
     {
         _directHotkeyRegistrar = directHotkeyRegistrar;
@@ -22,15 +23,16 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
 
     public IReadOnlyList<string> Start()
     {
-        var failures = _directHotkeyRegistrar.Start();
-        Refresh();
-        return failures;
+        return RefreshAndStartWhenNeeded();
     }
 
     public void Refresh()
     {
-        _directHotkeyRegistrar.Refresh(_viewModel.LoadActiveDirectHotkeys());
-        _directHotkeyRegistrar.IsSuspended = _viewModel.IsCapturingHotkeyInput;
+        var failures = RefreshAndStartWhenNeeded();
+        if (failures.Count > 0)
+        {
+            _viewModel.ReportHotkeyRegistrationFailure(failures);
+        }
     }
 
     public void Dispose()
@@ -43,6 +45,22 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
     private void OnDirectHotkeysChanged(object? sender, EventArgs e)
     {
         Refresh();
+    }
+
+    private IReadOnlyList<string> RefreshAndStartWhenNeeded()
+    {
+        var registrations = _viewModel.LoadActiveDirectHotkeys();
+        _directHotkeyRegistrar.Refresh(registrations);
+        _directHotkeyRegistrar.IsSuspended = _viewModel.IsCapturingHotkeyInput;
+
+        if (_isStarted || registrations.Count == 0)
+        {
+            return [];
+        }
+
+        var failures = _directHotkeyRegistrar.Start();
+        _isStarted = failures.Count == 0;
+        return failures;
     }
 
     private void OnDirectHotkeyPressed(object? sender, DirectHotkeyPressedEventArgs e)

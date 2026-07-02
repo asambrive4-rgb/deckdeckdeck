@@ -83,7 +83,7 @@
                                       VerticalAlignment="Center">
                                     <Border x:Name="ThumbnailFrame"
                                             Style="{StaticResource Deck.SlotThumbnailFrameBorderStyle}">
-                                        <Image Source="{Binding ThumbnailPath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=42}"
+                                        <Image Source="{Binding ThumbnailPath, IsAsync=True, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=42}"
                                                Width="42"
                                                Height="42"
                                                Stretch="UniformToFill">

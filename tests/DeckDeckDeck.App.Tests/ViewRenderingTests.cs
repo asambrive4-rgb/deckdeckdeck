@@ -355,7 +355,7 @@ public sealed class ViewRenderingTests
     private static ISpotifyConnectionUseCase CreateSpotifyConnectionUseCase(TestServices services)
     {
         var urlLaunchService = new RecordingUrlLaunchGatewayAdapter();
-        var spotifyConnectionService = new SpotifyConnectionGatewayAdapter(services.SettingsRepository, urlLaunchService);
+        var spotifyConnectionService = new SpotifyConnectionGatewayAdapter(urlLaunchService);
         return new SpotifyConnectionUseCase(
             services.SettingsRepository,
             spotifyConnectionService,

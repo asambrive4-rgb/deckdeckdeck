@@ -1,16 +1,14 @@
-using System.IO;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Diagnostics;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.ViewModels;
-using DrawingIcon = System.Drawing.Icon;
 
 namespace DeckDeckDeck.App;
 
@@ -26,10 +24,24 @@ public partial class MainWindow : Window
     private IntPtr _windowHandle;
     private IntPtr _lastPasteTargetWindowHandle;
     private bool _allowClose;
+    private bool _isHidingToTrayFromClose;
+    private readonly AppIconProvider _iconProvider;
+    private readonly StartupTimingLog? _startupTiming;
 
     public MainWindow()
+        : this(new AppIconProvider(), startupTiming: null)
     {
-        InitializeComponent();
+    }
+
+    internal MainWindow(AppIconProvider iconProvider, StartupTimingLog? startupTiming)
+    {
+        _iconProvider = iconProvider;
+        _startupTiming = startupTiming;
+        using (_startupTiming?.Measure("main window initialize component"))
+        {
+            InitializeComponent();
+        }
+
         UseApplicationIcon();
         WindowStartupLocation = WindowStartupLocation.Manual;
         SourceInitialized += OnSourceInitialized;
@@ -63,24 +75,16 @@ public partial class MainWindow : Window
 
     private void UseApplicationIcon()
     {
-        var processPath = Environment.ProcessPath;
-        if (string.IsNullOrWhiteSpace(processPath) || !File.Exists(processPath))
+        using (_startupTiming?.Measure("window icon load"))
         {
-            return;
-        }
+            var icon = _iconProvider.GetWindowIcon();
+            if (icon is null)
+            {
+                return;
+            }
 
-        using var icon = DrawingIcon.ExtractAssociatedIcon(processPath);
-        if (icon is null)
-        {
-            return;
+            Icon = icon;
         }
-
-        var imageSource = Imaging.CreateBitmapSourceFromHIcon(
-            icon.Handle,
-            Int32Rect.Empty,
-            BitmapSizeOptions.FromEmptyOptions());
-        imageSource.Freeze();
-        Icon = imageSource;
     }
 
     internal void AllowCloseForExit()
@@ -127,8 +131,16 @@ public partial class MainWindow : Window
         _paletteWindowController.Attach(_windowHandle);
         ApplyWindowPlacement(IntPtr.Zero);
 
-        var failures = _globalHotkeyRegistrar.Start(_windowHandle).ToList();
-        failures.AddRange(_directHotkeyCoordinator?.Start() ?? []);
+        List<string> failures;
+        using (_startupTiming?.Measure("global hotkey registration"))
+        {
+            failures = _globalHotkeyRegistrar.Start(_windowHandle).ToList();
+        }
+
+        using (_startupTiming?.Measure("direct hotkey registration"))
+        {
+            failures.AddRange(_directHotkeyCoordinator?.Start() ?? []);
+        }
 
         if (failures.Count > 0 && DataContext is MainViewModel viewModel)
         {
@@ -184,15 +196,28 @@ public partial class MainWindow : Window
         }
 
         e.Cancel = true;
-        WindowState = WindowState.Minimized;
-        SaveWindowPlacement();
-        Hide();
+        _isHidingToTrayFromClose = true;
+        try
+        {
+            SaveWindowPlacement();
+            WindowState = WindowState.Minimized;
+            Hide();
+        }
+        finally
+        {
+            _isHidingToTrayFromClose = false;
+        }
     }
 
     private void OnStateChanged(object? sender, EventArgs e)
     {
         if (WindowState == WindowState.Minimized)
         {
+            if (_isHidingToTrayFromClose)
+            {
+                return;
+            }
+
             SaveWindowPlacement();
             Hide();
         }
@@ -340,7 +365,7 @@ public partial class MainWindow : Window
 
         if (!IsVisible)
         {
-            ApplyWindowPlacement(_lastPasteTargetWindowHandle);
+            ApplyWindowPlacement(_lastPasteTargetWindowHandle, settings);
             Show();
         }
 
@@ -378,7 +403,7 @@ public partial class MainWindow : Window
         Focus();
     }
 
-    private void ApplyWindowPlacement(IntPtr fallbackWindowHandle)
+    private void ApplyWindowPlacement(IntPtr fallbackWindowHandle, AppSettings? settings = null)
     {
         if (DataContext is not MainViewModel viewModel)
         {
@@ -387,7 +412,7 @@ public partial class MainWindow : Window
 
         var placement = _windowPlacementResolver.ResolveForWindow(
             this,
-            viewModel.LoadSettings(),
+            settings ?? viewModel.LoadSettings(),
             fallbackWindowHandle);
         Left = placement.Left;
         Top = placement.Top;

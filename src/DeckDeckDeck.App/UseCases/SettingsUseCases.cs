@@ -210,16 +210,44 @@ public sealed class SpotifyConnectionUseCase : ISpotifyConnectionUseCase
             return SpotifyConnectionUseCaseResult.Failure("Spotify Client ID를 입력해 주세요.");
         }
 
-        var result = await _spotifyConnectionGateway.ConnectAsync(clientId, cancellationToken);
-        return result.Succeeded
-            ? SpotifyConnectionUseCaseResult.Success(GetState())
-            : SpotifyConnectionUseCaseResult.Failure(
+        var trimmedClientId = clientId.Trim();
+        var result = await _spotifyConnectionGateway.ConnectAsync(trimmedClientId, cancellationToken);
+        if (!result.Succeeded)
+        {
+            return SpotifyConnectionUseCaseResult.Failure(
                 result.ErrorMessage ?? "Spotify 연결에 실패했습니다.");
+        }
+
+        if (string.IsNullOrWhiteSpace(result.AccessToken)
+            || string.IsNullOrWhiteSpace(result.RefreshToken)
+            || result.ExpiresAt is null)
+        {
+            return SpotifyConnectionUseCaseResult.Failure("Spotify 토큰을 받지 못했습니다.");
+        }
+
+        var settings = _settingsStore.Load();
+        settings.SpotifyClientId = trimmedClientId;
+        settings.SpotifyAccessToken = result.AccessToken;
+        settings.SpotifyRefreshToken = result.RefreshToken;
+        settings.SpotifyTokenExpiresAt = result.ExpiresAt;
+        settings.SpotifyConnectedUserDisplayName = string.IsNullOrWhiteSpace(result.DisplayName)
+            ? "Spotify 계정"
+            : result.DisplayName;
+        _settingsStore.Save(settings);
+
+        return SpotifyConnectionUseCaseResult.Success(GetState());
     }
 
     public SpotifyConnectionState Disconnect()
     {
-        _spotifyConnectionGateway.Disconnect();
+        var settings = _settingsStore.Load();
+        settings.SpotifyClientId = string.Empty;
+        settings.SpotifyAccessToken = string.Empty;
+        settings.SpotifyRefreshToken = string.Empty;
+        settings.SpotifyTokenExpiresAt = null;
+        settings.SpotifyConnectedUserDisplayName = string.Empty;
+        _settingsStore.Save(settings);
+
         return GetState();
     }
 }

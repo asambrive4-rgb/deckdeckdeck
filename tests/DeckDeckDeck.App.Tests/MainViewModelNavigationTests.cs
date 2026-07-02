@@ -17,6 +17,19 @@ namespace DeckDeckDeck.App.Tests;
 public sealed class MainViewModelNavigationTests
 {
     [Fact]
+    public void MainViewModelLoadsHomeOnlyAfterExplicitInitialization()
+    {
+        var services = CreateServices();
+        var viewModel = CreateMainViewModel(services, initializeHome: false);
+
+        Assert.Null(viewModel.CurrentViewModel);
+
+        viewModel.InitializeHome();
+
+        Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+    }
+
+    [Fact]
     public void HomeHotkeyAlwaysReturnsToHome()
     {
         var services = CreateServices();
@@ -30,6 +43,18 @@ public sealed class MainViewModelNavigationTests
     }
 
     [Fact]
+    public void HomeHotkeyDoesNotRebuildHomeWhenAlreadyVisible()
+    {
+        var services = CreateServices();
+        var viewModel = CreateMainViewModel(services);
+        var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+
+        viewModel.OpenHomeFromHotkey();
+
+        Assert.Same(home, viewModel.CurrentViewModel);
+    }
+
+    [Fact]
     public void DirectCategoryHotkeyOpensExistingCategory()
     {
         var services = CreateServices();
@@ -40,6 +65,20 @@ public sealed class MainViewModelNavigationTests
 
         Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
         Assert.Equal("Writing 카테고리", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void DirectCategoryHotkeyDoesNotRebuildCurrentCategory()
+    {
+        var services = CreateServices();
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var viewModel = CreateMainViewModel(services);
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var category = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+
+        Assert.Same(category, viewModel.CurrentViewModel);
     }
 
     [Fact]

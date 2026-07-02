@@ -1,11 +1,12 @@
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
+using DeckDeckDeck.App.ViewModels;
 using System.Threading;
 
-namespace DeckDeckDeck.App.ViewModels;
+namespace DeckDeckDeck.App.Composition;
 
-internal sealed class SnippetActionRunner
+internal sealed class ActionExecutionCoordinator
 {
     private const int NotExecuting = 0;
     private const int Executing = 1;
@@ -18,7 +19,7 @@ internal sealed class SnippetActionRunner
     private readonly Action<string> _showStatus;
     private int _isExecuting;
 
-    public SnippetActionRunner(
+    public ActionExecutionCoordinator(
         ILoadSettingsUseCase loadSettingsUseCase,
         PrepareSnippetActionUseCase prepareSnippetActionUseCase,
         ExecuteSnippetActionUseCase executeSnippetActionUseCase,
@@ -32,11 +33,6 @@ internal sealed class SnippetActionRunner
         _callbacks = callbacks;
         _showStatus = showStatus;
         _logger = logger;
-    }
-
-    public async Task ExecuteAsync(Snippet snippet)
-    {
-        await ExecuteAsync(ExecutableAction.FromSnippet(snippet));
     }
 
     public async Task ExecuteAsync(ExecutableAction action)

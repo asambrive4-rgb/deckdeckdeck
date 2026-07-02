@@ -66,7 +66,8 @@ internal static class TestAppFactory
         ITerminalCommandGateway? terminalCommandService = null,
         ISpotifyConnectionGateway? spotifyConnectionService = null,
         ISpotifyMediaActionGateway? spotifyMediaActionGatewayAdapter = null,
-        IAutoBackupCoordinator? autoBackupCoordinator = null)
+        IAutoBackupCoordinator? autoBackupCoordinator = null,
+        bool initializeHome = true)
     {
         var effectiveUrlLaunchGatewayAdapter = urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter();
         var composition = AppComposition.Create(
@@ -83,9 +84,7 @@ internal static class TestAppFactory
             mediaActionService ?? new RecordingSystemMediaActionGatewayAdapter(),
             terminalCommandService ?? new RecordingTerminalCommandGatewayAdapter(),
             spotifyConnectionService
-                ?? new SpotifyConnectionGatewayAdapter(
-                    services.SettingsRepository,
-                    effectiveUrlLaunchGatewayAdapter),
+                ?? new SpotifyConnectionGatewayAdapter(effectiveUrlLaunchGatewayAdapter),
             spotifyMediaActionGatewayAdapter ?? new RecordingSpotifyMediaActionGatewayAdapter(),
             services.StoredImagePathResolver,
             services.FileLogger,
@@ -94,14 +93,31 @@ internal static class TestAppFactory
             new FakeClipboardAdapter(null),
             filePasteService ?? new RecordingFilePasteGateway());
 
-        return new MainViewModel(
-            composition.CreateMainViewModelDependencies(autoBackupCoordinator),
-            new MainViewModelCallbacks(
-                getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
-                hideWindowAfterPaste ?? (() => { }),
-                enterEditMode ?? (() => { }),
-                createPasteSelectionCompletion
-                    ?? (() => completePasteSelection ?? (() => { }))));
+        MainViewModel? viewModel = null;
+        var callbacks = new MainViewModelCallbacks(
+            getPasteTargetWindowHandle ?? (() => IntPtr.Zero),
+            hideWindowAfterPaste ?? (() => { }),
+            enterEditMode ?? (() => { }),
+            createPasteSelectionCompletion
+                ?? (() => completePasteSelection ?? (() => { })));
+        var actionExecutionCoordinator = new ActionExecutionCoordinator(
+            new LoadSettingsUseCase(services.SettingsRepository),
+            new PrepareSnippetActionUseCase(),
+            composition.ExecuteSnippetActionUseCase,
+            callbacks,
+            message => viewModel?.ReportBackgroundStatus(message),
+            services.FileLogger);
+        viewModel = new MainViewModel(
+            composition.CreateMainViewModelDependencies(
+                autoBackupCoordinator,
+                actionExecutionCoordinator.ExecuteAsync),
+            callbacks);
+        if (initializeHome)
+        {
+            viewModel.InitializeHome();
+        }
+
+        return viewModel;
     }
 
     public static SettingsViewModel CreateSettingsViewModel(
@@ -124,7 +140,7 @@ internal static class TestAppFactory
         var effectiveSpotifyConnectionUseCase = spotifyConnectionUseCase
             ?? new SpotifyConnectionUseCase(
                 services.SettingsRepository,
-                new SpotifyConnectionGatewayAdapter(services.SettingsRepository, urlLaunchGateway),
+                new SpotifyConnectionGatewayAdapter(urlLaunchGateway),
                 urlLaunchGateway);
 
         return new SettingsViewModel(

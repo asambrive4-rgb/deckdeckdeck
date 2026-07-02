@@ -1,15 +1,16 @@
-using System.IO;
 using System.Windows;
 using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Infrastructure.Diagnostics;
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
-using DrawingIcon = System.Drawing.Icon;
-using DrawingSystemIcons = System.Drawing.SystemIcons;
+using DeckDeckDeck.App.ViewModels;
+using DeckDeckDeck.App.Views.Converters;
 using FormsContextMenuStrip = System.Windows.Forms.ContextMenuStrip;
 using FormsNotifyIcon = System.Windows.Forms.NotifyIcon;
 using FormsToolStripMenuItem = System.Windows.Forms.ToolStripMenuItem;
+using DispatcherPriority = System.Windows.Threading.DispatcherPriority;
 
 namespace DeckDeckDeck.App;
 
@@ -17,6 +18,7 @@ public partial class App : Application
 {
     private IAppInstanceCoordinator? _appInstanceCoordinator;
     private FormsNotifyIcon? _trayIcon;
+    private AppIconProvider? _appIconProvider;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -24,16 +26,21 @@ public partial class App : Application
 
         try
         {
+            var startupTiming = new StartupTimingLog();
             var appInstanceCoordinator = new AppInstanceCoordinator();
-            var startupDecision = new AppStartupUseCase(appInstanceCoordinator)
-                .ExecuteAsync(AppStartupRequest.Default)
-                .GetAwaiter()
-                .GetResult();
+            AppStartupDecision startupDecision;
+            using (startupTiming.Measure("app instance decision"))
+            {
+                startupDecision = new AppStartupUseCase(appInstanceCoordinator)
+                    .ExecuteAsync(AppStartupRequest.Default)
+                    .GetAwaiter()
+                    .GetResult();
+            }
 
             switch (startupDecision.Kind)
             {
                 case AppStartupDecisionKind.RunPrimary:
-                    StartPrimaryInstance(appInstanceCoordinator);
+                    StartPrimaryInstance(appInstanceCoordinator, startupTiming);
                     break;
                 case AppStartupDecisionKind.ForwardedToPrimaryAndExit:
                     appInstanceCoordinator.Dispose();
@@ -60,30 +67,62 @@ public partial class App : Application
         DisposeTrayIcon();
         _appInstanceCoordinator?.Dispose();
         _appInstanceCoordinator = null;
+        _appIconProvider = null;
         base.OnExit(e);
     }
 
-    private void StartPrimaryInstance(IAppInstanceCoordinator appInstanceCoordinator)
+    private void StartPrimaryInstance(
+        IAppInstanceCoordinator appInstanceCoordinator,
+        StartupTimingLog startupTiming)
     {
         _appInstanceCoordinator = appInstanceCoordinator;
 
-        var services = AppComposition.CreateDefault();
-        var mainWindow = new MainWindow();
-        var viewModel = MainViewModelFactory.Create(
-            services,
-            mainWindow.GetPasteTargetWindowHandle,
-            mainWindow.HideAfterPaste,
-            mainWindow.EnterEditMode,
-            createPasteSelectionCompletion: mainWindow.CreatePasteSelectionCompletion);
+        AppComposition services;
+        using (startupTiming.Measure("app composition"))
+        {
+            services = AppComposition.CreateDefault();
+        }
+
+        _appIconProvider = new AppIconProvider();
+        MainWindow mainWindow;
+        using (startupTiming.Measure("main window construction"))
+        {
+            mainWindow = new MainWindow(_appIconProvider, startupTiming);
+        }
+
+        MainViewModel viewModel;
+        using (startupTiming.Measure("main view model construction"))
+        {
+            viewModel = MainViewModelFactory.Create(
+                services,
+                mainWindow.GetPasteTargetWindowHandle,
+                mainWindow.HideAfterPaste,
+                mainWindow.EnterEditMode,
+                createPasteSelectionCompletion: mainWindow.CreatePasteSelectionCompletion);
+        }
+
         mainWindow.AttachViewModel(viewModel);
+        RegisterThumbnailPrewarm(viewModel);
+        mainWindow.ContentRendered += (_, _) => startupTiming.Mark("first content rendered");
 
         MainWindow = mainWindow;
-        CreateTrayIcon();
+        using (startupTiming.Measure("tray icon creation"))
+        {
+            CreateTrayIcon(_appIconProvider);
+        }
+
         _appInstanceCoordinator.StartListening(ShowMainWindow);
-        MainWindow.Show();
+        using (startupTiming.Measure("main window show"))
+        {
+            MainWindow.Show();
+        }
+
+        _ = Dispatcher.BeginInvoke(
+            () => InitializeHomeAfterFirstRender(viewModel, services.FileLogger, startupTiming),
+            DispatcherPriority.ApplicationIdle);
     }
 
-    private void CreateTrayIcon()
+    private void CreateTrayIcon(AppIconProvider iconProvider)
     {
         var menu = new FormsContextMenuStrip();
         menu.Items.Add(new FormsToolStripMenuItem("열기", null, (_, _) => ShowMainWindow()));
@@ -92,7 +131,7 @@ public partial class App : Application
         _trayIcon = new FormsNotifyIcon
         {
             ContextMenuStrip = menu,
-            Icon = CreateTrayIconImage(),
+            Icon = iconProvider.CreateTrayIcon(),
             Text = "DeckDeckDeck 실행 중",
             Visible = true
         };
@@ -100,19 +139,49 @@ public partial class App : Application
         _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
     }
 
-    private static DrawingIcon CreateTrayIconImage()
+    private static void InitializeHomeAfterFirstRender(
+        MainViewModel viewModel,
+        FileLogger? fileLogger,
+        StartupTimingLog startupTiming)
     {
-        var processPath = Environment.ProcessPath;
-        if (!string.IsNullOrWhiteSpace(processPath) && File.Exists(processPath))
+        try
         {
-            var icon = DrawingIcon.ExtractAssociatedIcon(processPath);
-            if (icon is not null)
+            using (startupTiming.Measure("initial home load"))
             {
-                return icon;
+                viewModel.InitializeHome();
             }
         }
+        catch (Exception ex)
+        {
+            fileLogger?.Log("Initial home loading failed.", ex);
+            viewModel.ReportBackgroundStatus("홈 화면을 불러오지 못했습니다.");
+        }
+        finally
+        {
+            startupTiming.FlushAsync(fileLogger);
+        }
+    }
 
-        return (DrawingIcon)DrawingSystemIcons.Application.Clone();
+    private static void RegisterThumbnailPrewarm(MainViewModel viewModel)
+    {
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.CurrentViewModel))
+            {
+                QueueThumbnailPrewarm(viewModel);
+            }
+        };
+    }
+
+    private static void QueueThumbnailPrewarm(MainViewModel viewModel)
+    {
+        var thumbnailPaths = viewModel.GetVisibleThumbnailPaths();
+        if (thumbnailPaths.Count == 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(() => CachedImageSourceConverter.PrewarmFiles(thumbnailPaths, decodePixelWidth: 42));
     }
 
     private void ExitApplication()

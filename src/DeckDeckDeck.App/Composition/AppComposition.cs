@@ -61,7 +61,7 @@ internal sealed record AppComposition(
             fileLogger);
         var snippetImageResolver = new SnippetImageResolver(fileIconCacheRepository, storedImagePathResolver);
         var urlLaunchGatewayAdapter = new UrlLaunchGatewayAdapter();
-        var spotifyConnectionGatewayAdapter = new SpotifyConnectionGatewayAdapter(settingsRepository, urlLaunchGatewayAdapter);
+        var spotifyConnectionGatewayAdapter = new SpotifyConnectionGatewayAdapter(urlLaunchGatewayAdapter);
         var spotifyMediaActionGatewayAdapter = new SpotifyMediaActionGatewayAdapter(settingsRepository);
         var clipboardAdapter = new WpfClipboardAdapter();
         var fileLaunchGatewayAdapter = new FileLaunchGatewayAdapter();
@@ -136,7 +136,7 @@ internal sealed record AppComposition(
         var effectiveSystemMediaActionGatewayAdapter = mediaActionGateway ?? new SystemMediaActionGatewayAdapter();
         var effectiveTerminalCommandGatewayAdapter = terminalCommandGateway ?? new TerminalCommandGatewayAdapter();
         var effectiveSpotifyConnectionGatewayAdapter = spotifyConnectionGateway
-            ?? new SpotifyConnectionGatewayAdapter(settingsRepository, effectiveUrlLaunchGatewayAdapter);
+            ?? new SpotifyConnectionGatewayAdapter(effectiveUrlLaunchGatewayAdapter);
         var effectiveSpotifyMediaActionGatewayAdapter = spotifyMediaActionGateway
             ?? new SpotifyMediaActionGatewayAdapter(settingsRepository);
         var effectiveStoredImagePathResolver = storedImagePathResolver
@@ -186,7 +186,8 @@ internal sealed record AppComposition(
     }
 
     public MainViewModelDependencies CreateMainViewModelDependencies(
-        IAutoBackupCoordinator? autoBackupCoordinator)
+        IAutoBackupCoordinator? autoBackupCoordinator,
+        Func<ExecutableAction, Task> executeActionAsync)
     {
         var loadSettingsUseCase = new LoadSettingsUseCase(SettingsRepository);
         var saveCategoryUseCase = new SaveCategoryUseCase(
@@ -260,8 +261,7 @@ internal sealed record AppComposition(
             ResolveCategoryHotkeyUseCase,
             new LoadDirectHotkeyRegistrationsUseCase(HotkeyActionRepository),
             new ResolveExecutableHotkeyActionUseCase(HotkeyActionRepository),
-            new PrepareSnippetActionUseCase(),
-            ExecuteSnippetActionUseCase,
+            executeActionAsync,
             FileLogger,
             autoBackupCoordinator);
     }

@@ -5,7 +5,7 @@ using DeckDeckDeck.App.UseCases;
 
 namespace DeckDeckDeck.App.Infrastructure.Platform;
 
-public sealed class DirectHotkeyRegistrar : IDisposable
+public sealed class DirectHotkeyRegistrar : IDirectHotkeyRegistrar
 {
     private readonly Func<int, bool> _isKeyDown;
     private readonly Func<HotkeyGesture, bool> _shouldPassThrough;

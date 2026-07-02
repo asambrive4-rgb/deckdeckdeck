@@ -1,3 +1,4 @@
+using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 
@@ -10,8 +11,7 @@ internal sealed record MainViewModelDependencies(
     ResolveCategoryHotkeyUseCase ResolveCategoryHotkeyUseCase,
     LoadDirectHotkeyRegistrationsUseCase LoadDirectHotkeyRegistrationsUseCase,
     ResolveExecutableHotkeyActionUseCase ResolveExecutableHotkeyActionUseCase,
-    PrepareSnippetActionUseCase PrepareSnippetActionUseCase,
-    ExecuteSnippetActionUseCase ExecuteSnippetActionUseCase,
+    Func<ExecutableAction, Task> ExecuteActionAsync,
     IAppLogger? Logger,
     IAutoBackupCoordinator? AutoBackupCoordinator);
 

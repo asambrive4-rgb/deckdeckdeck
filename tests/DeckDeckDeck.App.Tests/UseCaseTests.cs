@@ -27,20 +27,21 @@ public sealed class UseCaseTests
             category.Id,
             SlotKey.Numpad3,
             SnippetId: null,
-            "Paste",
-            "Hello",
-            Description: null,
-            ImagePath: null,
-            ThumbnailPath: null,
-            SnippetActionType.PasteText,
-            LaunchPath: string.Empty,
-            SlotImageMode.Auto,
-            AutoIcon: null,
-            LaunchUrl: null,
-            SnippetMediaProvider.System,
-            SnippetMediaCommand.PlayPause,
             IsSlotEnabled: true,
-            OriginalIsSlotEnabled: true));
+            OriginalIsSlotEnabled: true,
+            Data: new SnippetSaveData(
+                "Paste",
+                "Hello",
+                Description: null,
+                ImagePath: null,
+                ThumbnailPath: null,
+                SnippetActionType.PasteText,
+                LaunchPath: string.Empty,
+                SlotImageMode.Auto,
+                AutoIcon: null,
+                LaunchUrl: null,
+                SnippetMediaProvider.System,
+                SnippetMediaCommand.PlayPause)));
 
         Assert.True(result.Succeeded);
         Assert.Equal("Paste", result.Snippet!.Title);
@@ -308,24 +309,12 @@ public sealed class UseCaseTests
         var services = CreateServices();
         var gateway = new RecordingSpotifyConnectionGateway
         {
-            OnConnect = clientId =>
-            {
-                var settings = services.SettingsRepository.Load();
-                settings.SpotifyClientId = clientId;
-                settings.SpotifyAccessToken = "access-token";
-                settings.SpotifyRefreshToken = "refresh-token";
-                settings.SpotifyConnectedUserDisplayName = "Spotify 계정";
-                services.SettingsRepository.Save(settings);
-            },
-            OnDisconnect = () =>
-            {
-                var settings = services.SettingsRepository.Load();
-                settings.SpotifyClientId = string.Empty;
-                settings.SpotifyAccessToken = string.Empty;
-                settings.SpotifyRefreshToken = string.Empty;
-                settings.SpotifyConnectedUserDisplayName = string.Empty;
-                services.SettingsRepository.Save(settings);
-            }
+            ConnectResult = new SpotifyConnectionGatewayResult(
+                true,
+                AccessToken: "access-token",
+                RefreshToken: "refresh-token",
+                ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+                DisplayName: "Spotify 계정")
         };
         var useCase = new SpotifyConnectionUseCase(
             services.SettingsRepository,
@@ -359,10 +348,6 @@ public sealed class UseCaseTests
 
         public List<string> ClientIds { get; } = [];
 
-        public Action<string>? OnConnect { get; init; }
-
-        public Action? OnDisconnect { get; init; }
-
         public SpotifyConnectionGatewayResult ConnectResult { get; init; } = new(true);
 
         public Task<SpotifyConnectionGatewayResult> ConnectAsync(
@@ -370,17 +355,7 @@ public sealed class UseCaseTests
             CancellationToken cancellationToken = default)
         {
             ClientIds.Add(clientId);
-            if (ConnectResult.Succeeded)
-            {
-                OnConnect?.Invoke(clientId);
-            }
-
             return Task.FromResult(ConnectResult);
-        }
-
-        public void Disconnect()
-        {
-            OnDisconnect?.Invoke();
         }
     }
 

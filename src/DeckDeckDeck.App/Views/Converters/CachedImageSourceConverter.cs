@@ -14,7 +14,7 @@ namespace DeckDeckDeck.App.Views.Converters;
 
 public sealed class CachedImageSourceConverter : IValueConverter
 {
-    private static readonly ConcurrentDictionary<CacheKey, ImageSource> Cache = new();
+    private static readonly ConcurrentDictionary<CacheKey, Lazy<ImageSource?>> Cache = new();
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -33,18 +33,7 @@ public sealed class CachedImageSourceConverter : IValueConverter
             return null;
         }
 
-        if (Cache.TryGetValue(key, out var cached))
-        {
-            return cached;
-        }
-
-        var image = LoadImage(key);
-        if (image is not null)
-        {
-            Cache.TryAdd(key, image);
-        }
-
-        return image;
+        return GetOrLoadImage(key);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -52,7 +41,27 @@ public sealed class CachedImageSourceConverter : IValueConverter
         return Binding.DoNothing;
     }
 
+    public static void PrewarmFiles(IEnumerable<string?> paths, int decodePixelWidth)
+    {
+        foreach (var path in paths)
+        {
+            if (string.IsNullOrWhiteSpace(path)
+                || !TryCreateCacheKey(path, decodePixelWidth, out var key)
+                || Cache.ContainsKey(key))
+            {
+                continue;
+            }
+
+            _ = GetOrLoadImage(key);
+        }
+    }
+
     private static bool TryCreateCacheKey(string path, object? parameter, out CacheKey key)
+    {
+        return TryCreateCacheKey(path, ParseDecodePixelWidth(parameter), out key);
+    }
+
+    private static bool TryCreateCacheKey(string path, int decodePixelWidth, out CacheKey key)
     {
         key = default;
 
@@ -66,7 +75,7 @@ public sealed class CachedImageSourceConverter : IValueConverter
 
             key = new CacheKey(
                 fullPath,
-                ParseDecodePixelWidth(parameter),
+                decodePixelWidth,
                 File.GetLastWriteTimeUtc(fullPath).Ticks);
             return true;
         }
@@ -98,6 +107,23 @@ public sealed class CachedImageSourceConverter : IValueConverter
         {
             return null;
         }
+    }
+
+    private static ImageSource? GetOrLoadImage(CacheKey key)
+    {
+        var lazyImage = Cache.GetOrAdd(
+            key,
+            static cacheKey => new Lazy<ImageSource?>(
+                () => LoadImage(cacheKey),
+                LazyThreadSafetyMode.ExecutionAndPublication));
+
+        var image = lazyImage.Value;
+        if (image is null)
+        {
+            Cache.TryRemove(key, out _);
+        }
+
+        return image;
     }
 
     private static int ParseDecodePixelWidth(object? parameter)

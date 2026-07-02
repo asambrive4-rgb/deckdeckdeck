@@ -92,6 +92,4 @@ public interface ISpotifyConnectionGateway
     Task<SpotifyConnectionGatewayResult> ConnectAsync(
         string clientId,
         CancellationToken cancellationToken = default);
-
-    void Disconnect();
 }
