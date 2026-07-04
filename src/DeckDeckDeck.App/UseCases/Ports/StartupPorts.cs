@@ -20,3 +20,36 @@ public interface IStoredPathMigrationGateway
 {
     void NormalizeManagedPaths();
 }
+
+public interface IStartupRegistrationGateway
+{
+    StartupRegistrationState GetState();
+
+    StartupRegistrationResult Save(StartupRegistrationSettings settings);
+}
+
+public sealed record StartupRegistrationSettings(
+    bool IsEnabled,
+    bool RunAsAdministrator);
+
+public sealed record StartupRegistrationState(
+    bool IsEnabled,
+    bool RunAsAdministrator)
+{
+    public static StartupRegistrationState Disabled { get; } = new(false, false);
+}
+
+public sealed record StartupRegistrationResult(
+    bool Succeeded,
+    string? ErrorMessage = null)
+{
+    public static StartupRegistrationResult Success()
+    {
+        return new StartupRegistrationResult(true);
+    }
+
+    public static StartupRegistrationResult Failure(string errorMessage)
+    {
+        return new StartupRegistrationResult(false, errorMessage);
+    }
+}

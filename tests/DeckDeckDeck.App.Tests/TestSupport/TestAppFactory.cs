@@ -86,6 +86,7 @@ internal static class TestAppFactory
             spotifyConnectionService
                 ?? new SpotifyConnectionGatewayAdapter(effectiveUrlLaunchGatewayAdapter),
             spotifyMediaActionGatewayAdapter ?? new RecordingSpotifyMediaActionGatewayAdapter(),
+            new RecordingStartupRegistrationGateway(),
             services.StoredImagePathResolver,
             services.FileLogger,
             services.ImageFileRepository,
@@ -131,6 +132,7 @@ internal static class TestAppFactory
         IDialogAdapter? dialogAdapter = null,
         ISpotifyConnectionUseCase? spotifyConnectionUseCase = null,
         IClipboardTextWriter? clipboardTextWriter = null,
+        IStartupRegistrationUseCase? startupRegistrationUseCase = null,
         ISaveSettingsUseCase? saveSettingsUseCase = null,
         ICreateManualBackupUseCase? createManualBackupUseCase = null,
         IRestoreBackupUseCase? restoreBackupUseCase = null)
@@ -152,6 +154,7 @@ internal static class TestAppFactory
                     autoBackupRequester),
             createManualBackupUseCase ?? new CreateManualBackupUseCase(effectiveBackupGateway),
             restoreBackupUseCase ?? new RestoreBackupUseCase(effectiveBackupGateway),
+            startupRegistrationUseCase ?? new RecordingStartupRegistrationUseCase(),
             effectiveSpotifyConnectionUseCase,
             clipboardTextWriter ?? new FakeClipboardAdapter(null),
             dialogAdapter ?? new DialogAdapter(),
@@ -492,6 +495,56 @@ internal sealed class RecordingAutoBackupCoordinator : IAutoBackupCoordinator
     public void RequestAutoBackup()
     {
         RequestCount++;
+    }
+}
+
+internal sealed class RecordingStartupRegistrationGateway : IStartupRegistrationGateway
+{
+    public StartupRegistrationState State { get; set; } = StartupRegistrationState.Disabled;
+
+    public StartupRegistrationResult SaveResult { get; set; } =
+        StartupRegistrationResult.Success();
+
+    public List<StartupRegistrationSettings> SavedSettings { get; } = [];
+
+    public StartupRegistrationState GetState()
+    {
+        return State;
+    }
+
+    public StartupRegistrationResult Save(StartupRegistrationSettings settings)
+    {
+        SavedSettings.Add(settings);
+        State = settings.IsEnabled
+            ? new StartupRegistrationState(true, settings.RunAsAdministrator)
+            : StartupRegistrationState.Disabled;
+
+        return SaveResult;
+    }
+}
+
+internal sealed class RecordingStartupRegistrationUseCase : IStartupRegistrationUseCase
+{
+    public StartupRegistrationState State { get; set; } = StartupRegistrationState.Disabled;
+
+    public StartupRegistrationResult SaveResult { get; set; } =
+        StartupRegistrationResult.Success();
+
+    public List<StartupRegistrationSettings> SavedSettings { get; } = [];
+
+    public StartupRegistrationState GetState()
+    {
+        return State;
+    }
+
+    public StartupRegistrationResult Save(StartupRegistrationSettings settings)
+    {
+        SavedSettings.Add(settings);
+        State = settings.IsEnabled
+            ? new StartupRegistrationState(true, settings.RunAsAdministrator)
+            : StartupRegistrationState.Disabled;
+
+        return SaveResult;
     }
 }
 

@@ -25,6 +25,7 @@ internal sealed record MainViewModelNavigatorDependencies(
     ISaveSettingsUseCase SaveSettingsUseCase,
     ICreateManualBackupUseCase CreateManualBackupUseCase,
     IRestoreBackupUseCase RestoreBackupUseCase,
+    IStartupRegistrationUseCase StartupRegistrationUseCase,
     IDialogAdapter DialogAdapter,
     SlotGridViewModelFactory SlotGridViewModelFactory,
     IImageFileRepository? ImageFileRepository,

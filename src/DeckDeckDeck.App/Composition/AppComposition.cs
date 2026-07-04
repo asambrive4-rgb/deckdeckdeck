@@ -26,6 +26,7 @@ internal sealed record AppComposition(
     ITerminalCommandGateway TerminalCommandGatewayAdapter,
     ISpotifyConnectionGateway SpotifyConnectionGatewayAdapter,
     ISpotifyMediaActionGateway SpotifyMediaActionGatewayAdapter,
+    IStartupRegistrationGateway StartupRegistrationGateway,
     IStoredImagePathResolver StoredImagePathResolver,
     FileLogger? FileLogger,
     ImageFileRepository? ImageFileRepository,
@@ -63,6 +64,7 @@ internal sealed record AppComposition(
         var urlLaunchGatewayAdapter = new UrlLaunchGatewayAdapter();
         var spotifyConnectionGatewayAdapter = new SpotifyConnectionGatewayAdapter(urlLaunchGatewayAdapter);
         var spotifyMediaActionGatewayAdapter = new SpotifyMediaActionGatewayAdapter(settingsRepository);
+        var startupRegistrationGateway = new WindowsStartupRegistrationGateway();
         var clipboardAdapter = new WpfClipboardAdapter();
         var fileLaunchGatewayAdapter = new FileLaunchGatewayAdapter();
         var terminalCommandGatewayAdapter = new TerminalCommandGatewayAdapter(appStoragePaths.TempPath);
@@ -88,6 +90,7 @@ internal sealed record AppComposition(
             terminalCommandGatewayAdapter,
             spotifyConnectionGatewayAdapter,
             spotifyMediaActionGatewayAdapter,
+            startupRegistrationGateway,
             storedImagePathResolver,
             fileLogger,
             imageFileRepository,
@@ -123,6 +126,7 @@ internal sealed record AppComposition(
         ITerminalCommandGateway? terminalCommandGateway,
         ISpotifyConnectionGateway? spotifyConnectionGateway,
         ISpotifyMediaActionGateway? spotifyMediaActionGateway,
+        IStartupRegistrationGateway? startupRegistrationGateway,
         IStoredImagePathResolver? storedImagePathResolver,
         FileLogger? fileLogger,
         ImageFileRepository? imageFileRepository,
@@ -139,6 +143,8 @@ internal sealed record AppComposition(
             ?? new SpotifyConnectionGatewayAdapter(effectiveUrlLaunchGatewayAdapter);
         var effectiveSpotifyMediaActionGatewayAdapter = spotifyMediaActionGateway
             ?? new SpotifyMediaActionGatewayAdapter(settingsRepository);
+        var effectiveStartupRegistrationGateway = startupRegistrationGateway
+            ?? new WindowsStartupRegistrationGateway();
         var effectiveStoredImagePathResolver = storedImagePathResolver
             ?? new StoredImagePathResolver(new AppStoragePaths());
         var effectiveClipboardAdapter = clipboardAdapter ?? new WpfClipboardAdapter();
@@ -165,6 +171,7 @@ internal sealed record AppComposition(
             effectiveTerminalCommandGatewayAdapter,
             effectiveSpotifyConnectionGatewayAdapter,
             effectiveSpotifyMediaActionGatewayAdapter,
+            effectiveStartupRegistrationGateway,
             effectiveStoredImagePathResolver,
             fileLogger,
             imageFileRepository,
@@ -245,6 +252,7 @@ internal sealed record AppComposition(
             new SaveSettingsUseCase(SettingsRepository, BackupGateway, autoBackupCoordinator),
             new CreateManualBackupUseCase(BackupGateway),
             new RestoreBackupUseCase(BackupGateway),
+            new StartupRegistrationUseCase(StartupRegistrationGateway),
             DialogAdapter,
             SlotGridViewModelFactory,
             ImageFileRepository,

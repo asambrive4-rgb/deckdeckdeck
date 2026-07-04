@@ -19,6 +19,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly IRestoreBackupUseCase _restoreBackupUseCase;
     private readonly Action<string> _showStatus;
     private readonly IClipboardTextWriter _clipboardService;
+    private readonly IStartupRegistrationUseCase _startupRegistrationUseCase;
     private readonly ISpotifyConnectionUseCase _spotifyConnectionUseCase;
     private readonly ISaveSettingsUseCase _saveSettingsUseCase;
     private readonly AppSettings _settings;
@@ -29,7 +30,9 @@ public sealed class SettingsViewModel : ObservableObject
     private string _errorMessage = string.Empty;
     private bool _isSpotifyConnected;
     private bool _isSpotifyConnectionBusy;
+    private bool _launchAtStartup;
     private bool _restoreClipboardAfterPaste;
+    private bool _runAsAdministratorAtStartup;
     private bool _showSpotifyConnectionFields;
     private string _spotifyClientIdInput = string.Empty;
     private string _spotifyConnectionStatusText = string.Empty;
@@ -39,6 +42,7 @@ public sealed class SettingsViewModel : ObservableObject
         ISaveSettingsUseCase saveSettingsUseCase,
         ICreateManualBackupUseCase createManualBackupUseCase,
         IRestoreBackupUseCase restoreBackupUseCase,
+        IStartupRegistrationUseCase startupRegistrationUseCase,
         ISpotifyConnectionUseCase spotifyConnectionUseCase,
         IClipboardTextWriter clipboardService,
         IDialogAdapter dialogService,
@@ -55,6 +59,7 @@ public sealed class SettingsViewModel : ObservableObject
         _saveSettingsUseCase = saveSettingsUseCase;
         _createManualBackupUseCase = createManualBackupUseCase;
         _restoreBackupUseCase = restoreBackupUseCase;
+        _startupRegistrationUseCase = startupRegistrationUseCase;
         _dialogService = dialogService;
         _clipboardService = clipboardService;
         _spotifyConnectionUseCase = spotifyConnectionUseCase;
@@ -65,6 +70,9 @@ public sealed class SettingsViewModel : ObservableObject
         _restoreClipboardAfterPaste = _settings.RestoreClipboardAfterPaste;
         _autoBackupEnabled = _settings.AutoBackupEnabled;
         _backupFolderPath = _settings.BackupFolderPath;
+        var startupState = _startupRegistrationUseCase.GetState();
+        _launchAtStartup = startupState.IsEnabled;
+        _runAsAdministratorAtStartup = startupState.IsEnabled && startupState.RunAsAdministrator;
         RefreshSpotifyConnectionState();
 
         SaveCommand = new RelayCommand(Save);
@@ -96,6 +104,9 @@ public sealed class SettingsViewModel : ObservableObject
     public string AdminPermissionNotice =>
         "관리자 권한 앱, 보호된 입력창, 보안 프로그램, 일부 게임에서는 DeckDeckDeck도 같은 권한으로 실행해야 붙여넣기가 동작할 수 있습니다.";
 
+    public string StartupPermissionNotice =>
+        "관리자 권한으로 시작하면 저장할 때 Windows 확인창이 표시될 수 있습니다. 변경 내용은 다음 Windows 로그인부터 적용됩니다.";
+
     public bool BringWindowToFrontOnHotkey
     {
         get => _bringWindowToFrontOnHotkey;
@@ -119,6 +130,32 @@ public sealed class SettingsViewModel : ObservableObject
         get => _autoBackupEnabled;
         set => SetProperty(ref _autoBackupEnabled, value);
     }
+
+    public bool LaunchAtStartup
+    {
+        get => _launchAtStartup;
+        set
+        {
+            if (!SetProperty(ref _launchAtStartup, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(CanRunAsAdministratorAtStartup));
+            if (!value)
+            {
+                RunAsAdministratorAtStartup = false;
+            }
+        }
+    }
+
+    public bool RunAsAdministratorAtStartup
+    {
+        get => _runAsAdministratorAtStartup;
+        set => SetProperty(ref _runAsAdministratorAtStartup, value);
+    }
+
+    public bool CanRunAsAdministratorAtStartup => LaunchAtStartup;
 
     public string BackupFolderPath
     {
@@ -253,6 +290,17 @@ public sealed class SettingsViewModel : ObservableObject
             if (!result.Succeeded)
             {
                 ErrorMessage = result.ErrorMessage ?? string.Empty;
+                return;
+            }
+
+            var startupResult = _startupRegistrationUseCase.Save(
+                new StartupRegistrationSettings(
+                    LaunchAtStartup,
+                    RunAsAdministratorAtStartup));
+            if (!startupResult.Succeeded)
+            {
+                ErrorMessage = startupResult.ErrorMessage ?? "시작프로그램 설정을 저장하지 못했습니다.";
+                _showStatus(ErrorMessage);
                 return;
             }
 

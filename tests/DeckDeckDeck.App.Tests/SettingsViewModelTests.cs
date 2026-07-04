@@ -24,10 +24,12 @@ public sealed class SettingsViewModelTests
         var services = CreateServices();
         var returned = false;
         var status = string.Empty;
+        var startupRegistration = new RecordingStartupRegistrationUseCase();
         var viewModel = CreateSettingsViewModel(
             services,
             afterSave: () => returned = true,
-            showStatus: message => status = message);
+            showStatus: message => status = message,
+            startupRegistrationUseCase: startupRegistration);
         viewModel.BringWindowToFrontOnHotkey = false;
         viewModel.AutoHideAfterPaste = false;
         viewModel.RestoreClipboardAfterPaste = false;
@@ -40,6 +42,84 @@ public sealed class SettingsViewModelTests
         Assert.False(reloaded.RestoreClipboardAfterPaste);
         Assert.True(returned);
         Assert.Equal("설정을 저장했습니다.", status);
+        Assert.Equal(new StartupRegistrationSettings(false, false), Assert.Single(startupRegistration.SavedSettings));
+    }
+
+    [Fact]
+    public void SettingsViewModelLoadsStartupRegistrationState()
+    {
+        var services = CreateServices();
+        var startupRegistration = new RecordingStartupRegistrationUseCase
+        {
+            State = new StartupRegistrationState(true, true)
+        };
+
+        var viewModel = CreateSettingsViewModel(
+            services,
+            startupRegistrationUseCase: startupRegistration);
+
+        Assert.True(viewModel.LaunchAtStartup);
+        Assert.True(viewModel.RunAsAdministratorAtStartup);
+        Assert.True(viewModel.CanRunAsAdministratorAtStartup);
+    }
+
+    [Fact]
+    public void SettingsViewModelSaveUpdatesStartupRegistration()
+    {
+        var services = CreateServices();
+        var startupRegistration = new RecordingStartupRegistrationUseCase();
+        var viewModel = CreateSettingsViewModel(
+            services,
+            startupRegistrationUseCase: startupRegistration);
+        viewModel.LaunchAtStartup = true;
+        viewModel.RunAsAdministratorAtStartup = true;
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.Equal(new StartupRegistrationSettings(true, true), Assert.Single(startupRegistration.SavedSettings));
+        Assert.Equal(string.Empty, viewModel.ErrorMessage);
+    }
+
+    [Fact]
+    public void SettingsViewModelDisablesAdministratorStartupWhenStartupIsOff()
+    {
+        var services = CreateServices();
+        var startupRegistration = new RecordingStartupRegistrationUseCase
+        {
+            State = new StartupRegistrationState(true, true)
+        };
+        var viewModel = CreateSettingsViewModel(
+            services,
+            startupRegistrationUseCase: startupRegistration);
+
+        viewModel.LaunchAtStartup = false;
+
+        Assert.False(viewModel.RunAsAdministratorAtStartup);
+        Assert.False(viewModel.CanRunAsAdministratorAtStartup);
+    }
+
+    [Fact]
+    public void SettingsViewModelDoesNotReturnWhenStartupRegistrationFails()
+    {
+        var services = CreateServices();
+        var returned = false;
+        var status = string.Empty;
+        var startupRegistration = new RecordingStartupRegistrationUseCase
+        {
+            SaveResult = StartupRegistrationResult.Failure("시작프로그램 등록 실패")
+        };
+        var viewModel = CreateSettingsViewModel(
+            services,
+            afterSave: () => returned = true,
+            showStatus: message => status = message,
+            startupRegistrationUseCase: startupRegistration);
+        viewModel.LaunchAtStartup = true;
+
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.False(returned);
+        Assert.Equal("시작프로그램 등록 실패", viewModel.ErrorMessage);
+        Assert.Equal("시작프로그램 등록 실패", status);
     }
 
     [Fact]
@@ -365,6 +445,7 @@ public sealed class SettingsViewModelTests
         IBackupGateway? backupGateway = null,
         IAutoBackupRequester? autoBackupRequester = null,
         IDialogAdapter? dialogService = null,
+        IStartupRegistrationUseCase? startupRegistrationUseCase = null,
         ISaveSettingsUseCase? saveSettingsUseCase = null,
         ICreateManualBackupUseCase? createManualBackupUseCase = null,
         IRestoreBackupUseCase? restoreBackupUseCase = null)
@@ -383,6 +464,7 @@ public sealed class SettingsViewModelTests
                 spotifyConnectionService ?? new StubSpotifyConnectionGatewayAdapter(),
                 urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter()),
             clipboardService ?? new FakeClipboardAdapter(null),
+            startupRegistrationUseCase,
             saveSettingsUseCase,
             createManualBackupUseCase,
             restoreBackupUseCase);

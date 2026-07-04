@@ -29,6 +29,26 @@
                       IsChecked="{Binding RestoreClipboardAfterPaste}" />
 
             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                       Text="시작프로그램" />
+            <Border Margin="0,0,0,18"
+                    Style="{StaticResource Deck.InfoPanelBorderStyle}">
+                <StackPanel>
+                    <CheckBox Margin="0,0,0,10"
+                              Content="Windows 시작 시 DeckDeckDeck 자동 실행"
+                              Style="{StaticResource Deck.CheckBoxStyle}"
+                              IsChecked="{Binding LaunchAtStartup}" />
+                    <CheckBox Margin="0,0,0,8"
+                              Content="관리자 권한으로 시작"
+                              Style="{StaticResource Deck.CheckBoxStyle}"
+                              IsChecked="{Binding RunAsAdministratorAtStartup}"
+                              IsEnabled="{Binding CanRunAsAdministratorAtStartup}" />
+                    <TextBlock Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                               Text="{Binding StartupPermissionNotice}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                        Text="Spotify 연결" />
             <Border Margin="0,0,0,18"
                     Style="{StaticResource Deck.InfoPanelBorderStyle}">

@@ -114,6 +114,7 @@ internal sealed class MainViewModelViewFactory
             _dependencies.SaveSettingsUseCase,
             _dependencies.CreateManualBackupUseCase,
             _dependencies.RestoreBackupUseCase,
+            _dependencies.StartupRegistrationUseCase,
             _dependencies.SpotifyConnectionUseCase,
             _dependencies.ClipboardTextWriter,
             _dependencies.DialogAdapter,

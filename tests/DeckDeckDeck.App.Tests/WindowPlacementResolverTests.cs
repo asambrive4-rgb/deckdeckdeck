@@ -77,4 +77,17 @@ public sealed class WindowPlacementResolverTests
         Assert.Equal(376, placement.Top);
         Assert.Equal("Secondary", placement.ScreenDeviceName);
     }
+
+    [Fact]
+    public void WindowPlacementDefaultMatchesCapturedBottomRightSize()
+    {
+        var settings = new AppSettings();
+        var primary = new WindowWorkArea("Primary", 0, 0, 1920, 1032, true);
+
+        var placement = WindowPlacementResolver.Resolve(settings, 440, 580, [primary]);
+
+        Assert.Equal(1456, placement.Left);
+        Assert.Equal(428, placement.Top);
+        Assert.Equal("Primary", placement.ScreenDeviceName);
+    }
 }
