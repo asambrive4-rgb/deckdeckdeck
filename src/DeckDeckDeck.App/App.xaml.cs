@@ -6,7 +6,7 @@ using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
-using DeckDeckDeck.App.Views.Converters;
+using DeckDeckDeck.App.Views.Imaging;
 using FormsContextMenuStrip = System.Windows.Forms.ContextMenuStrip;
 using FormsNotifyIcon = System.Windows.Forms.NotifyIcon;
 using FormsToolStripMenuItem = System.Windows.Forms.ToolStripMenuItem;
@@ -175,13 +175,37 @@ public partial class App : Application
 
     private static void QueueThumbnailPrewarm(MainViewModel viewModel)
     {
-        var thumbnailPaths = viewModel.GetVisibleThumbnailPaths();
+        IReadOnlyList<string> thumbnailPaths;
+        try
+        {
+            thumbnailPaths = viewModel.GetVisibleThumbnailPaths();
+        }
+        catch
+        {
+            // Prewarm must never break navigation.
+            return;
+        }
+
         if (thumbnailPaths.Count == 0)
         {
             return;
         }
 
-        _ = Task.Run(() => CachedImageSourceConverter.PrewarmFiles(thumbnailPaths, decodePixelWidth: 42));
+        // Snapshot paths so a later navigation cannot mutate the list mid-prewarm.
+        var snapshot = thumbnailPaths.ToArray();
+
+        // Match NumpadGrid slot bindings (ConverterParameter=42).
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                FrozenImageCache.PrewarmFiles(snapshot, decodePixelWidth: 42);
+            }
+            catch
+            {
+                // Background decode failures are non-fatal; binding will retry on demand.
+            }
+        });
     }
 
     private void ExitApplication()

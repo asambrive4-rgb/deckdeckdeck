@@ -81,23 +81,13 @@
                                 <Grid Grid.Row="1"
                                       Margin="0,2,0,0"
                                       VerticalAlignment="Center">
+                                    <!-- ImageBrush + CornerRadius avoids per-slot OpacityMask/VisualBrush cost. -->
                                     <Border x:Name="ThumbnailFrame"
                                             Style="{StaticResource Deck.SlotThumbnailFrameBorderStyle}">
-                                        <Image Source="{Binding ThumbnailPath, IsAsync=True, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=42}"
-                                               Width="42"
-                                               Height="42"
-                                               Stretch="UniformToFill">
-                                            <Image.OpacityMask>
-                                                <VisualBrush Stretch="Fill">
-                                                    <VisualBrush.Visual>
-                                                        <Border Width="42"
-                                                                Height="42"
-                                                                Background="Black"
-                                                                CornerRadius="{StaticResource Deck.Radius.Thumbnail}" />
-                                                    </VisualBrush.Visual>
-                                                </VisualBrush>
-                                            </Image.OpacityMask>
-                                        </Image>
+                                        <Border.Background>
+                                            <ImageBrush ImageSource="{Binding ThumbnailPath, IsAsync=True, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=42}"
+                                                        Stretch="UniformToFill" />
+                                        </Border.Background>
                                     </Border>
                                     <TextBlock x:Name="DisplayTextBlock"
                                                Style="{StaticResource Deck.SlotTitleTextStyle}"

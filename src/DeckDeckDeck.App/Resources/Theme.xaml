@@ -537,16 +537,14 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
+                    <!-- Soft card look via border/fill; panel-level shadow covers elevation.
+                         Per-slot DropShadow + BitmapCache was the main grid paint cost. -->
                     <Border x:Name="Root"
                             Padding="{TemplateBinding Padding}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{StaticResource Deck.Radius.Card}"
-                            Effect="{StaticResource Deck.Effect.CardShadow}">
-                        <Border.CacheMode>
-                            <BitmapCache />
-                        </Border.CacheMode>
+                            CornerRadius="{StaticResource Deck.Radius.Card}">
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                     </Border>

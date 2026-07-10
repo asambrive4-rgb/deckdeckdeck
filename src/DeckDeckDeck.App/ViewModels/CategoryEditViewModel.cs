@@ -174,7 +174,8 @@ public sealed class CategoryEditViewModel : ObservableObject
             _originalIsSlotEnabled = IsSlotEnabled;
             _draft.DeleteCurrentUnsavedImage();
             _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
-            _cancel();
+            // afterDelete navigates back with cache invalidation (slot enablement changed).
+            _afterDelete();
             return null;
         }
 

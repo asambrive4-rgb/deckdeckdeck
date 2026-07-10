@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:views="clr-namespace:DeckDeckDeck.App.Views"
+        xmlns:navigation="clr-namespace:DeckDeckDeck.App.Views.Navigation"
         xmlns:viewModels="clr-namespace:DeckDeckDeck.App.ViewModels"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}"
@@ -24,24 +25,13 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <!-- First-show fade is owned by CachingContentControl (cache hits skip animation). -->
         <Style x:Key="Deck.ViewTransitionContainerStyle" TargetType="{x:Type Border}">
-            <Setter Property="Opacity" Value="0" />
             <Setter Property="CacheMode">
                 <Setter.Value>
                     <BitmapCache />
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <EventTrigger RoutedEvent="Loaded">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                             To="1"
-                                             Duration="0:0:0.12" />
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-            </Style.Triggers>
         </Style>
         <DataTemplate DataType="{x:Type viewModels:HomeViewModel}">
             <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
@@ -142,7 +132,7 @@
 
                 <Border Grid.Row="1"
                         Style="{StaticResource Deck.AppContentBorderStyle}">
-                    <ContentControl Content="{Binding CurrentViewModel}" />
+                    <navigation:CachingContentControl Content="{Binding CurrentViewModel}" />
                 </Border>
             </Grid>
         </Border>

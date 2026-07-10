@@ -6,4 +6,5 @@ obj/
 *.suo
 TestResults/
 artifacts/
-DeckDeckDeck.exe
+# Local publish/backup binaries — never push to GitHub
+*.exe

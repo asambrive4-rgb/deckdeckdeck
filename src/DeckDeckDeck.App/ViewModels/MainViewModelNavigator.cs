@@ -4,6 +4,8 @@ namespace DeckDeckDeck.App.ViewModels;
 
 internal sealed class MainViewModelNavigator
 {
+    private const int MaxCachedCategories = 3;
+
     private readonly MainViewModelNavigatorDependencies _dependencies;
     private readonly Action _enterEditMode;
     private readonly Action _notifyDirectHotkeyCaptureStateChanged;
@@ -11,6 +13,9 @@ internal sealed class MainViewModelNavigator
     private readonly MainViewModelViewFactory _viewFactory;
     private readonly Action<string> _showStatus;
     private readonly Action<object> _showViewModel;
+
+    private HomeViewModel? _cachedHome;
+    private readonly List<CachedCategoryEntry> _categoryLru = new(MaxCachedCategories);
 
     public MainViewModelNavigator(
         MainViewModelNavigatorDependencies dependencies,
@@ -32,12 +37,7 @@ internal sealed class MainViewModelNavigator
 
     public void ShowHome()
     {
-        _showViewModel(_viewFactory.CreateHome(
-            OpenCategory,
-            EditCategory,
-            CreateCategory,
-            () => ShowSettings(ShowHome),
-            ShowHotkeys));
+        _showViewModel(GetOrCreateHome());
         _showStatus("홈");
     }
 
@@ -47,9 +47,19 @@ internal sealed class MainViewModelNavigator
         _showViewModel(_viewFactory.CreateCategoryEditor(
             slotKey,
             category: null,
-            ShowHome,
-            _ => ShowHome(),
-            ShowHome));
+            cancel: ShowHome,
+            afterSave: _ =>
+            {
+                InvalidateHome();
+                InvalidateCategoryCache();
+                ShowHome();
+            },
+            afterDelete: () =>
+            {
+                InvalidateHome();
+                InvalidateCategoryCache();
+                ShowHome();
+            }));
         _showStatus($"슬롯 {slotKey.GetDisplayText()}에 새 카테고리 만들기");
     }
 
@@ -59,28 +69,40 @@ internal sealed class MainViewModelNavigator
         _showViewModel(_viewFactory.CreateCategoryEditor(
             category.SlotKey,
             category,
-            ShowHome,
-            _ => ShowHome(),
-            ShowHome));
+            cancel: ShowHome,
+            afterSave: _ =>
+            {
+                InvalidateHome();
+                InvalidateCategoryCache();
+                ShowHome();
+            },
+            afterDelete: () =>
+            {
+                InvalidateHome();
+                InvalidateCategoryCache();
+                ShowHome();
+            }));
         _showStatus($"{category.Name} 편집");
     }
 
     public void OpenCategory(Category category)
     {
-        _showViewModel(_viewFactory.CreateCategory(
-            category,
-            ShowHome,
-            () => ShowSettings(() => OpenCategoryById(category.Id)),
-            EditSnippet));
+        _showViewModel(GetOrCreateCategory(category));
         _showStatus($"{category.Name} 카테고리");
     }
 
     private void OpenCategoryById(Guid categoryId)
     {
+        if (TryShowCachedCategory(categoryId))
+        {
+            return;
+        }
+
         var category = _dependencies.GetCategoryByIdUseCase.Execute(categoryId);
 
         if (category is null)
         {
+            InvalidateCategory(categoryId);
             ShowHome();
             return;
         }
@@ -95,9 +117,17 @@ internal sealed class MainViewModelNavigator
             category,
             slotKey,
             snippet,
-            () => OpenCategoryById(category.Id),
-            _ => OpenCategoryById(category.Id),
-            () => OpenCategoryById(category.Id)));
+            cancel: () => OpenCategoryById(category.Id),
+            afterSave: _ =>
+            {
+                InvalidateCategory(category.Id);
+                OpenCategoryById(category.Id);
+            },
+            afterDelete: () =>
+            {
+                InvalidateCategory(category.Id);
+                OpenCategoryById(category.Id);
+            }));
         _showStatus(snippet is null
             ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
             : $"{snippet.Title} 편집");
@@ -107,8 +137,14 @@ internal sealed class MainViewModelNavigator
     {
         _enterEditMode();
         _showViewModel(_viewFactory.CreateSettings(
-            returnTo,
-            returnTo));
+            cancel: returnTo,
+            afterSave: () =>
+            {
+                // Settings can change slot enablement and other grid-facing flags.
+                InvalidateHome();
+                InvalidateCategoryCache();
+                returnTo();
+            }));
         _showStatus("설정");
     }
 
@@ -168,4 +204,107 @@ internal sealed class MainViewModelNavigator
     {
         _notifyDirectHotkeysChanged();
     }
+
+    private HomeViewModel GetOrCreateHome()
+    {
+        if (_cachedHome is not null)
+        {
+            return _cachedHome;
+        }
+
+        _cachedHome = _viewFactory.CreateHome(
+            OpenCategory,
+            EditCategory,
+            CreateCategory,
+            () => ShowSettings(ShowHome),
+            ShowHotkeys);
+        return _cachedHome;
+    }
+
+    private CategoryViewModel GetOrCreateCategory(Category category)
+    {
+        if (TryGetCachedCategory(category.Id, touch: true, out var cached))
+        {
+            return cached;
+        }
+
+        var created = _viewFactory.CreateCategory(
+            category,
+            ShowHome,
+            () => ShowSettings(() => OpenCategoryById(category.Id)),
+            EditSnippet);
+        AddCategoryToCache(category.Id, created);
+        return created;
+    }
+
+    private bool TryShowCachedCategory(Guid categoryId)
+    {
+        if (!TryGetCachedCategory(categoryId, touch: true, out var cached))
+        {
+            return false;
+        }
+
+        _showViewModel(cached);
+        _showStatus($"{cached.Title} 카테고리");
+        return true;
+    }
+
+    private bool TryGetCachedCategory(Guid categoryId, bool touch, out CategoryViewModel viewModel)
+    {
+        for (var i = 0; i < _categoryLru.Count; i++)
+        {
+            var entry = _categoryLru[i];
+            if (entry.CategoryId != categoryId)
+            {
+                continue;
+            }
+
+            if (touch && i < _categoryLru.Count - 1)
+            {
+                _categoryLru.RemoveAt(i);
+                _categoryLru.Add(entry);
+            }
+
+            viewModel = entry.ViewModel;
+            return true;
+        }
+
+        viewModel = null!;
+        return false;
+    }
+
+    private void AddCategoryToCache(Guid categoryId, CategoryViewModel viewModel)
+    {
+        // Replace any prior entry for the same id (defensive if factory is called twice).
+        for (var i = _categoryLru.Count - 1; i >= 0; i--)
+        {
+            if (_categoryLru[i].CategoryId == categoryId)
+            {
+                _categoryLru.RemoveAt(i);
+            }
+        }
+
+        _categoryLru.Add(new CachedCategoryEntry(categoryId, viewModel));
+        while (_categoryLru.Count > MaxCachedCategories)
+        {
+            _categoryLru.RemoveAt(0);
+        }
+    }
+
+    private void InvalidateHome()
+    {
+        _cachedHome = null;
+    }
+
+    private void InvalidateCategory(Guid categoryId)
+    {
+        _categoryLru.RemoveAll(entry => entry.CategoryId == categoryId);
+    }
+
+    private void InvalidateCategoryCache()
+    {
+        _categoryLru.Clear();
+    }
+
+    private readonly record struct CachedCategoryEntry(Guid CategoryId, CategoryViewModel ViewModel);
 }

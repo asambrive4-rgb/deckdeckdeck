@@ -282,7 +282,7 @@ public sealed class MainViewModelNavigationTests
 
         editor.CancelCommand.Execute(null);
 
-        Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+        Assert.Same(home, viewModel.CurrentViewModel);
     }
 
     [Fact]
@@ -298,8 +298,104 @@ public sealed class MainViewModelNavigationTests
 
         editor.SaveCommand.Execute(null);
 
-        Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+        var refreshedHome = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+        Assert.NotSame(home, refreshedHome);
         Assert.Equal("Writing Updated", Assert.Single(services.CategoryRepository.GetAll()).Name);
+        Assert.Equal("Writing Updated", refreshedHome.NumpadGrid.Numpad1.Title);
+    }
+
+    [Fact]
+    public void ReturningHomeFromCategoryReusesHomeViewModel()
+    {
+        var services = CreateServices();
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var viewModel = CreateMainViewModel(services);
+        var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var category = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        category.BackCommand.Execute(null);
+
+        Assert.Same(home, viewModel.CurrentViewModel);
+    }
+
+    [Fact]
+    public void ReopeningSameCategoryReusesCategoryViewModel()
+    {
+        var services = CreateServices();
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var first = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        first.BackCommand.Execute(null);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var second = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+
+        Assert.Same(first, second);
+    }
+
+    [Fact]
+    public void SwitchingBetweenTwoCategoriesReusesBothViewModels()
+    {
+        var services = CreateServices();
+        services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.CategoryRepository.Create(SlotKey.Numpad2, "Research", null);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var writing = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        writing.BackCommand.Execute(null);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad2);
+        var research = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        research.BackCommand.Execute(null);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        Assert.Same(writing, viewModel.CurrentViewModel);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad2);
+        Assert.Same(research, viewModel.CurrentViewModel);
+    }
+
+    [Fact]
+    public void SnippetEditorSaveRebuildsCategoryViewModel()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Structure", "Make this clearer.", null);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var categoryViewModel = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        categoryViewModel.NumpadGrid.Numpad3.EditCommand.Execute(null);
+        var editor = Assert.IsType<SnippetEditViewModel>(viewModel.CurrentViewModel);
+        editor.SnippetTitle = "Structure Updated";
+
+        editor.SaveCommand.Execute(null);
+
+        var refreshedCategory = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        Assert.NotSame(categoryViewModel, refreshedCategory);
+        Assert.Equal("Structure Updated", refreshedCategory.NumpadGrid.Numpad3.Title);
+    }
+
+    [Fact]
+    public void SnippetEditorCancelReusesCategoryViewModel()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Writing", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad3, "Structure", "Make this clearer.", null);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var categoryViewModel = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        categoryViewModel.NumpadGrid.Numpad3.EditCommand.Execute(null);
+        var editor = Assert.IsType<SnippetEditViewModel>(viewModel.CurrentViewModel);
+
+        editor.CancelCommand.Execute(null);
+
+        Assert.Same(categoryViewModel, viewModel.CurrentViewModel);
     }
 
     [Fact]
