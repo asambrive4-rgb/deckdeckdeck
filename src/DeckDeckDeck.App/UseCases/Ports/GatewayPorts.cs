@@ -80,7 +80,9 @@ public interface ITerminalCommandGateway
     bool TryExecute(
         string command,
         SnippetTerminalShell shell,
-        bool runAsAdministrator);
+        bool runAsAdministrator,
+        bool openTerminalWindow = false,
+        string? workingDirectory = null);
 }
 
 public interface ISpotifyConnectionGateway

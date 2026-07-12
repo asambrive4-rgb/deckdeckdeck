@@ -1,7 +1,11 @@
 <UserControl x:Class="DeckDeckDeck.App.Views.NumpadGridView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             MinWidth="380">
+             MinWidth="380"
+             PreviewMouseLeftButtonDown="OnPreviewMouseLeftButtonDown"
+             PreviewMouseMove="OnPreviewMouseMove"
+             PreviewMouseLeftButtonUp="OnPreviewMouseLeftButtonUp"
+             LostMouseCapture="OnLostMouseCapture">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
@@ -49,13 +53,34 @@
             </ItemsControl.ItemContainerStyle>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Grid>
-                        <Button Command="{Binding SelectCommand}"
-                                Style="{StaticResource Deck.SlotMainButtonStyle}">
+                    <Grid AllowDrop="True"
+                          DragOver="Slot_DragOver"
+                          DragLeave="Slot_DragLeave"
+                          Drop="Slot_Drop">
+                        <Button x:Name="MainSlotButton"
+                                Command="{Binding SelectCommand}"
+                                AllowDrop="True"
+                                DragOver="Slot_DragOver"
+                                DragLeave="Slot_DragLeave"
+                                Drop="Slot_Drop">
                             <Button.InputBindings>
                                 <MouseBinding Command="{Binding EditCommand}"
                                               MouseAction="RightClick" />
                             </Button.InputBindings>
+                            <Button.Style>
+                                <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.SlotMainButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsDragging}" Value="True">
+                                            <Setter Property="Opacity" Value="0.45" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsDropHighlight}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                            <Setter Property="BorderThickness" Value="2" />
+                                            <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -85,7 +110,7 @@
                                     <Border x:Name="ThumbnailFrame"
                                             Style="{StaticResource Deck.SlotThumbnailFrameBorderStyle}">
                                         <Border.Background>
-                                            <ImageBrush ImageSource="{Binding ThumbnailPath, IsAsync=True, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=42}"
+                                            <ImageBrush ImageSource="{Binding ThumbnailSource}"
                                                         Stretch="UniformToFill" />
                                         </Border.Background>
                                     </Border>

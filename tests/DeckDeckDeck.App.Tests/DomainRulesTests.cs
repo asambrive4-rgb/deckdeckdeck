@@ -38,6 +38,43 @@ public sealed class DomainRulesTests
     }
 
     [Fact]
+    public void TerminalCommandRequiresCommandUnlessOpeningWindow()
+    {
+        var backgroundWithoutCommand = SnippetRules.ValidateForSave(
+            "Grok",
+            string.Empty,
+            SnippetActionType.TerminalCommand,
+            launchPath: null,
+            launchUrl: null,
+            SnippetMediaProvider.System,
+            SnippetMediaCommand.PlayPause,
+            terminalCommand: "  ",
+            openTerminalWindow: false);
+
+        Assert.False(backgroundWithoutCommand.Succeeded);
+        Assert.Equal(
+            SnippetRules.TerminalCommandRequiredMessage,
+            backgroundWithoutCommand.ErrorMessage);
+
+        var openWindowWithoutCommand = SnippetRules.ValidateForSave(
+            "Grok",
+            string.Empty,
+            SnippetActionType.TerminalCommand,
+            launchPath: null,
+            launchUrl: null,
+            SnippetMediaProvider.System,
+            SnippetMediaCommand.PlayPause,
+            terminalCommand: "  ",
+            openTerminalWindow: true,
+            terminalWorkingDirectory: "  C:\\repos\\demo  ");
+
+        Assert.True(openWindowWithoutCommand.Succeeded);
+        Assert.Null(openWindowWithoutCommand.NormalizedTerminalCommand);
+        Assert.True(openWindowWithoutCommand.OpenTerminalWindow);
+        Assert.Equal(@"C:\repos\demo", openWindowWithoutCommand.TerminalWorkingDirectory);
+    }
+
+    [Fact]
     public void MediaCommandFallsBackWhenProviderDoesNotSupportCommand()
     {
         var command = MediaCommandRules.GetValidCommandForProvider(

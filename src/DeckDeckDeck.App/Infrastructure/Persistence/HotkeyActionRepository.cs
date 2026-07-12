@@ -108,6 +108,8 @@ public sealed class HotkeyActionRepository : IHotkeyActionRepository
         action.MediaCommand = data.MediaCommand;
         action.TerminalCommand = data.TerminalCommand;
         action.TerminalShell = data.TerminalShell;
+        action.OpenTerminalWindow = data.OpenTerminalWindow;
+        action.TerminalWorkingDirectory = data.TerminalWorkingDirectory;
         action.RunAsAdministrator = data.RunAsAdministrator;
         action.SlotImageMode = data.SlotImageMode;
         action.Description = data.Description;

@@ -1,4 +1,5 @@
 using DeckDeckDeck.App.Data;
+using DeckDeckDeck.App.Infrastructure.Diagnostics;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
 using DeckDeckDeck.App.Infrastructure.Platform;
@@ -9,6 +10,28 @@ using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
 
 namespace DeckDeckDeck.App.Composition;
+
+/// <summary>
+/// Storage/DB bootstrap completed before (or off) the UI thread so the shell can show earlier.
+/// </summary>
+internal sealed class AppCompositionBootstrap
+{
+    public AppCompositionBootstrap(
+        AppStoragePaths storagePaths,
+        AppDbContextFactory dbContextFactory,
+        FileLogger fileLogger)
+    {
+        StoragePaths = storagePaths;
+        DbContextFactory = dbContextFactory;
+        FileLogger = fileLogger;
+    }
+
+    public AppStoragePaths StoragePaths { get; }
+
+    public AppDbContextFactory DbContextFactory { get; }
+
+    public FileLogger FileLogger { get; }
+}
 
 internal sealed record AppComposition(
     CategoryRepository CategoryRepository,
@@ -36,43 +59,131 @@ internal sealed record AppComposition(
     ISpotifyConnectionUseCase SpotifyConnectionUseCase,
     IClipboardAdapter ClipboardAdapter)
 {
-    public static AppComposition CreateDefault()
+    public static AppComposition CreateDefault(StartupTimingLog? startupTiming = null)
     {
-        var appStoragePaths = new AppStoragePaths();
-        appStoragePaths.EnsureCreated();
+        var bootstrap = PrepareStorageAndDatabase(startupTiming);
+        return CreateFromBootstrap(bootstrap, startupTiming);
+    }
 
-        var dbContextFactory = new AppDbContextFactory(appStoragePaths.DatabasePath);
-        dbContextFactory.EnsureCreated();
+    /// <summary>
+    /// Heavy I/O: directories, SQLite ensure, one-time path migration.
+    /// Safe to run on a background thread before UI composition.
+    /// </summary>
+    public static AppCompositionBootstrap PrepareStorageAndDatabase(StartupTimingLog? startupTiming = null)
+    {
+        AppStoragePaths appStoragePaths;
+        using (startupTiming?.Measure("storage prepare"))
+        {
+            appStoragePaths = new AppStoragePaths();
+            appStoragePaths.EnsureCreated();
+        }
 
-        var categoryRepository = new CategoryRepository(dbContextFactory);
-        var settingsRepository = new SettingsRepository(dbContextFactory);
-        var fileLogger = new FileLogger(appStoragePaths);
-        new StartupMaintenanceUseCase(
-            new StartupMaintenanceStateRepository(dbContextFactory),
-            new StoredPathMigration(dbContextFactory, appStoragePaths))
-            .Execute();
-        var storedImagePathResolver = new StoredImagePathResolver(appStoragePaths);
-        var backupGateway = new BackupGateway(appStoragePaths, settingsRepository, fileLogger);
-        var imageFileRepository = new ImageFileRepository(appStoragePaths);
-        var snippetRepository = new SnippetRepository(dbContextFactory);
-        var hotkeyActionRepository = new HotkeyActionRepository(dbContextFactory);
-        var fileIconCacheRepository = new FileIconCacheRepository(
-            appStoragePaths,
-            new ShellFileIconExtractor(),
-            fileLogger);
-        var snippetImageResolver = new SnippetImageResolver(fileIconCacheRepository, storedImagePathResolver);
-        var urlLaunchGatewayAdapter = new UrlLaunchGatewayAdapter();
-        var spotifyConnectionGatewayAdapter = new SpotifyConnectionGatewayAdapter(urlLaunchGatewayAdapter);
-        var spotifyMediaActionGatewayAdapter = new SpotifyMediaActionGatewayAdapter(settingsRepository);
-        var startupRegistrationGateway = new WindowsStartupRegistrationGateway();
-        var clipboardAdapter = new WpfClipboardAdapter();
-        var fileLaunchGatewayAdapter = new FileLaunchGatewayAdapter();
-        var terminalCommandGatewayAdapter = new TerminalCommandGatewayAdapter(appStoragePaths.TempPath);
-        var systemMediaActionGatewayAdapter = new SystemMediaActionGatewayAdapter();
-        var clipboardPasteGateway = new ClipboardPasteGateway(
-            clipboardAdapter,
-            new Win32KeyboardInputAdapter(),
-            new Win32WindowFocusAdapter());
+        AppDbContextFactory dbContextFactory;
+        using (startupTiming?.Measure("database prepare"))
+        {
+            dbContextFactory = new AppDbContextFactory(appStoragePaths.DatabasePath);
+            dbContextFactory.EnsureCreated();
+        }
+
+        FileLogger fileLogger;
+        using (startupTiming?.Measure("startup maintenance"))
+        {
+            fileLogger = new FileLogger(appStoragePaths);
+            new StartupMaintenanceUseCase(
+                new StartupMaintenanceStateRepository(dbContextFactory),
+                new StoredPathMigration(dbContextFactory, appStoragePaths))
+                .Execute();
+        }
+
+        return new AppCompositionBootstrap(appStoragePaths, dbContextFactory, fileLogger);
+    }
+
+    /// <summary>
+    /// Builds service graph from a prepared bootstrap. Prefer UI thread for WPF adapters.
+    /// </summary>
+    public static AppComposition CreateFromBootstrap(
+        AppCompositionBootstrap bootstrap,
+        StartupTimingLog? startupTiming = null)
+    {
+        var appStoragePaths = bootstrap.StoragePaths;
+        var dbContextFactory = bootstrap.DbContextFactory;
+        var fileLogger = bootstrap.FileLogger;
+
+        CategoryRepository categoryRepository;
+        SettingsRepository settingsRepository;
+        SnippetRepository snippetRepository;
+        HotkeyActionRepository hotkeyActionRepository;
+        IStoredImagePathResolver storedImagePathResolver;
+        SlotGridViewModelFactory slotGridViewModelFactory;
+        SnippetImageResolver snippetImageResolver;
+        ClipboardPasteGateway clipboardPasteGateway;
+        IFileLaunchGateway fileLaunchGatewayAdapter;
+        IUrlLaunchGateway urlLaunchGatewayAdapter;
+        IMediaActionGateway systemMediaActionGatewayAdapter;
+        ITerminalCommandGateway terminalCommandGatewayAdapter;
+        IClipboardAdapter clipboardAdapter;
+        ISpotifyMediaActionGateway spotifyMediaActionGatewayAdapter;
+        ExecuteSnippetActionUseCase executeSnippetActionUseCase;
+        ResolveCategoryHotkeyUseCase resolveCategoryHotkeyUseCase;
+
+        using (startupTiming?.Measure("core composition"))
+        {
+            categoryRepository = new CategoryRepository(dbContextFactory);
+            settingsRepository = new SettingsRepository(dbContextFactory);
+            snippetRepository = new SnippetRepository(dbContextFactory);
+            hotkeyActionRepository = new HotkeyActionRepository(dbContextFactory);
+            storedImagePathResolver = new StoredImagePathResolver(appStoragePaths);
+
+            var fileIconCacheRepository = new FileIconCacheRepository(
+                appStoragePaths,
+                new ShellFileIconExtractor(),
+                fileLogger);
+            snippetImageResolver = new SnippetImageResolver(fileIconCacheRepository, storedImagePathResolver);
+            slotGridViewModelFactory = new SlotGridViewModelFactory(storedImagePathResolver, snippetImageResolver);
+
+            clipboardAdapter = new WpfClipboardAdapter();
+            fileLaunchGatewayAdapter = new FileLaunchGatewayAdapter();
+            urlLaunchGatewayAdapter = new UrlLaunchGatewayAdapter();
+            terminalCommandGatewayAdapter = new TerminalCommandGatewayAdapter(appStoragePaths.TempPath);
+            systemMediaActionGatewayAdapter = new SystemMediaActionGatewayAdapter();
+            clipboardPasteGateway = new ClipboardPasteGateway(
+                clipboardAdapter,
+                new Win32KeyboardInputAdapter(),
+                new Win32WindowFocusAdapter());
+
+            // Required by action execution on home; keep with core.
+            spotifyMediaActionGatewayAdapter = new SpotifyMediaActionGatewayAdapter(settingsRepository);
+            executeSnippetActionUseCase = CreateExecuteSnippetActionUseCase(
+                clipboardPasteGateway,
+                fileLaunchGatewayAdapter,
+                urlLaunchGatewayAdapter,
+                systemMediaActionGatewayAdapter,
+                spotifyMediaActionGatewayAdapter,
+                terminalCommandGatewayAdapter,
+                clipboardPasteGateway);
+            resolveCategoryHotkeyUseCase = new ResolveCategoryHotkeyUseCase(
+                categoryRepository,
+                settingsRepository);
+        }
+
+        BackupGateway backupGateway;
+        ImageFileRepository imageFileRepository;
+        ISpotifyConnectionGateway spotifyConnectionGatewayAdapter;
+        IStartupRegistrationGateway startupRegistrationGateway;
+        ISpotifyConnectionUseCase spotifyConnectionUseCase;
+
+        // Secondary services timed separately for L1; still assembled before first home for a complete graph.
+        using (startupTiming?.Measure("deferred composition"))
+        {
+            backupGateway = new BackupGateway(appStoragePaths, settingsRepository, fileLogger);
+            imageFileRepository = new ImageFileRepository(appStoragePaths);
+            spotifyConnectionGatewayAdapter = new SpotifyConnectionGatewayAdapter(urlLaunchGatewayAdapter);
+            startupRegistrationGateway = new WindowsStartupRegistrationGateway();
+            spotifyConnectionUseCase = new SpotifyConnectionUseCase(
+                settingsRepository,
+                spotifyConnectionGatewayAdapter,
+                urlLaunchGatewayAdapter);
+        }
 
         return new AppComposition(
             categoryRepository,
@@ -94,20 +205,10 @@ internal sealed record AppComposition(
             storedImagePathResolver,
             fileLogger,
             imageFileRepository,
-            new SlotGridViewModelFactory(storedImagePathResolver, snippetImageResolver),
-            CreateExecuteSnippetActionUseCase(
-                clipboardPasteGateway,
-                fileLaunchGatewayAdapter,
-                urlLaunchGatewayAdapter,
-                systemMediaActionGatewayAdapter,
-                spotifyMediaActionGatewayAdapter,
-                terminalCommandGatewayAdapter,
-                clipboardPasteGateway),
-            new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
-            new SpotifyConnectionUseCase(
-                settingsRepository,
-                spotifyConnectionGatewayAdapter,
-                urlLaunchGatewayAdapter),
+            slotGridViewModelFactory,
+            executeSnippetActionUseCase,
+            resolveCategoryHotkeyUseCase,
+            spotifyConnectionUseCase,
             clipboardAdapter);
     }
 
@@ -211,6 +312,10 @@ internal sealed record AppComposition(
         var setHotkeyActionEnabledUseCase = new SetHotkeyActionEnabledUseCase(
             HotkeyActionRepository,
             autoBackupCoordinator);
+        var startupRegistrationUseCase = new StartupRegistrationUseCase(StartupRegistrationGateway);
+        var saveAppPreferencesUseCase = new SaveAppPreferencesUseCase(
+            new SaveSettingsUseCase(SettingsRepository, BackupGateway, autoBackupCoordinator),
+            startupRegistrationUseCase);
         var navigatorDependencies = new MainViewModelNavigatorDependencies(
             new LoadHomeGridUseCase(CategoryRepository, SettingsRepository),
             new LoadCategoryGridUseCase(SnippetRepository, SettingsRepository),
@@ -231,6 +336,11 @@ internal sealed record AppComposition(
                 saveCategoryUseCase,
                 ImageFileRepository,
                 autoBackupCoordinator),
+            new MoveCategorySlotUseCase(
+                CategoryRepository,
+                SettingsRepository,
+                ImageFileRepository,
+                autoBackupCoordinator),
             saveSnippetUseCase,
             new DeleteSnippetUseCase(
                 SnippetRepository,
@@ -242,6 +352,11 @@ internal sealed record AppComposition(
                 saveSnippetUseCase,
                 ImageFileRepository,
                 autoBackupCoordinator),
+            new MoveSnippetSlotUseCase(
+                SnippetRepository,
+                SettingsRepository,
+                ImageFileRepository,
+                autoBackupCoordinator),
             saveHotkeyActionUseCase,
             setHotkeyActionEnabledUseCase,
             new DeleteHotkeyActionUseCase(
@@ -249,10 +364,10 @@ internal sealed record AppComposition(
                 ImageFileRepository,
                 autoBackupCoordinator),
             loadSettingsUseCase,
-            new SaveSettingsUseCase(SettingsRepository, BackupGateway, autoBackupCoordinator),
+            saveAppPreferencesUseCase,
             new CreateManualBackupUseCase(BackupGateway),
             new RestoreBackupUseCase(BackupGateway),
-            new StartupRegistrationUseCase(StartupRegistrationGateway),
+            startupRegistrationUseCase,
             DialogAdapter,
             SlotGridViewModelFactory,
             ImageFileRepository,

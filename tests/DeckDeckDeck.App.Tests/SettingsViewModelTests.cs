@@ -446,7 +446,7 @@ public sealed class SettingsViewModelTests
         IAutoBackupRequester? autoBackupRequester = null,
         IDialogAdapter? dialogService = null,
         IStartupRegistrationUseCase? startupRegistrationUseCase = null,
-        ISaveSettingsUseCase? saveSettingsUseCase = null,
+        ISaveAppPreferencesUseCase? saveAppPreferencesUseCase = null,
         ICreateManualBackupUseCase? createManualBackupUseCase = null,
         IRestoreBackupUseCase? restoreBackupUseCase = null)
     {
@@ -465,7 +465,7 @@ public sealed class SettingsViewModelTests
                 urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter()),
             clipboardService ?? new FakeClipboardAdapter(null),
             startupRegistrationUseCase,
-            saveSettingsUseCase,
+            saveAppPreferencesUseCase,
             createManualBackupUseCase,
             restoreBackupUseCase);
     }

@@ -76,50 +76,113 @@ public partial class App : Application
         StartupTimingLog startupTiming)
     {
         _appInstanceCoordinator = appInstanceCoordinator;
-
-        AppComposition services;
-        using (startupTiming.Measure("app composition"))
-        {
-            services = AppComposition.CreateDefault();
-        }
-
         _appIconProvider = new AppIconProvider();
+
+        // 1) Shell first: frame is visible while storage/DB work runs off the UI thread.
         MainWindow mainWindow;
         using (startupTiming.Measure("main window construction"))
         {
             mainWindow = new MainWindow(_appIconProvider, startupTiming);
         }
 
-        MainViewModel viewModel;
-        using (startupTiming.Measure("main view model construction"))
-        {
-            viewModel = MainViewModelFactory.Create(
-                services,
-                mainWindow.GetPasteTargetWindowHandle,
-                mainWindow.HideAfterPaste,
-                mainWindow.EnterEditMode,
-                createPasteSelectionCompletion: mainWindow.CreatePasteSelectionCompletion);
-        }
-
-        mainWindow.AttachViewModel(viewModel);
-        RegisterThumbnailPrewarm(viewModel);
+        MainWindow = mainWindow;
         mainWindow.ContentRendered += (_, _) => startupTiming.Mark("first content rendered");
 
-        MainWindow = mainWindow;
-        using (startupTiming.Measure("tray icon creation"))
+        using (startupTiming.Measure("shell show"))
         {
-            CreateTrayIcon(_appIconProvider);
+            mainWindow.Show();
         }
 
+        // Accept secondary-instance "show" requests as soon as the shell exists.
         _appInstanceCoordinator.StartListening(ShowMainWindow);
-        using (startupTiming.Measure("main window show"))
+
+        // 2) Heavy I/O off UI → 3) compose + home on UI dispatcher.
+        _ = Task.Run(() => PrepareBootstrapThenFinishStartup(mainWindow, startupTiming));
+    }
+
+    private void PrepareBootstrapThenFinishStartup(
+        MainWindow mainWindow,
+        StartupTimingLog startupTiming)
+    {
+        AppCompositionBootstrap bootstrap;
+        try
         {
-            MainWindow.Show();
+            bootstrap = AppComposition.PrepareStorageAndDatabase(startupTiming);
+        }
+        catch (Exception ex)
+        {
+            _ = Dispatcher.BeginInvoke(() =>
+            {
+                ReportStartupFailure(ex);
+                Shutdown();
+            });
+            return;
         }
 
         _ = Dispatcher.BeginInvoke(
-            () => InitializeHomeAfterFirstRender(viewModel, services.FileLogger, startupTiming),
-            DispatcherPriority.ApplicationIdle);
+            () => FinishStartupOnUiThread(mainWindow, bootstrap, startupTiming),
+            DispatcherPriority.Normal);
+    }
+
+    private void FinishStartupOnUiThread(
+        MainWindow mainWindow,
+        AppCompositionBootstrap bootstrap,
+        StartupTimingLog startupTiming)
+    {
+        try
+        {
+            AppComposition services;
+            using (startupTiming.Measure("service composition"))
+            {
+                services = AppComposition.CreateFromBootstrap(bootstrap, startupTiming);
+            }
+
+            MainViewModel viewModel;
+            using (startupTiming.Measure("main view model construction"))
+            {
+                viewModel = MainViewModelFactory.Create(
+                    services,
+                    mainWindow.GetPasteTargetWindowHandle,
+                    mainWindow.HideAfterPaste,
+                    mainWindow.EnterEditMode,
+                    createPasteSelectionCompletion: mainWindow.CreatePasteSelectionCompletion);
+            }
+
+            mainWindow.AttachViewModel(viewModel);
+            RegisterThumbnailPrewarm(viewModel);
+
+            try
+            {
+                using (startupTiming.Measure("initial home load"))
+                {
+                    viewModel.InitializeHome();
+                }
+            }
+            catch (Exception ex)
+            {
+                services.FileLogger?.Log("Initial home loading failed.", ex);
+                viewModel.ReportBackgroundStatus("홈 화면을 불러오지 못했습니다.");
+            }
+
+            // Prewarm as soon as home slots exist (no wait for ApplicationIdle).
+            QueueThumbnailPrewarm(viewModel);
+
+            using (startupTiming.Measure("tray icon creation"))
+            {
+                if (_appIconProvider is not null)
+                {
+                    CreateTrayIcon(_appIconProvider);
+                }
+            }
+
+            startupTiming.Mark("startup ready");
+            startupTiming.FlushAsync(services.FileLogger);
+        }
+        catch (Exception ex)
+        {
+            ReportStartupFailure(ex);
+            Shutdown();
+        }
     }
 
     private void CreateTrayIcon(AppIconProvider iconProvider)
@@ -139,29 +202,6 @@ public partial class App : Application
         _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
     }
 
-    private static void InitializeHomeAfterFirstRender(
-        MainViewModel viewModel,
-        FileLogger? fileLogger,
-        StartupTimingLog startupTiming)
-    {
-        try
-        {
-            using (startupTiming.Measure("initial home load"))
-            {
-                viewModel.InitializeHome();
-            }
-        }
-        catch (Exception ex)
-        {
-            fileLogger?.Log("Initial home loading failed.", ex);
-            viewModel.ReportBackgroundStatus("홈 화면을 불러오지 못했습니다.");
-        }
-        finally
-        {
-            startupTiming.FlushAsync(fileLogger);
-        }
-    }
-
     private static void RegisterThumbnailPrewarm(MainViewModel viewModel)
     {
         viewModel.PropertyChanged += (_, e) =>
@@ -175,37 +215,15 @@ public partial class App : Application
 
     private static void QueueThumbnailPrewarm(MainViewModel viewModel)
     {
-        IReadOnlyList<string> thumbnailPaths;
         try
         {
-            thumbnailPaths = viewModel.GetVisibleThumbnailPaths();
+            // Decode off UI and push frozen ImageSource onto each visible slot.
+            ThumbnailLoadScheduler.ScheduleGrid(viewModel.GetVisibleNumpadGrid());
         }
         catch
         {
-            // Prewarm must never break navigation.
-            return;
+            // Thumbnail scheduling must never break navigation.
         }
-
-        if (thumbnailPaths.Count == 0)
-        {
-            return;
-        }
-
-        // Snapshot paths so a later navigation cannot mutate the list mid-prewarm.
-        var snapshot = thumbnailPaths.ToArray();
-
-        // Match NumpadGrid slot bindings (ConverterParameter=42).
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                FrozenImageCache.PrewarmFiles(snapshot, decodePixelWidth: 42);
-            }
-            catch
-            {
-                // Background decode failures are non-fatal; binding will retry on demand.
-            }
-        });
     }
 
     private void ExitApplication()
@@ -299,4 +317,3 @@ public partial class App : Application
         _trayIcon = null;
     }
 }
-

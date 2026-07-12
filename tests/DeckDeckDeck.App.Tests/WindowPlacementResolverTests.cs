@@ -90,4 +90,52 @@ public sealed class WindowPlacementResolverTests
         Assert.Equal(428, placement.Top);
         Assert.Equal("Primary", placement.ScreenDeviceName);
     }
+
+    [Fact]
+    public void WindowPlacementIgnoresWpfManualOriginAndUsesBottomRight()
+    {
+        // Corrupted save from shell-first startup (Manual default before settings load).
+        var settings = new AppSettings
+        {
+            LastWindowLeft = 0,
+            LastWindowTop = 0,
+            LastWindowScreenDeviceName = "Primary"
+        };
+        var primary = new WindowWorkArea("Primary", 0, 0, 1920, 1080, true);
+
+        var placement = WindowPlacementResolver.Resolve(settings, 560, 680, [primary]);
+
+        Assert.Equal(1336, placement.Left);
+        Assert.Equal(376, placement.Top);
+        Assert.Equal("Primary", placement.ScreenDeviceName);
+    }
+
+    [Fact]
+    public void IsUnsetOrWpfManualOriginDetectsZeroZero()
+    {
+        Assert.True(WindowPlacementResolver.IsUnsetOrWpfManualOrigin(0, 0));
+        Assert.True(WindowPlacementResolver.IsUnsetOrWpfManualOrigin(0.1, -0.1));
+        Assert.False(WindowPlacementResolver.IsUnsetOrWpfManualOrigin(24, 24));
+        Assert.False(WindowPlacementResolver.IsUnsetOrWpfManualOrigin(1336, 376));
+    }
+
+    [Fact]
+    public void WindowPlacementIgnoresNearTopLeftShellFirstCorruption()
+    {
+        // Real user DB after shell-first bug: lastWindowLeft/Top ≈ 130 (not exactly 0).
+        var settings = new AppSettings
+        {
+            LastWindowLeft = 130,
+            LastWindowTop = 130,
+            LastWindowScreenDeviceName = @"\\.\DISPLAY1"
+        };
+        var primary = new WindowWorkArea("Primary", 0, 0, 1920, 1080, true);
+
+        var placement = WindowPlacementResolver.Resolve(settings, 560, 680, [primary]);
+
+        Assert.Equal(1336, placement.Left);
+        Assert.Equal(376, placement.Top);
+        Assert.True(WindowPlacementResolver.IsLikelyShellFirstCorruption(130, 130, [primary]));
+        Assert.False(WindowPlacementResolver.IsLikelyShellFirstCorruption(1336, 376, [primary]));
+    }
 }

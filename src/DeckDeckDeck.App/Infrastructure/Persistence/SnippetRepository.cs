@@ -286,6 +286,8 @@ public sealed class SnippetRepository : ISnippetRepository
             MediaCommand = source.MediaCommand,
             TerminalCommand = source.TerminalCommand,
             TerminalShell = source.TerminalShell,
+            OpenTerminalWindow = source.OpenTerminalWindow,
+            TerminalWorkingDirectory = source.TerminalWorkingDirectory,
             RunAsAdministrator = source.RunAsAdministrator,
             SlotImageMode = source.SlotImageMode,
             Description = source.Description,
@@ -341,6 +343,8 @@ public sealed class SnippetRepository : ISnippetRepository
         snippet.MediaCommand = data.MediaCommand;
         snippet.TerminalCommand = data.TerminalCommand;
         snippet.TerminalShell = data.TerminalShell;
+        snippet.OpenTerminalWindow = data.OpenTerminalWindow;
+        snippet.TerminalWorkingDirectory = data.TerminalWorkingDirectory;
         snippet.RunAsAdministrator = data.RunAsAdministrator;
         snippet.SlotImageMode = data.SlotImageMode;
         snippet.Description = data.Description;

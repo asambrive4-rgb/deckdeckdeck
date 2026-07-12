@@ -82,6 +82,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         RemoveImageCommand = new RelayCommand(RemoveImage);
         ChooseLaunchFileCommand = new RelayCommand(ChooseLaunchFile);
         ChooseLaunchFolderCommand = new RelayCommand(ChooseLaunchFolder);
+        ChooseTerminalWorkingDirectoryCommand = new RelayCommand(ChooseTerminalWorkingDirectory);
     }
 
     public string Title => IsExisting ? "실행 항목 편집" : "새 실행 항목";
@@ -159,20 +160,19 @@ public sealed class SnippetEditViewModel : ObservableObject
 
             _draft.SetActionType(value);
             OnPropertyChanged();
-            OnPropertyChanged(nameof(IsPasteTextAction));
-            OnPropertyChanged(nameof(IsLaunchFileAction));
-            OnPropertyChanged(nameof(IsLaunchUrlAction));
-            OnPropertyChanged(nameof(IsMediaAction));
-            OnPropertyChanged(nameof(IsTerminalCommandAction));
+            NotifyActionTypePresentationChanged();
             NotifyFileActionModeChanged();
             OnPropertyChanged(nameof(ShowSpotifyMediaConnectionNotice));
             NotifyImageChanged();
         }
     }
 
+    public ActionEditorPanel EditorPanel =>
+        ExecutableActionTypeCatalog.GetEditorPanel(ActionType);
+
     public bool IsPasteTextAction
     {
-        get => ActionType == SnippetActionType.PasteText;
+        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.PasteText);
         set
         {
             if (value)
@@ -184,7 +184,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public bool IsLaunchFileAction
     {
-        get => ActionType == SnippetActionType.LaunchFile;
+        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.LaunchFile);
         set
         {
             if (value)
@@ -196,7 +196,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public bool IsLaunchUrlAction
     {
-        get => ActionType == SnippetActionType.LaunchUrl;
+        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.LaunchUrl);
         set
         {
             if (value)
@@ -208,7 +208,7 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public bool IsMediaAction
     {
-        get => ActionType == SnippetActionType.MediaAction;
+        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.Media);
         set
         {
             if (value)
@@ -220,7 +220,9 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     public bool IsTerminalCommandAction
     {
-        get => ActionType == SnippetActionType.TerminalCommand;
+        get => ExecutableActionTypeCatalog.IsEditorPanel(
+            ActionType,
+            ActionEditorPanel.TerminalCommand);
         set
         {
             if (value)
@@ -356,6 +358,24 @@ public sealed class SnippetEditViewModel : ObservableObject
             static (draft, newValue) => draft.RunAsAdministrator = newValue);
     }
 
+    public bool OpenTerminalWindow
+    {
+        get => _draft.OpenTerminalWindow;
+        set => SetDraftValue(
+            _draft.OpenTerminalWindow,
+            value,
+            static (draft, newValue) => draft.OpenTerminalWindow = newValue);
+    }
+
+    public string TerminalWorkingDirectory
+    {
+        get => _draft.TerminalWorkingDirectory;
+        set => SetDraftValue(
+            _draft.TerminalWorkingDirectory,
+            value,
+            static (draft, newValue) => draft.TerminalWorkingDirectory = newValue);
+    }
+
     public string Description
     {
         get => _draft.Description;
@@ -397,6 +417,8 @@ public sealed class SnippetEditViewModel : ObservableObject
     public ICommand ChooseLaunchFileCommand { get; }
 
     public ICommand ChooseLaunchFolderCommand { get; }
+
+    public ICommand ChooseTerminalWorkingDirectoryCommand { get; }
 
     public void DropImageFiles(IReadOnlyList<string> sourcePaths)
     {
@@ -663,11 +685,33 @@ public sealed class SnippetEditViewModel : ObservableObject
         NotifyImageChanged();
     }
 
+    private void ChooseTerminalWorkingDirectory()
+    {
+        var selectedPath = _dialogService.SelectLaunchFolder();
+        if (selectedPath is null)
+        {
+            return;
+        }
+
+        TerminalWorkingDirectory = selectedPath;
+        ErrorMessage = string.Empty;
+    }
+
     private void NotifyImageChanged()
     {
         OnPropertyChanged(nameof(ThumbnailPath));
         OnPropertyChanged(nameof(HasImage));
         OnPropertyChanged(nameof(SlotImageMode));
+    }
+
+    private void NotifyActionTypePresentationChanged()
+    {
+        OnPropertyChanged(nameof(EditorPanel));
+        OnPropertyChanged(nameof(IsPasteTextAction));
+        OnPropertyChanged(nameof(IsLaunchFileAction));
+        OnPropertyChanged(nameof(IsLaunchUrlAction));
+        OnPropertyChanged(nameof(IsMediaAction));
+        OnPropertyChanged(nameof(IsTerminalCommandAction));
     }
 
     private void NotifyFileActionModeChanged()

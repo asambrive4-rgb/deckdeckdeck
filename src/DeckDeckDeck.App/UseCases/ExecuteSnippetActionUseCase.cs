@@ -3,6 +3,10 @@ using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.UseCases;
 
+/// <summary>
+/// Runs one executable action. When adding <see cref="SnippetActionType"/>,
+/// update <see cref="Domain.ExecutableActionTypeCatalog"/> first, then add a case here.
+/// </summary>
 public sealed class ExecuteSnippetActionUseCase
 {
     private readonly IClipboardPasteGateway _clipboardPasteGateway;
@@ -297,7 +301,7 @@ public sealed class ExecuteSnippetActionUseCase
         ExecutableAction action,
         AppSettings settings)
     {
-        if (string.IsNullOrWhiteSpace(action.TerminalCommand))
+        if (string.IsNullOrWhiteSpace(action.TerminalCommand) && !action.OpenTerminalWindow)
         {
             return ReportTerminalCommandFailure(action, "실행할 터미널 명령이 없습니다.");
         }
@@ -307,9 +311,11 @@ public sealed class ExecuteSnippetActionUseCase
         try
         {
             var executed = _terminalCommandGateway.TryExecute(
-                action.TerminalCommand,
+                action.TerminalCommand ?? string.Empty,
                 shell,
-                action.RunAsAdministrator);
+                action.RunAsAdministrator,
+                action.OpenTerminalWindow,
+                action.TerminalWorkingDirectory);
             if (!executed)
             {
                 return ReportTerminalCommandFailure(

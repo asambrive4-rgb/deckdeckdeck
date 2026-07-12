@@ -85,6 +85,16 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "RunAsAdministrator",
                 "ALTER TABLE Snippets ADD COLUMN RunAsAdministrator INTEGER NOT NULL DEFAULT 1");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "OpenTerminalWindow",
+                "ALTER TABLE Snippets ADD COLUMN OpenTerminalWindow INTEGER NOT NULL DEFAULT 0");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "TerminalWorkingDirectory",
+                "ALTER TABLE Snippets ADD COLUMN TerminalWorkingDirectory TEXT NULL");
             var addedSlotImageMode = AddColumnIfMissing(
                 dbContext,
                 existingColumns,
@@ -147,6 +157,8 @@ public sealed class AppDbContextFactory
                     TerminalCommand TEXT NULL,
                     TerminalShell TEXT NULL,
                     RunAsAdministrator INTEGER NOT NULL DEFAULT 1,
+                    OpenTerminalWindow INTEGER NOT NULL DEFAULT 0,
+                    TerminalWorkingDirectory TEXT NULL,
                     SlotImageMode TEXT NOT NULL DEFAULT 'Auto',
                     Description TEXT NULL,
                     ImagePath TEXT NULL,
@@ -167,6 +179,16 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "FileActionMode",
                 "ALTER TABLE HotkeyActions ADD COLUMN FileActionMode TEXT NOT NULL DEFAULT 'Launch'");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "OpenTerminalWindow",
+                "ALTER TABLE HotkeyActions ADD COLUMN OpenTerminalWindow INTEGER NOT NULL DEFAULT 0");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "TerminalWorkingDirectory",
+                "ALTER TABLE HotkeyActions ADD COLUMN TerminalWorkingDirectory TEXT NULL");
 
             using var createIndexCommand = dbContext.Database.GetDbConnection().CreateCommand();
             createIndexCommand.CommandText = """

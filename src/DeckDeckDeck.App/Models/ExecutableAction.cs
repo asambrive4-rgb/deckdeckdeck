@@ -13,7 +13,9 @@ public sealed record ExecutableAction(
     SnippetMediaCommand? MediaCommand,
     string? TerminalCommand,
     SnippetTerminalShell? TerminalShell,
-    bool RunAsAdministrator)
+    bool RunAsAdministrator,
+    bool OpenTerminalWindow = false,
+    string? TerminalWorkingDirectory = null)
 {
     public static ExecutableAction FromSnippet(Snippet snippet)
     {
@@ -30,7 +32,9 @@ public sealed record ExecutableAction(
             snippet.MediaCommand,
             snippet.TerminalCommand,
             snippet.TerminalShell,
-            snippet.RunAsAdministrator);
+            snippet.RunAsAdministrator,
+            snippet.OpenTerminalWindow,
+            snippet.TerminalWorkingDirectory);
     }
 
     public static ExecutableAction FromHotkeyAction(HotkeyAction action)
@@ -48,6 +52,8 @@ public sealed record ExecutableAction(
             action.MediaCommand,
             action.TerminalCommand,
             action.TerminalShell,
-            action.RunAsAdministrator);
+            action.RunAsAdministrator,
+            action.OpenTerminalWindow,
+            action.TerminalWorkingDirectory);
     }
 }

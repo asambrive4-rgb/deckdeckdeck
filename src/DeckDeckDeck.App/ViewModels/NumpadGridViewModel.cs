@@ -7,13 +7,16 @@ namespace DeckDeckDeck.App.ViewModels;
 public sealed class NumpadGridViewModel
 {
     private readonly Dictionary<SlotKey, SlotViewModel> _slotsByKey;
+    private readonly Action<SlotKey, SlotKey>? _onReorder;
 
     public NumpadGridViewModel(
         IEnumerable<SlotViewModel> slots,
-        HotkeyTileViewModel? hotkeyTile = null)
+        HotkeyTileViewModel? hotkeyTile = null,
+        Action<SlotKey, SlotKey>? onReorder = null)
     {
         Slots = slots.ToList();
         HotkeyTile = hotkeyTile ?? HotkeyTileViewModel.Disabled();
+        _onReorder = onReorder;
         _slotsByKey = Slots.ToDictionary(slot => slot.SlotKey);
 
         Numpad0 = GetRequiredSlot(SlotKey.Numpad0);
@@ -78,6 +81,16 @@ public sealed class NumpadGridViewModel
         {
             slot.SelectCommand.Execute(null);
         }
+    }
+
+    public void RequestReorder(SlotKey sourceSlotKey, SlotKey targetSlotKey)
+    {
+        if (sourceSlotKey == targetSlotKey)
+        {
+            return;
+        }
+
+        _onReorder?.Invoke(sourceSlotKey, targetSlotKey);
     }
 
     private SlotViewModel GetRequiredSlot(SlotKey slotKey)

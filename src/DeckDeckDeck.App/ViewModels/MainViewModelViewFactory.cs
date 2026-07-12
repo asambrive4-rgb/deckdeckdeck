@@ -24,7 +24,8 @@ internal sealed class MainViewModelViewFactory
         Action<Category> editCategory,
         Action<SlotKey> createCategory,
         Action showSettings,
-        Action showHotkeys)
+        Action showHotkeys,
+        Action<SlotKey, SlotKey> reorderCategory)
     {
         return new HomeViewModel(
             _dependencies.LoadHomeGridUseCase.Execute(),
@@ -33,14 +34,16 @@ internal sealed class MainViewModelViewFactory
             editCategory,
             createCategory,
             showSettings,
-            showHotkeys);
+            showHotkeys,
+            reorderCategory);
     }
 
     public CategoryViewModel CreateCategory(
         Category category,
         Action showHome,
         Action showSettings,
-        Action<Category, SlotKey, Snippet?> editSnippet)
+        Action<Category, SlotKey, Snippet?> editSnippet,
+        Action<SlotKey, SlotKey> reorderSnippet)
     {
         return new CategoryViewModel(
             category,
@@ -49,7 +52,8 @@ internal sealed class MainViewModelViewFactory
             showHome,
             showSettings,
             editSnippet,
-            _executeSnippet);
+            _executeSnippet,
+            reorderSnippet);
     }
 
     public CategoryEditViewModel CreateCategoryEditor(
@@ -111,7 +115,7 @@ internal sealed class MainViewModelViewFactory
     {
         return new SettingsViewModel(
             _dependencies.LoadSettingsUseCase,
-            _dependencies.SaveSettingsUseCase,
+            _dependencies.SaveAppPreferencesUseCase,
             _dependencies.CreateManualBackupUseCase,
             _dependencies.RestoreBackupUseCase,
             _dependencies.StartupRegistrationUseCase,

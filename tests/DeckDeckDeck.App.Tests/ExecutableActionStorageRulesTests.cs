@@ -36,6 +36,8 @@ public sealed class ExecutableActionStorageRulesTests
         Assert.Equal(snippet.TerminalCommand, hotkey.TerminalCommand);
         Assert.Equal(snippet.TerminalShell, hotkey.TerminalShell);
         Assert.Equal(snippet.RunAsAdministrator, hotkey.RunAsAdministrator);
+        Assert.Equal(snippet.OpenTerminalWindow, hotkey.OpenTerminalWindow);
+        Assert.Equal(snippet.TerminalWorkingDirectory, hotkey.TerminalWorkingDirectory);
         Assert.Equal(snippet.FileActionMode, hotkey.FileActionMode);
 
         Assert.Equal("Title", snippet.Title);
@@ -65,7 +67,9 @@ public sealed class ExecutableActionStorageRulesTests
             "  echo hello  ",
             SnippetTerminalShell.PowerShell,
             RunAsAdministrator: false,
-            FileActionMode: FileActionMode.Paste);
+            FileActionMode: FileActionMode.Paste,
+            OpenTerminalWindow: true,
+            TerminalWorkingDirectory: "  C:\\repos\\demo  ");
     }
 
     private static HotkeyActionSaveData CreateHotkeyActionSaveData(
@@ -91,7 +95,9 @@ public sealed class ExecutableActionStorageRulesTests
             "  echo hello  ",
             SnippetTerminalShell.PowerShell,
             RunAsAdministrator: false,
-            FileActionMode: FileActionMode.Paste);
+            FileActionMode: FileActionMode.Paste,
+            OpenTerminalWindow: true,
+            TerminalWorkingDirectory: "  C:\\repos\\demo  ");
     }
 
     private static void AssertExpectedExecutableFields(
@@ -111,6 +117,8 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Null(data.TerminalCommand);
                 Assert.Null(data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
+                Assert.False(data.OpenTerminalWindow);
+                Assert.Null(data.TerminalWorkingDirectory);
                 Assert.Null(data.AutoIcon);
                 Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
@@ -124,6 +132,8 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Null(data.TerminalCommand);
                 Assert.Null(data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
+                Assert.False(data.OpenTerminalWindow);
+                Assert.Null(data.TerminalWorkingDirectory);
                 Assert.Equal(autoIcon, data.AutoIcon);
                 Assert.Equal(FileActionMode.Paste, data.FileActionMode);
                 break;
@@ -136,6 +146,8 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Null(data.TerminalCommand);
                 Assert.Null(data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
+                Assert.False(data.OpenTerminalWindow);
+                Assert.Null(data.TerminalWorkingDirectory);
                 Assert.Null(data.AutoIcon);
                 Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
@@ -148,6 +160,8 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Null(data.TerminalCommand);
                 Assert.Null(data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
+                Assert.False(data.OpenTerminalWindow);
+                Assert.Null(data.TerminalWorkingDirectory);
                 Assert.Null(data.AutoIcon);
                 Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
@@ -160,6 +174,8 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.Equal("echo hello", data.TerminalCommand);
                 Assert.Equal(SnippetTerminalShell.PowerShell, data.TerminalShell);
                 Assert.False(data.RunAsAdministrator);
+                Assert.True(data.OpenTerminalWindow);
+                Assert.Equal(@"C:\repos\demo", data.TerminalWorkingDirectory);
                 Assert.Null(data.AutoIcon);
                 Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;

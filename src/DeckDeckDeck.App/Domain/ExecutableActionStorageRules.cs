@@ -20,9 +20,12 @@ public static class ExecutableActionStorageRules
         string? terminalCommand,
         SnippetTerminalShell? terminalShell,
         bool runAsAdministrator,
-        FileActionMode fileActionMode)
+        FileActionMode fileActionMode,
+        bool openTerminalWindow = false,
+        string? terminalWorkingDirectory = null)
     {
         var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
+        var isTerminal = actionType == SnippetActionType.TerminalCommand;
 
         return new ExecutableActionStorageData(
             title.Trim(),
@@ -44,16 +47,20 @@ public static class ExecutableActionStorageRules
             actionType == SnippetActionType.PasteText
                 ? pasteShortcutMode
                 : PasteShortcutMode.CtrlV,
-            actionType == SnippetActionType.TerminalCommand
+            isTerminal
                 ? NormalizeOptionalText(terminalCommand)
                 : null,
-            actionType == SnippetActionType.TerminalCommand
+            isTerminal
                 ? terminalShell ?? SnippetTerminalShell.Cmd
                 : null,
-            actionType == SnippetActionType.TerminalCommand && runAsAdministrator,
+            isTerminal && runAsAdministrator,
             actionType == SnippetActionType.LaunchFile
                 ? fileActionMode
-                : FileActionMode.Launch);
+                : FileActionMode.Launch,
+            isTerminal && openTerminalWindow,
+            isTerminal
+                ? NormalizeOptionalText(terminalWorkingDirectory)
+                : null);
     }
 
     private static string? NormalizeOptionalText(string? value)
@@ -84,4 +91,6 @@ public sealed record ExecutableActionStorageData(
     string? TerminalCommand,
     SnippetTerminalShell? TerminalShell,
     bool RunAsAdministrator,
-    FileActionMode FileActionMode);
+    FileActionMode FileActionMode,
+    bool OpenTerminalWindow,
+    string? TerminalWorkingDirectory);

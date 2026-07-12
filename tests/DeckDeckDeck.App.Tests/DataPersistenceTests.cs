@@ -217,6 +217,22 @@ public sealed class DataPersistenceTests
             terminalShell: SnippetTerminalShell.PowerShell,
             runAsAdministrator: false);
 
+        var created = Assert.Single(services.SnippetRepository.GetByCategoryId(category.Id));
+        services.SnippetRepository.Update(
+            created.Id,
+            new SnippetSaveData(
+                created.Title,
+                created.Content,
+                created.Description,
+                created.ImagePath,
+                created.ThumbnailPath,
+                SnippetActionType.TerminalCommand,
+                TerminalCommand: "  echo reconnect  ",
+                TerminalShell: SnippetTerminalShell.PowerShell,
+                RunAsAdministrator: false,
+                OpenTerminalWindow: true,
+                TerminalWorkingDirectory: "  C:\\repos\\demo  ").NormalizeForStorage());
+
         var reloadedServices = CreateServices(services.Storage.AppDataPath);
         var snippet = Assert.Single(reloadedServices.SnippetRepository.GetByCategoryId(category.Id));
 
@@ -229,6 +245,8 @@ public sealed class DataPersistenceTests
         Assert.Equal("echo reconnect", snippet.TerminalCommand);
         Assert.Equal(SnippetTerminalShell.PowerShell, snippet.TerminalShell);
         Assert.False(snippet.RunAsAdministrator);
+        Assert.True(snippet.OpenTerminalWindow);
+        Assert.Equal(@"C:\repos\demo", snippet.TerminalWorkingDirectory);
         Assert.Null(snippet.AutoIconPath);
     }
 
@@ -610,13 +628,18 @@ public sealed class DataPersistenceTests
         services.SnippetRepository.Create(
             source.Id,
             SlotKey.Numpad3,
-            "Reconnect Bluetooth",
-            "unused",
-            null,
-            actionType: SnippetActionType.TerminalCommand,
-            terminalCommand: "echo reconnect",
-            terminalShell: SnippetTerminalShell.Cmd,
-            runAsAdministrator: true);
+            new SnippetSaveData(
+                "Reconnect Bluetooth",
+                "unused",
+                Description: null,
+                ImagePath: null,
+                ThumbnailPath: null,
+                SnippetActionType.TerminalCommand,
+                TerminalCommand: "echo reconnect",
+                TerminalShell: SnippetTerminalShell.Cmd,
+                RunAsAdministrator: true,
+                OpenTerminalWindow: true,
+                TerminalWorkingDirectory: @"C:\repos\demo").NormalizeForStorage());
 
         services.CategoryRepository.CopyToSlot(source.Id, SlotKey.Numpad5, imageFiles => imageFiles);
 
@@ -627,6 +650,8 @@ public sealed class DataPersistenceTests
         Assert.Equal("echo reconnect", copiedSnippet.TerminalCommand);
         Assert.Equal(SnippetTerminalShell.Cmd, copiedSnippet.TerminalShell);
         Assert.True(copiedSnippet.RunAsAdministrator);
+        Assert.True(copiedSnippet.OpenTerminalWindow);
+        Assert.Equal(@"C:\repos\demo", copiedSnippet.TerminalWorkingDirectory);
     }
 
     [Fact]

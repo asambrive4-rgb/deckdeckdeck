@@ -22,7 +22,9 @@ public static class ExecutableActionSaveDataExtensions
             data.TerminalCommand,
             data.TerminalShell,
             data.RunAsAdministrator,
-            data.FileActionMode);
+            data.FileActionMode,
+            data.OpenTerminalWindow,
+            data.TerminalWorkingDirectory);
 
         return data with
         {
@@ -40,7 +42,9 @@ public static class ExecutableActionSaveDataExtensions
             TerminalCommand = normalized.TerminalCommand,
             TerminalShell = normalized.TerminalShell,
             RunAsAdministrator = normalized.RunAsAdministrator,
-            FileActionMode = normalized.FileActionMode
+            FileActionMode = normalized.FileActionMode,
+            OpenTerminalWindow = normalized.OpenTerminalWindow,
+            TerminalWorkingDirectory = normalized.TerminalWorkingDirectory
         };
     }
 
@@ -62,7 +66,9 @@ public static class ExecutableActionSaveDataExtensions
             data.TerminalCommand,
             data.TerminalShell,
             data.RunAsAdministrator,
-            data.FileActionMode);
+            data.FileActionMode,
+            data.OpenTerminalWindow,
+            data.TerminalWorkingDirectory);
 
         return data with
         {
@@ -80,7 +86,9 @@ public static class ExecutableActionSaveDataExtensions
             TerminalCommand = normalized.TerminalCommand,
             TerminalShell = normalized.TerminalShell,
             RunAsAdministrator = normalized.RunAsAdministrator,
-            FileActionMode = normalized.FileActionMode
+            FileActionMode = normalized.FileActionMode,
+            OpenTerminalWindow = normalized.OpenTerminalWindow,
+            TerminalWorkingDirectory = normalized.TerminalWorkingDirectory
         };
     }
 }

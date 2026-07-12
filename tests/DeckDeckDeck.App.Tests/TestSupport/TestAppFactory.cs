@@ -133,7 +133,7 @@ internal static class TestAppFactory
         ISpotifyConnectionUseCase? spotifyConnectionUseCase = null,
         IClipboardTextWriter? clipboardTextWriter = null,
         IStartupRegistrationUseCase? startupRegistrationUseCase = null,
-        ISaveSettingsUseCase? saveSettingsUseCase = null,
+        ISaveAppPreferencesUseCase? saveAppPreferencesUseCase = null,
         ICreateManualBackupUseCase? createManualBackupUseCase = null,
         IRestoreBackupUseCase? restoreBackupUseCase = null)
     {
@@ -144,17 +144,22 @@ internal static class TestAppFactory
                 services.SettingsRepository,
                 new SpotifyConnectionGatewayAdapter(urlLaunchGateway),
                 urlLaunchGateway);
-
-        return new SettingsViewModel(
-            new LoadSettingsUseCase(services.SettingsRepository),
-            saveSettingsUseCase
-                ?? new SaveSettingsUseCase(
+        var effectiveStartupRegistrationUseCase = startupRegistrationUseCase
+            ?? new RecordingStartupRegistrationUseCase();
+        var effectiveSaveAppPreferencesUseCase = saveAppPreferencesUseCase
+            ?? new SaveAppPreferencesUseCase(
+                new SaveSettingsUseCase(
                     services.SettingsRepository,
                     effectiveBackupGateway,
                     autoBackupRequester),
+                effectiveStartupRegistrationUseCase);
+
+        return new SettingsViewModel(
+            new LoadSettingsUseCase(services.SettingsRepository),
+            effectiveSaveAppPreferencesUseCase,
             createManualBackupUseCase ?? new CreateManualBackupUseCase(effectiveBackupGateway),
             restoreBackupUseCase ?? new RestoreBackupUseCase(effectiveBackupGateway),
-            startupRegistrationUseCase ?? new RecordingStartupRegistrationUseCase(),
+            effectiveStartupRegistrationUseCase,
             effectiveSpotifyConnectionUseCase,
             clipboardTextWriter ?? new FakeClipboardAdapter(null),
             dialogAdapter ?? new DialogAdapter(),
@@ -471,14 +476,21 @@ internal sealed class RecordingTerminalCommandGatewayAdapter : ITerminalCommandG
     public bool TryExecute(
         string command,
         SnippetTerminalShell shell,
-        bool runAsAdministrator)
+        bool runAsAdministrator,
+        bool openTerminalWindow = false,
+        string? workingDirectory = null)
     {
         if (Exception is not null)
         {
             throw Exception;
         }
 
-        Calls.Add(new TerminalCommandCall(command, shell, runAsAdministrator));
+        Calls.Add(new TerminalCommandCall(
+            command,
+            shell,
+            runAsAdministrator,
+            openTerminalWindow,
+            workingDirectory));
         return Result;
     }
 }
@@ -486,7 +498,9 @@ internal sealed class RecordingTerminalCommandGatewayAdapter : ITerminalCommandG
 internal sealed record TerminalCommandCall(
     string Command,
     SnippetTerminalShell Shell,
-    bool RunAsAdministrator);
+    bool RunAsAdministrator,
+    bool OpenTerminalWindow = false,
+    string? WorkingDirectory = null);
 
 internal sealed class RecordingAutoBackupCoordinator : IAutoBackupCoordinator
 {

@@ -1,3 +1,4 @@
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 
@@ -7,13 +8,28 @@ public sealed class PrepareSnippetActionUseCase
 {
     public PrepareSnippetActionResult Execute(PrepareSnippetActionRequest request)
     {
-        var shouldHideBeforeExecute =
-            (request.Action.ActionType == SnippetActionType.PasteText
-                || request.Action.ActionType == SnippetActionType.LaunchFile
-                && request.Action.FileActionMode == FileActionMode.Paste)
-            && request.Settings.AutoHideAfterPaste;
+        var shouldHideBeforeExecute = ExecutableActionTypeCatalog.ShouldHideBeforeExecute(
+            request.Action.ActionType,
+            request.Action.FileActionMode,
+            request.Settings.AutoHideAfterPaste);
 
         return new PrepareSnippetActionResult(shouldHideBeforeExecute);
+    }
+}
+
+/// <summary>
+/// Decides paste-palette Z-order policy from settings. Window visibility/minimized
+/// handling stays in the window adapter.
+/// </summary>
+public sealed class PreparePastePalettePresentationUseCase
+{
+    public PreparePastePalettePresentationResult Execute(PreparePastePalettePresentationRequest request)
+    {
+        var zOrderMode = request.Settings.BringWindowToFrontOnHotkey
+            ? PastePaletteZOrderMode.BringToFrontTemporarily
+            : PastePaletteZOrderMode.SendToBottom;
+
+        return new PreparePastePalettePresentationResult(zOrderMode);
     }
 }
 
@@ -114,6 +130,16 @@ public sealed record PrepareSnippetActionRequest(
 }
 
 public sealed record PrepareSnippetActionResult(bool ShouldHideBeforeExecute);
+
+public sealed record PreparePastePalettePresentationRequest(AppSettings Settings);
+
+public enum PastePaletteZOrderMode
+{
+    BringToFrontTemporarily,
+    SendToBottom
+}
+
+public sealed record PreparePastePalettePresentationResult(PastePaletteZOrderMode ZOrderMode);
 
 public sealed record SaveWindowPlacementRequest(
     double Left,

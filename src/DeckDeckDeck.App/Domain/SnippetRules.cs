@@ -20,7 +20,9 @@ public static class SnippetRules
         SnippetMediaCommand selectedMediaCommand,
         string? terminalCommand = null,
         SnippetTerminalShell selectedTerminalShell = SnippetTerminalShell.Cmd,
-        bool runAsAdministrator = true)
+        bool runAsAdministrator = true,
+        bool openTerminalWindow = false,
+        string? terminalWorkingDirectory = null)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -45,6 +47,7 @@ public static class SnippetRules
         }
 
         if (actionType == SnippetActionType.TerminalCommand
+            && !openTerminalWindow
             && string.IsNullOrWhiteSpace(terminalCommand))
         {
             return SnippetSaveValidationResult.Failure(TerminalCommandRequiredMessage);
@@ -56,14 +59,20 @@ public static class SnippetRules
         var mediaCommand = actionType == SnippetActionType.MediaAction
             ? MediaCommandRules.GetValidCommandForProvider(selectedMediaProvider, selectedMediaCommand)
             : (SnippetMediaCommand?)null;
-        var normalizedTerminalCommand = actionType == SnippetActionType.TerminalCommand
-            ? terminalCommand?.Trim()
+        var isTerminal = actionType == SnippetActionType.TerminalCommand;
+        var normalizedTerminalCommand = isTerminal
+            ? (string.IsNullOrWhiteSpace(terminalCommand) ? null : terminalCommand.Trim())
             : null;
-        var terminalShell = actionType == SnippetActionType.TerminalCommand
+        var terminalShell = isTerminal
             ? selectedTerminalShell
             : (SnippetTerminalShell?)null;
-        var storedRunAsAdministrator = actionType == SnippetActionType.TerminalCommand
-            && runAsAdministrator;
+        var storedRunAsAdministrator = isTerminal && runAsAdministrator;
+        var storedOpenTerminalWindow = isTerminal && openTerminalWindow;
+        var normalizedTerminalWorkingDirectory = isTerminal
+            ? (string.IsNullOrWhiteSpace(terminalWorkingDirectory)
+                ? null
+                : terminalWorkingDirectory.Trim())
+            : null;
 
         return SnippetSaveValidationResult.Success(
             normalizedLaunchUrl,
@@ -71,7 +80,9 @@ public static class SnippetRules
             mediaCommand,
             normalizedTerminalCommand,
             terminalShell,
-            storedRunAsAdministrator);
+            storedRunAsAdministrator,
+            storedOpenTerminalWindow,
+            normalizedTerminalWorkingDirectory);
     }
 }
 
@@ -83,7 +94,9 @@ public sealed record SnippetSaveValidationResult(
     SnippetMediaCommand? MediaCommand,
     string? NormalizedTerminalCommand,
     SnippetTerminalShell? TerminalShell,
-    bool RunAsAdministrator)
+    bool RunAsAdministrator,
+    bool OpenTerminalWindow,
+    string? TerminalWorkingDirectory)
 {
     public static SnippetSaveValidationResult Success(
         string? normalizedLaunchUrl,
@@ -91,7 +104,9 @@ public sealed record SnippetSaveValidationResult(
         SnippetMediaCommand? mediaCommand,
         string? normalizedTerminalCommand,
         SnippetTerminalShell? terminalShell,
-        bool runAsAdministrator)
+        bool runAsAdministrator,
+        bool openTerminalWindow = false,
+        string? terminalWorkingDirectory = null)
     {
         return new SnippetSaveValidationResult(
             true,
@@ -101,11 +116,23 @@ public sealed record SnippetSaveValidationResult(
             mediaCommand,
             normalizedTerminalCommand,
             terminalShell,
-            runAsAdministrator);
+            runAsAdministrator,
+            openTerminalWindow,
+            terminalWorkingDirectory);
     }
 
     public static SnippetSaveValidationResult Failure(string errorMessage)
     {
-        return new SnippetSaveValidationResult(false, errorMessage, null, null, null, null, null, false);
+        return new SnippetSaveValidationResult(
+            false,
+            errorMessage,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            false,
+            null);
     }
 }

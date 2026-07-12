@@ -1,4 +1,5 @@
 using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.UseCases;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -217,7 +218,8 @@ internal sealed class MainViewModelNavigator
             EditCategory,
             CreateCategory,
             () => ShowSettings(ShowHome),
-            ShowHotkeys);
+            ShowHotkeys,
+            ReorderCategory);
         return _cachedHome;
     }
 
@@ -228,13 +230,108 @@ internal sealed class MainViewModelNavigator
             return cached;
         }
 
+        var categoryId = category.Id;
         var created = _viewFactory.CreateCategory(
             category,
             ShowHome,
-            () => ShowSettings(() => OpenCategoryById(category.Id)),
-            EditSnippet);
+            () => ShowSettings(() => OpenCategoryById(categoryId)),
+            EditSnippet,
+            (source, target) => ReorderSnippet(categoryId, source, target));
         AddCategoryToCache(category.Id, created);
         return created;
+    }
+
+    private void ReorderCategory(SlotKey sourceSlotKey, SlotKey targetSlotKey)
+    {
+        try
+        {
+            var result = _dependencies.MoveCategorySlotUseCase.Execute(
+                new MoveCategorySlotRequest(sourceSlotKey, targetSlotKey, OverwriteConfirmed: false));
+
+            if (result.NeedsOverwriteConfirmation)
+            {
+                var confirmed = _dependencies.DialogAdapter.Confirm(
+                    "카테고리 이동",
+                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetName}' 카테고리가 있습니다.\n기존 카테고리와 안의 실행 항목을 덮어쓸까요?");
+                if (!confirmed)
+                {
+                    return;
+                }
+
+                result = _dependencies.MoveCategorySlotUseCase.Execute(
+                    new MoveCategorySlotRequest(sourceSlotKey, targetSlotKey, OverwriteConfirmed: true));
+            }
+
+            if (result.IsNoOp)
+            {
+                return;
+            }
+
+            if (!result.Succeeded)
+            {
+                _showStatus(result.ErrorMessage ?? "카테고리 이동에 실패했습니다.");
+                return;
+            }
+
+            InvalidateHome();
+            InvalidateCategoryCache();
+            ShowHome();
+            _showStatus($"슬롯 {targetSlotKey.GetDisplayText()}로 카테고리를 이동했습니다.");
+        }
+        catch (Exception)
+        {
+            _showStatus("카테고리 이동에 실패했습니다.");
+        }
+    }
+
+    private void ReorderSnippet(Guid categoryId, SlotKey sourceSlotKey, SlotKey targetSlotKey)
+    {
+        try
+        {
+            var result = _dependencies.MoveSnippetSlotUseCase.Execute(
+                new MoveSnippetSlotRequest(
+                    categoryId,
+                    sourceSlotKey,
+                    targetSlotKey,
+                    OverwriteConfirmed: false));
+
+            if (result.NeedsOverwriteConfirmation)
+            {
+                var confirmed = _dependencies.DialogAdapter.Confirm(
+                    "실행 항목 이동",
+                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetName}' 실행 항목이 있습니다.\n기존 실행 항목을 덮어쓸까요?");
+                if (!confirmed)
+                {
+                    return;
+                }
+
+                result = _dependencies.MoveSnippetSlotUseCase.Execute(
+                    new MoveSnippetSlotRequest(
+                        categoryId,
+                        sourceSlotKey,
+                        targetSlotKey,
+                        OverwriteConfirmed: true));
+            }
+
+            if (result.IsNoOp)
+            {
+                return;
+            }
+
+            if (!result.Succeeded)
+            {
+                _showStatus(result.ErrorMessage ?? "실행 항목 이동에 실패했습니다.");
+                return;
+            }
+
+            InvalidateCategory(categoryId);
+            OpenCategoryById(categoryId);
+            _showStatus($"슬롯 {targetSlotKey.GetDisplayText()}로 실행 항목을 이동했습니다.");
+        }
+        catch (Exception)
+        {
+            _showStatus("실행 항목 이동에 실패했습니다.");
+        }
     }
 
     private bool TryShowCachedCategory(Guid categoryId)

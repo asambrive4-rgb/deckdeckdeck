@@ -21,7 +21,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly IClipboardTextWriter _clipboardService;
     private readonly IStartupRegistrationUseCase _startupRegistrationUseCase;
     private readonly ISpotifyConnectionUseCase _spotifyConnectionUseCase;
-    private readonly ISaveSettingsUseCase _saveSettingsUseCase;
+    private readonly ISaveAppPreferencesUseCase _saveAppPreferencesUseCase;
     private readonly AppSettings _settings;
     private bool _autoHideAfterPaste;
     private bool _autoBackupEnabled;
@@ -39,7 +39,7 @@ public sealed class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(
         ILoadSettingsUseCase loadSettingsUseCase,
-        ISaveSettingsUseCase saveSettingsUseCase,
+        ISaveAppPreferencesUseCase saveAppPreferencesUseCase,
         ICreateManualBackupUseCase createManualBackupUseCase,
         IRestoreBackupUseCase restoreBackupUseCase,
         IStartupRegistrationUseCase startupRegistrationUseCase,
@@ -56,7 +56,7 @@ public sealed class SettingsViewModel : ObservableObject
         _afterSave = afterSave;
         _showStatus = showStatus;
         _loggingService = loggingService;
-        _saveSettingsUseCase = saveSettingsUseCase;
+        _saveAppPreferencesUseCase = saveAppPreferencesUseCase;
         _createManualBackupUseCase = createManualBackupUseCase;
         _restoreBackupUseCase = restoreBackupUseCase;
         _startupRegistrationUseCase = startupRegistrationUseCase;
@@ -281,26 +281,24 @@ public sealed class SettingsViewModel : ObservableObject
     {
         try
         {
-            var result = _saveSettingsUseCase.Execute(new SaveSettingsRequest(
-                BringWindowToFrontOnHotkey,
-                AutoHideAfterPaste,
-                RestoreClipboardAfterPaste,
-                AutoBackupEnabled,
-                BackupFolderPath));
+            var result = _saveAppPreferencesUseCase.Execute(new SaveAppPreferencesRequest(
+                new SaveSettingsRequest(
+                    BringWindowToFrontOnHotkey,
+                    AutoHideAfterPaste,
+                    RestoreClipboardAfterPaste,
+                    AutoBackupEnabled,
+                    BackupFolderPath),
+                new StartupRegistrationSettings(
+                    LaunchAtStartup,
+                    RunAsAdministratorAtStartup)));
             if (!result.Succeeded)
             {
                 ErrorMessage = result.ErrorMessage ?? string.Empty;
-                return;
-            }
+                if (result.FailureKind == SaveAppPreferencesFailureKind.StartupRegistration)
+                {
+                    _showStatus(ErrorMessage);
+                }
 
-            var startupResult = _startupRegistrationUseCase.Save(
-                new StartupRegistrationSettings(
-                    LaunchAtStartup,
-                    RunAsAdministratorAtStartup));
-            if (!startupResult.Succeeded)
-            {
-                ErrorMessage = startupResult.ErrorMessage ?? "시작프로그램 설정을 저장하지 못했습니다.";
-                _showStatus(ErrorMessage);
                 return;
             }
 

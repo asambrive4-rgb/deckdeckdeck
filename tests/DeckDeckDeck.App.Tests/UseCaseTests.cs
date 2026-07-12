@@ -225,7 +225,9 @@ public sealed class UseCaseTests
                 ActionType = SnippetActionType.TerminalCommand,
                 TerminalCommand = "echo reconnect",
                 TerminalShell = SnippetTerminalShell.PowerShell,
-                RunAsAdministrator = true
+                RunAsAdministrator = true,
+                OpenTerminalWindow = true,
+                TerminalWorkingDirectory = @"C:\repos\demo"
             },
             new AppSettings(),
             new IntPtr(123)));
@@ -237,6 +239,8 @@ public sealed class UseCaseTests
         Assert.Equal("echo reconnect", call.Command);
         Assert.Equal(SnippetTerminalShell.PowerShell, call.Shell);
         Assert.True(call.RunAsAdministrator);
+        Assert.True(call.OpenTerminalWindow);
+        Assert.Equal(@"C:\repos\demo", call.WorkingDirectory);
     }
 
     [Fact]

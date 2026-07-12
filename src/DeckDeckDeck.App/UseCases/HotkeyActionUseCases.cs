@@ -126,7 +126,9 @@ public sealed class SaveHotkeyActionUseCase
             data.MediaCommand ?? SnippetMediaCommand.PlayPause,
             data.TerminalCommand,
             data.TerminalShell ?? SnippetTerminalShell.Cmd,
-            data.RunAsAdministrator);
+            data.RunAsAdministrator,
+            data.OpenTerminalWindow,
+            data.TerminalWorkingDirectory);
 
         if (!validation.Succeeded)
         {
@@ -140,7 +142,9 @@ public sealed class SaveHotkeyActionUseCase
             MediaCommand = validation.MediaCommand,
             TerminalCommand = validation.NormalizedTerminalCommand,
             TerminalShell = validation.TerminalShell,
-            RunAsAdministrator = validation.RunAsAdministrator
+            RunAsAdministrator = validation.RunAsAdministrator,
+            OpenTerminalWindow = validation.OpenTerminalWindow,
+            TerminalWorkingDirectory = validation.TerminalWorkingDirectory
         })
             .NormalizeForStorage();
 

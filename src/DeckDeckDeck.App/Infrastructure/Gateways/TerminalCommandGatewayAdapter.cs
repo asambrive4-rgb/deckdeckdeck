@@ -34,17 +34,40 @@ public sealed class TerminalCommandGatewayAdapter : ITerminalCommandGateway
     public bool TryExecute(
         string command,
         SnippetTerminalShell shell,
-        bool runAsAdministrator)
+        bool runAsAdministrator,
+        bool openTerminalWindow = false,
+        string? workingDirectory = null)
     {
-        if (string.IsNullOrWhiteSpace(command))
+        var hasCommand = !string.IsNullOrWhiteSpace(command);
+        if (!hasCommand && !openTerminalWindow)
         {
             return false;
         }
 
-        Directory.CreateDirectory(_tempDirectory);
-        var scriptPath = WriteScript(command, shell);
-        var process = _startProcess(CreateStartInfo(scriptPath, shell, runAsAdministrator));
-        DeleteScriptWhenProcessExits(process, scriptPath);
+        if (!TryNormalizeWorkingDirectory(workingDirectory, out var normalizedWorkingDirectory))
+        {
+            return false;
+        }
+
+        string? scriptPath = null;
+        if (hasCommand)
+        {
+            Directory.CreateDirectory(_tempDirectory);
+            scriptPath = WriteScript(command, shell);
+        }
+
+        var process = _startProcess(
+            CreateStartInfo(
+                scriptPath,
+                shell,
+                runAsAdministrator,
+                openTerminalWindow,
+                normalizedWorkingDirectory));
+
+        if (scriptPath is not null)
+        {
+            DeleteScriptWhenProcessExits(process, scriptPath);
+        }
 
         return true;
     }
@@ -59,13 +82,36 @@ public sealed class TerminalCommandGatewayAdapter : ITerminalCommandGateway
     }
 
     private static ProcessStartInfo CreateStartInfo(
-        string scriptPath,
+        string? scriptPath,
         SnippetTerminalShell shell,
-        bool runAsAdministrator)
+        bool runAsAdministrator,
+        bool openTerminalWindow,
+        string? workingDirectory)
     {
         var startInfo = shell == SnippetTerminalShell.PowerShell
-            ? CreatePowerShellStartInfo(scriptPath)
-            : CreateCmdStartInfo(scriptPath);
+            ? CreatePowerShellStartInfo(scriptPath, openTerminalWindow)
+            : CreateCmdStartInfo(scriptPath, openTerminalWindow);
+
+        if (!string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            startInfo.WorkingDirectory = workingDirectory;
+        }
+
+        if (openTerminalWindow)
+        {
+            if (runAsAdministrator)
+            {
+                startInfo.UseShellExecute = true;
+                startInfo.Verb = "runas";
+                startInfo.WindowStyle = ProcessWindowStyle.Normal;
+                return startInfo;
+            }
+
+            startInfo.UseShellExecute = false;
+            startInfo.CreateNoWindow = false;
+            startInfo.WindowStyle = ProcessWindowStyle.Normal;
+            return startInfo;
+        }
 
         if (runAsAdministrator)
         {
@@ -81,22 +127,61 @@ public sealed class TerminalCommandGatewayAdapter : ITerminalCommandGateway
         return startInfo;
     }
 
-    private static ProcessStartInfo CreateCmdStartInfo(string scriptPath)
+    private static ProcessStartInfo CreateCmdStartInfo(string? scriptPath, bool openTerminalWindow)
     {
+        if (scriptPath is null)
+        {
+            return new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = "/d /k"
+            };
+        }
+
+        var switchFlag = openTerminalWindow ? "/k" : "/c";
         return new ProcessStartInfo
         {
             FileName = "cmd.exe",
-            Arguments = $"/d /c {QuoteArgument(scriptPath)}"
+            Arguments = $"/d {switchFlag} {QuoteArgument(scriptPath)}"
         };
     }
 
-    private static ProcessStartInfo CreatePowerShellStartInfo(string scriptPath)
+    private static ProcessStartInfo CreatePowerShellStartInfo(string? scriptPath, bool openTerminalWindow)
     {
+        if (scriptPath is null)
+        {
+            return new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = "-NoProfile -NoExit"
+            };
+        }
+
+        var keepOpen = openTerminalWindow ? " -NoExit" : string.Empty;
         return new ProcessStartInfo
         {
             FileName = "powershell.exe",
-            Arguments = $"-NoProfile -ExecutionPolicy Bypass -File {QuoteArgument(scriptPath)}"
+            Arguments = $"-NoProfile -ExecutionPolicy Bypass{keepOpen} -File {QuoteArgument(scriptPath)}"
         };
+    }
+
+    private static bool TryNormalizeWorkingDirectory(string? workingDirectory, out string? normalized)
+    {
+        if (string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            normalized = null;
+            return true;
+        }
+
+        var trimmed = workingDirectory.Trim();
+        if (!Directory.Exists(trimmed))
+        {
+            normalized = null;
+            return false;
+        }
+
+        normalized = trimmed;
+        return true;
     }
 
     private static string QuoteArgument(string value)

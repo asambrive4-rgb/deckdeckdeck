@@ -142,6 +142,16 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         };
     }
 
+    public NumpadGridViewModel? GetVisibleNumpadGrid()
+    {
+        return CurrentViewModel switch
+        {
+            HomeViewModel homeViewModel => homeViewModel.NumpadGrid,
+            CategoryViewModel categoryViewModel => categoryViewModel.NumpadGrid,
+            _ => null
+        };
+    }
+
     public void OpenHomeFromHotkey()
     {
         if (CurrentViewModel is not HomeViewModel)

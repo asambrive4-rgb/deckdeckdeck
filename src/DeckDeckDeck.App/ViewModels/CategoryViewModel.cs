@@ -18,7 +18,8 @@ public sealed class CategoryViewModel
         Action showHome,
         Action showSettings,
         Action<Category, SlotKey, Snippet?> editSnippet,
-        Func<Snippet, Task> pasteSnippet)
+        Func<Snippet, Task> pasteSnippet,
+        Action<SlotKey, SlotKey>? reorderSnippet = null)
     {
         _category = category;
         _editSnippet = editSnippet;
@@ -33,7 +34,8 @@ public sealed class CategoryViewModel
             gridState.Snippets,
             gridState.Settings,
             SelectSnippetSlot,
-            EditSnippetSlot);
+            EditSnippetSlot,
+            reorderSnippet);
     }
 
     public string Title { get; }
@@ -82,4 +84,3 @@ public sealed class CategoryViewModel
         }
     }
 }
-

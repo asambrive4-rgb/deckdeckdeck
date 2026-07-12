@@ -32,6 +32,10 @@ public sealed class Snippet
 
     public SnippetTerminalShell? TerminalShell { get; set; }
 
+    public bool OpenTerminalWindow { get; set; }
+
+    public string? TerminalWorkingDirectory { get; set; }
+
     public bool RunAsAdministrator { get; set; } = true;
 
     public SlotImageMode SlotImageMode { get; set; } = SlotImageMode.Auto;

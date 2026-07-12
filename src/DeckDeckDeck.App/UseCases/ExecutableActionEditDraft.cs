@@ -39,6 +39,9 @@ public sealed class ExecutableActionEditDraft
             state.MediaCommand);
         TerminalCommand = state.TerminalCommand;
         TerminalShell = state.TerminalShell;
+        OpenTerminalWindow = state.ActionType == SnippetActionType.TerminalCommand
+            && state.OpenTerminalWindow;
+        TerminalWorkingDirectory = state.TerminalWorkingDirectory;
         RunAsAdministrator = state.ActionType == SnippetActionType.TerminalCommand
             ? state.RunAsAdministrator
             : true;
@@ -69,6 +72,10 @@ public sealed class ExecutableActionEditDraft
     public string TerminalCommand { get; set; }
 
     public SnippetTerminalShell TerminalShell { get; set; }
+
+    public bool OpenTerminalWindow { get; set; }
+
+    public string TerminalWorkingDirectory { get; set; }
 
     public bool RunAsAdministrator { get; set; }
 
@@ -235,7 +242,9 @@ public sealed class ExecutableActionEditDraft
             TerminalCommand,
             TerminalShell,
             RunAsAdministrator,
-            FileActionMode);
+            FileActionMode,
+            OpenTerminalWindow,
+            TerminalWorkingDirectory);
     }
 
     public HotkeyActionSaveData ToHotkeyActionSaveData(
@@ -262,7 +271,9 @@ public sealed class ExecutableActionEditDraft
             TerminalCommand,
             TerminalShell,
             RunAsAdministrator,
-            FileActionMode);
+            FileActionMode,
+            OpenTerminalWindow,
+            TerminalWorkingDirectory);
     }
 
     public void UpdateAutoIconPreview()
@@ -307,6 +318,8 @@ internal sealed record ExecutableActionEditDraftState(
     SnippetMediaCommand MediaCommand,
     string TerminalCommand,
     SnippetTerminalShell TerminalShell,
+    bool OpenTerminalWindow,
+    string TerminalWorkingDirectory,
     bool RunAsAdministrator,
     SlotImageMode SlotImageMode,
     AutoIconCacheEntry? AutoIcon)
@@ -328,6 +341,8 @@ internal sealed record ExecutableActionEditDraftState(
             SnippetMediaCommand.PlayPause,
             string.Empty,
             SnippetTerminalShell.Cmd,
+            false,
+            string.Empty,
             true,
             SlotImageMode.Auto,
             null);
@@ -350,6 +365,8 @@ internal sealed record ExecutableActionEditDraftState(
             snippet.MediaCommand ?? SnippetMediaCommand.PlayPause,
             snippet.TerminalCommand ?? string.Empty,
             snippet.TerminalShell ?? SnippetTerminalShell.Cmd,
+            snippet.OpenTerminalWindow,
+            snippet.TerminalWorkingDirectory ?? string.Empty,
             snippet.RunAsAdministrator,
             snippet.SlotImageMode,
             AutoIconCacheEntry.FromSnippet(snippet));
@@ -372,6 +389,8 @@ internal sealed record ExecutableActionEditDraftState(
             action.MediaCommand ?? SnippetMediaCommand.PlayPause,
             action.TerminalCommand ?? string.Empty,
             action.TerminalShell ?? SnippetTerminalShell.Cmd,
+            action.OpenTerminalWindow,
+            action.TerminalWorkingDirectory ?? string.Empty,
             action.RunAsAdministrator,
             action.SlotImageMode,
             AutoIconCacheEntry.FromHotkeyAction(action));

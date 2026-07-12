@@ -8,6 +8,14 @@ public interface ISaveSettingsUseCase
     SaveSettingsResult Execute(SaveSettingsRequest request);
 }
 
+/// <summary>
+/// Saves app settings and startup-registration preferences as one user action.
+/// </summary>
+public interface ISaveAppPreferencesUseCase
+{
+    SaveAppPreferencesResult Execute(SaveAppPreferencesRequest request);
+}
+
 public interface ILoadSettingsUseCase
 {
     AppSettings Execute();
@@ -98,6 +106,41 @@ public sealed class SaveSettingsUseCase : ISaveSettingsUseCase
         }
 
         return _backupGateway?.ValidateBackupFolder(backupFolderPath);
+    }
+}
+
+public sealed class SaveAppPreferencesUseCase : ISaveAppPreferencesUseCase
+{
+    public const string StartupRegistrationSaveFailedMessage = "시작프로그램 설정을 저장하지 못했습니다.";
+
+    private readonly ISaveSettingsUseCase _saveSettingsUseCase;
+    private readonly IStartupRegistrationUseCase _startupRegistrationUseCase;
+
+    public SaveAppPreferencesUseCase(
+        ISaveSettingsUseCase saveSettingsUseCase,
+        IStartupRegistrationUseCase startupRegistrationUseCase)
+    {
+        _saveSettingsUseCase = saveSettingsUseCase;
+        _startupRegistrationUseCase = startupRegistrationUseCase;
+    }
+
+    public SaveAppPreferencesResult Execute(SaveAppPreferencesRequest request)
+    {
+        var settingsResult = _saveSettingsUseCase.Execute(request.Settings);
+        if (!settingsResult.Succeeded)
+        {
+            return SaveAppPreferencesResult.SettingsFailure(
+                settingsResult.ErrorMessage ?? string.Empty);
+        }
+
+        var startupResult = _startupRegistrationUseCase.Save(request.Startup);
+        if (!startupResult.Succeeded)
+        {
+            return SaveAppPreferencesResult.StartupRegistrationFailure(
+                startupResult.ErrorMessage ?? StartupRegistrationSaveFailedMessage);
+        }
+
+        return SaveAppPreferencesResult.Success();
     }
 }
 
@@ -274,6 +317,44 @@ public sealed record SaveSettingsResult(bool Succeeded, string? ErrorMessage = n
     public static SaveSettingsResult Failure(string errorMessage)
     {
         return new SaveSettingsResult(false, errorMessage);
+    }
+}
+
+public sealed record SaveAppPreferencesRequest(
+    SaveSettingsRequest Settings,
+    StartupRegistrationSettings Startup);
+
+public enum SaveAppPreferencesFailureKind
+{
+    None,
+    Settings,
+    StartupRegistration
+}
+
+public sealed record SaveAppPreferencesResult(
+    bool Succeeded,
+    SaveAppPreferencesFailureKind FailureKind = SaveAppPreferencesFailureKind.None,
+    string? ErrorMessage = null)
+{
+    public static SaveAppPreferencesResult Success()
+    {
+        return new SaveAppPreferencesResult(true);
+    }
+
+    public static SaveAppPreferencesResult SettingsFailure(string errorMessage)
+    {
+        return new SaveAppPreferencesResult(
+            false,
+            SaveAppPreferencesFailureKind.Settings,
+            errorMessage);
+    }
+
+    public static SaveAppPreferencesResult StartupRegistrationFailure(string errorMessage)
+    {
+        return new SaveAppPreferencesResult(
+            false,
+            SaveAppPreferencesFailureKind.StartupRegistration,
+            errorMessage);
     }
 }
 

@@ -183,6 +183,8 @@ public sealed class CategoryRepository : ICategoryRepository
                 MediaCommand = sourceSnippet.MediaCommand,
                 TerminalCommand = sourceSnippet.TerminalCommand,
                 TerminalShell = sourceSnippet.TerminalShell,
+                OpenTerminalWindow = sourceSnippet.OpenTerminalWindow,
+                TerminalWorkingDirectory = sourceSnippet.TerminalWorkingDirectory,
                 RunAsAdministrator = sourceSnippet.RunAsAdministrator,
                 SlotImageMode = sourceSnippet.SlotImageMode,
                 Description = sourceSnippet.Description,

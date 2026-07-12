@@ -22,7 +22,8 @@ public sealed class SlotGridViewModelFactory
         AppSettings settings,
         Action<SlotKey, Category?> onSelected,
         Action<SlotKey, Category?> onEdit,
-        Action? onHotkeySelected = null)
+        Action? onHotkeySelected = null,
+        Action<SlotKey, SlotKey>? onReorder = null)
     {
         var categoriesBySlot = categories.ToDictionary(category => category.SlotKey);
 
@@ -40,14 +41,16 @@ public sealed class SlotGridViewModelFactory
         }),
             onHotkeySelected is null
                 ? HotkeyTileViewModel.Disabled()
-                : HotkeyTileViewModel.Enabled(onHotkeySelected));
+                : HotkeyTileViewModel.Enabled(onHotkeySelected),
+            onReorder);
     }
 
     public NumpadGridViewModel BuildSnippetGrid(
         IEnumerable<Snippet> snippets,
         AppSettings settings,
         Action<SlotKey, Snippet?> onSelected,
-        Action<SlotKey, Snippet?> onEdit)
+        Action<SlotKey, Snippet?> onEdit,
+        Action<SlotKey, SlotKey>? onReorder = null)
     {
         var snippetsBySlot = snippets.ToDictionary(snippet => snippet.SlotKey);
 
@@ -64,7 +67,8 @@ public sealed class SlotGridViewModelFactory
                 selectedSlotKey => onSelected(selectedSlotKey, snippet),
                 selectedSlotKey => onEdit(selectedSlotKey, snippet));
         }),
-            HotkeyTileViewModel.Disabled());
+            HotkeyTileViewModel.Disabled(),
+            onReorder);
     }
 
     private string? ResolveDisplayPath(string? path)

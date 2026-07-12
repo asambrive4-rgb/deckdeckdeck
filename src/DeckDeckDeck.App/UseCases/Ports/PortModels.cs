@@ -23,7 +23,9 @@ public sealed record SnippetSaveData(
     string? TerminalCommand = null,
     SnippetTerminalShell? TerminalShell = null,
     bool RunAsAdministrator = true,
-    FileActionMode FileActionMode = FileActionMode.Launch);
+    FileActionMode FileActionMode = FileActionMode.Launch,
+    bool OpenTerminalWindow = false,
+    string? TerminalWorkingDirectory = null);
 
 public sealed record HotkeyActionSaveData(
     string Title,
@@ -44,7 +46,9 @@ public sealed record HotkeyActionSaveData(
     string? TerminalCommand = null,
     SnippetTerminalShell? TerminalShell = null,
     bool RunAsAdministrator = true,
-    FileActionMode FileActionMode = FileActionMode.Launch);
+    FileActionMode FileActionMode = FileActionMode.Launch,
+    bool OpenTerminalWindow = false,
+    string? TerminalWorkingDirectory = null);
 
 public enum FilePasteGatewayStatus
 {

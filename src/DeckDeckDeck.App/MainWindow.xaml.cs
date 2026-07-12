@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using DeckDeckDeck.App.Composition;
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Infrastructure.Diagnostics;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Infrastructure.Platform;
@@ -25,6 +26,7 @@ public partial class MainWindow : Window
     private IntPtr _lastPasteTargetWindowHandle;
     private bool _allowClose;
     private bool _isHidingToTrayFromClose;
+    private bool _hasAppliedWindowPlacement;
     private readonly AppIconProvider _iconProvider;
     private readonly StartupTimingLog? _startupTiming;
 
@@ -61,6 +63,33 @@ public partial class MainWindow : Window
                 new ShouldPassThroughDirectHotkeyUseCase(new TextInputFocusDetector())),
             viewModel);
         _directHotkeyCoordinator.DirectHotkeyPressed += OnDirectHotkeyPressed;
+
+        // Shell-first: SourceInitialized already placed default bottom-right (no settings yet).
+        // Re-apply only when settings carry a real saved position — not empty / (0,0) /
+        // near-top-left corruption — so the window does not jump after home load.
+        if (_windowHandle != IntPtr.Zero)
+        {
+            StartDirectHotkeys(viewModel);
+            var settings = viewModel.LoadSettings();
+            if (WindowPlacementRules.HasUsableSavedWindowPlacement(settings))
+            {
+                ApplyWindowPlacement(IntPtr.Zero, settings);
+            }
+        }
+    }
+
+    private void StartDirectHotkeys(MainViewModel viewModel)
+    {
+        List<string> failures;
+        using (_startupTiming?.Measure("direct hotkey registration"))
+        {
+            failures = _directHotkeyCoordinator?.Start().ToList() ?? [];
+        }
+
+        if (failures.Count > 0)
+        {
+            viewModel.ReportHotkeyRegistrationFailure(failures);
+        }
     }
 
     internal IntPtr GetPasteTargetWindowHandle()
@@ -137,9 +166,13 @@ public partial class MainWindow : Window
             failures = _globalHotkeyRegistrar.Start(_windowHandle).ToList();
         }
 
-        using (_startupTiming?.Measure("direct hotkey registration"))
+        // Direct hotkeys need MainViewModel; when shell-first, AttachViewModel starts them later.
+        if (_directHotkeyCoordinator is not null)
         {
-            failures.AddRange(_directHotkeyCoordinator?.Start() ?? []);
+            using (_startupTiming?.Measure("direct hotkey registration"))
+            {
+                failures.AddRange(_directHotkeyCoordinator.Start());
+            }
         }
 
         if (failures.Count > 0 && DataContext is MainViewModel viewModel)
@@ -374,16 +407,21 @@ public partial class MainWindow : Window
             _paletteWindowController.ShowWithoutActivation();
         }
 
-        if (settings.BringWindowToFrontOnHotkey)
-        {
-            _paletteWindowController.BringToFrontWithoutActivation();
-            Dispatcher.BeginInvoke(
-                () => _paletteWindowController.ReturnToNormalZOrderWithoutActivation(),
-                DispatcherPriority.ApplicationIdle);
-            return;
-        }
+        var presentation = new PreparePastePalettePresentationUseCase().Execute(
+            new PreparePastePalettePresentationRequest(settings));
 
-        _paletteWindowController.SendToBottomWithoutActivation();
+        switch (presentation.ZOrderMode)
+        {
+            case PastePaletteZOrderMode.BringToFrontTemporarily:
+                _paletteWindowController.BringToFrontWithoutActivation();
+                Dispatcher.BeginInvoke(
+                    () => _paletteWindowController.ReturnToNormalZOrderWithoutActivation(),
+                    DispatcherPriority.ApplicationIdle);
+                break;
+            case PastePaletteZOrderMode.SendToBottom:
+                _paletteWindowController.SendToBottomWithoutActivation();
+                break;
+        }
     }
 
     private void BringWindowToFrontForEdit()
@@ -405,22 +443,26 @@ public partial class MainWindow : Window
 
     private void ApplyWindowPlacement(IntPtr fallbackWindowHandle, AppSettings? settings = null)
     {
-        if (DataContext is not MainViewModel viewModel)
-        {
-            return;
-        }
+        // Shell-first: before DataContext, use empty settings → default bottom-right.
+        // After attach, reload settings; (0,0) saved during the Manual default bug is ignored
+        // by WindowPlacementResolver so we do not jump back to the top-left.
+        var effectiveSettings = settings
+            ?? (DataContext is MainViewModel viewModel ? viewModel.LoadSettings() : new AppSettings());
 
         var placement = _windowPlacementResolver.ResolveForWindow(
             this,
-            settings ?? viewModel.LoadSettings(),
+            effectiveSettings,
             fallbackWindowHandle);
         Left = placement.Left;
         Top = placement.Top;
+        _hasAppliedWindowPlacement = true;
     }
 
     private void SaveWindowPlacement()
     {
-        if (DataContext is not MainViewModel viewModel || _windowHandle == IntPtr.Zero)
+        if (DataContext is not MainViewModel viewModel
+            || _windowHandle == IntPtr.Zero
+            || !_hasAppliedWindowPlacement)
         {
             return;
         }
@@ -430,6 +472,12 @@ public partial class MainWindow : Window
             : RestoreBounds;
 
         if (!double.IsFinite(bounds.Left) || !double.IsFinite(bounds.Top))
+        {
+            return;
+        }
+
+        // Never persist WPF Manual origin — that was the shell-first corruption path.
+        if (WindowPlacementRules.IsUnsetOrWpfManualOrigin(bounds.Left, bounds.Top))
         {
             return;
         }
