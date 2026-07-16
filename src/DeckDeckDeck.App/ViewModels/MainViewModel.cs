@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -16,9 +17,17 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private ResolveCategoryHotkeyUseCase _resolveCategoryHotkeyUseCase = null!;
     private ILoadSettingsUseCase _loadSettingsUseCase = null!;
     private SaveWindowPlacementUseCase _saveWindowPlacementUseCase = null!;
+    private IBluetoothAudioStatusGateway _bluetoothAudioStatusGateway = null!;
     private IAppLogger? _loggingService;
     private object? _currentViewModel;
     private string _statusMessage = "준비됨.";
+    private string _topBarStatusMessage = BluetoothAudioStatusRules.LoadingText;
+    private string _topBarStatusToolTip = BluetoothAudioStatusRules.LoadingToolTip;
+    private CancellationTokenSource? _bluetoothStatusCancellation;
+    private long _bluetoothStatusRequestVersion;
+    private int _bluetoothStatusRefreshPosted;
+    private bool _disposed;
+    private readonly SynchronizationContext? _synchronizationContext = SynchronizationContext.Current;
 
     internal MainViewModel(
         MainViewModelDependencies dependencies,
@@ -43,23 +52,30 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// 내부/테스트용 상태 문자열. 상단바에는 더 이상 표시하지 않는다.
+    /// (네비·단축키 위치 문구는 주석 처리됨. 실행 결과 등은 여기로만 남김)
+    /// </summary>
     public string StatusMessage
     {
         get => _statusMessage;
-        private set
-        {
-            if (!SetProperty(ref _statusMessage, value))
-            {
-                return;
-            }
-
-            OnPropertyChanged(nameof(TopBarStatusMessage));
-        }
+        private set => SetProperty(ref _statusMessage, value);
     }
 
-    public string TopBarStatusMessage => StatusMessage == "홈"
-        ? "준비됨"
-        : StatusMessage;
+    /// <summary>
+    /// 상단바 우측: 기본 재생 장치가 블루투스 오디오일 때 기기명·배터리.
+    /// </summary>
+    public string TopBarStatusMessage
+    {
+        get => _topBarStatusMessage;
+        private set => SetProperty(ref _topBarStatusMessage, value);
+    }
+
+    public string TopBarStatusToolTip
+    {
+        get => _topBarStatusToolTip;
+        private set => SetProperty(ref _topBarStatusToolTip, value);
+    }
 
     public string TopBarTitle => CurrentViewModel switch
     {
@@ -110,6 +126,17 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _bluetoothAudioStatusGateway.StatusInvalidated -= OnBluetoothStatusInvalidated;
+        var cancellation = Interlocked.Exchange(ref _bluetoothStatusCancellation, null);
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+        _bluetoothAudioStatusGateway.Dispose();
         (_autoBackupCoordinator as IDisposable)?.Dispose();
     }
 
@@ -159,7 +186,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             ShowHome();
         }
 
-        StatusMessage = "전역 단축키로 홈을 열었습니다.";
+        // [removed from top bar] 네비/단축키 위치 문구 — TopBarTitle과 역할이 겹쳐 상단 표시 제거.
+        // StatusMessage = "전역 단축키로 홈을 열었습니다.";
+        _ = RefreshBluetoothAudioStatusAsync();
     }
 
     public void OpenCategoryFromHotkey(SlotKey slotKey)
@@ -175,6 +204,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 break;
             case CategoryHotkeyResolutionKind.Blocked:
             case CategoryHotkeyResolutionKind.Unsupported:
+                // 차단 사유는 내부 StatusMessage에만 남김(상단바 비표시).
                 StatusMessage = resolution.StatusMessage ?? string.Empty;
                 break;
         }
@@ -209,6 +239,97 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         await _executeActionAsync(action);
     }
 
+    /// <summary>
+    /// 창이 다시 보일 때 등 외부에서 블루투스 상태를 즉시 갱신할 때 사용.
+    /// </summary>
+    public Task RefreshBluetoothAudioStatusAsync()
+    {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RefreshBluetoothAudioStatusCoreAsync();
+    }
+
+    private async Task RefreshBluetoothAudioStatusCoreAsync()
+    {
+        var requestVersion = Interlocked.Increment(ref _bluetoothStatusRequestVersion);
+        var cancellation = new CancellationTokenSource();
+        var previousCancellation = Interlocked.Exchange(
+            ref _bluetoothStatusCancellation,
+            cancellation);
+        previousCancellation?.Cancel();
+        previousCancellation?.Dispose();
+
+        try
+        {
+            var snapshot = await _bluetoothAudioStatusGateway.GetCurrentAsync(cancellation.Token);
+            if (_disposed
+                || cancellation.IsCancellationRequested
+                || requestVersion != Interlocked.Read(ref _bluetoothStatusRequestVersion))
+            {
+                return;
+            }
+
+            ApplyBluetoothStatus(snapshot);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            // A newer refresh owns the top-bar state.
+        }
+        catch (Exception ex)
+        {
+            _loggingService?.Log("블루투스 오디오 상태 조회 실패", ex);
+            // Preserve the last truthful connection/name instead of reporting a false disconnect.
+        }
+        finally
+        {
+            Interlocked.CompareExchange(ref _bluetoothStatusCancellation, null, cancellation);
+            cancellation.Dispose();
+        }
+    }
+
+    private void ApplyBluetoothStatus(BluetoothAudioStatusSnapshot snapshot)
+    {
+        if (!snapshot.IsBluetoothAudioConnected)
+        {
+            TopBarStatusMessage = BluetoothAudioStatusRules.DisconnectedText;
+            TopBarStatusToolTip = BluetoothAudioStatusRules.DisconnectedToolTip;
+            return;
+        }
+
+        TopBarStatusMessage = BluetoothAudioStatusRules.FormatDisplayText(
+            snapshot.DeviceName,
+            snapshot.BatteryPercent);
+        TopBarStatusToolTip = BluetoothAudioStatusRules.FormatToolTip(
+            snapshot.DeviceName,
+            snapshot.BatteryPercent);
+    }
+
+    private void OnBluetoothStatusInvalidated(object? sender, EventArgs e)
+    {
+        if (_disposed || Interlocked.Exchange(ref _bluetoothStatusRefreshPosted, 1) == 1)
+        {
+            return;
+        }
+
+        void RefreshOnOwnerContext()
+        {
+            Interlocked.Exchange(ref _bluetoothStatusRefreshPosted, 0);
+            _ = RefreshBluetoothAudioStatusAsync();
+        }
+
+        if (_synchronizationContext is null
+            || ReferenceEquals(SynchronizationContext.Current, _synchronizationContext))
+        {
+            RefreshOnOwnerContext();
+            return;
+        }
+
+        _synchronizationContext.Post(_ => RefreshOnOwnerContext(), null);
+    }
+
     internal void NotifyDirectHotkeysChanged()
     {
         DirectHotkeysChanged?.Invoke(this, EventArgs.Empty);
@@ -236,6 +357,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     private void ShowStatus(string message)
     {
+        // 상단바에는 더 이상 반영하지 않음. 실행 결과·저장 등 내부/테스트용으로만 유지.
         StatusMessage = message;
     }
 
@@ -266,6 +388,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(TopBarBackCommand));
         OnPropertyChanged(nameof(TopBarSettingsCommand));
         OnPropertyChanged(nameof(TopBarStatusMessage));
+        OnPropertyChanged(nameof(TopBarStatusToolTip));
         OnPropertyChanged(nameof(ShowTopBarBackButton));
         OnPropertyChanged(nameof(ShowTopBarSettingsButton));
         OnPropertyChanged(nameof(ShowTopBarTitle));
@@ -282,6 +405,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _resolveExecutableHotkeyActionUseCase = dependencies.ResolveExecutableHotkeyActionUseCase;
         _loggingService = dependencies.Logger;
         _autoBackupCoordinator = dependencies.AutoBackupCoordinator;
+        _bluetoothAudioStatusGateway = dependencies.BluetoothAudioStatusGateway;
 
         var viewFactory = new MainViewModelViewFactory(
             dependencies.NavigatorDependencies,
@@ -297,5 +421,17 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             callbacks.EnterEditMode,
             NotifyDirectHotkeysChanged,
             NotifyDirectHotkeyCaptureStateChanged);
+
+        _bluetoothAudioStatusGateway.StatusInvalidated += OnBluetoothStatusInvalidated;
+        try
+        {
+            _bluetoothAudioStatusGateway.StartMonitoring();
+        }
+        catch (Exception ex)
+        {
+            _loggingService?.Log("블루투스 오디오 변경 감시 시작 실패", ex);
+        }
+
+        _ = RefreshBluetoothAudioStatusAsync();
     }
 }

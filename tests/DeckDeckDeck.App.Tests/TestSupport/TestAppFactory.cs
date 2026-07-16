@@ -67,6 +67,7 @@ internal static class TestAppFactory
         ISpotifyConnectionGateway? spotifyConnectionService = null,
         ISpotifyMediaActionGateway? spotifyMediaActionGatewayAdapter = null,
         IAutoBackupCoordinator? autoBackupCoordinator = null,
+        IBluetoothAudioStatusGateway? bluetoothAudioStatusGateway = null,
         bool initializeHome = true)
     {
         var effectiveUrlLaunchGatewayAdapter = urlLaunchService ?? new RecordingUrlLaunchGatewayAdapter();
@@ -111,7 +112,8 @@ internal static class TestAppFactory
         viewModel = new MainViewModel(
             composition.CreateMainViewModelDependencies(
                 autoBackupCoordinator,
-                actionExecutionCoordinator.ExecuteAsync),
+                actionExecutionCoordinator.ExecuteAsync,
+                bluetoothAudioStatusGateway ?? new StubBluetoothAudioStatusGateway()),
             callbacks);
         if (initializeHome)
         {

@@ -39,7 +39,8 @@ internal sealed class MainViewModelNavigator
     public void ShowHome()
     {
         _showViewModel(GetOrCreateHome());
-        _showStatus("홈");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus("홈");
     }
 
     public void CreateCategory(SlotKey slotKey)
@@ -61,7 +62,8 @@ internal sealed class MainViewModelNavigator
                 InvalidateCategoryCache();
                 ShowHome();
             }));
-        _showStatus($"슬롯 {slotKey.GetDisplayText()}에 새 카테고리 만들기");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus($"슬롯 {slotKey.GetDisplayText()}에 새 카테고리 만들기");
     }
 
     public void EditCategory(Category category)
@@ -83,13 +85,15 @@ internal sealed class MainViewModelNavigator
                 InvalidateCategoryCache();
                 ShowHome();
             }));
-        _showStatus($"{category.Name} 편집");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus($"{category.Name} 편집");
     }
 
     public void OpenCategory(Category category)
     {
         _showViewModel(GetOrCreateCategory(category));
-        _showStatus($"{category.Name} 카테고리");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus($"{category.Name} 카테고리");
     }
 
     private void OpenCategoryById(Guid categoryId)
@@ -129,9 +133,10 @@ internal sealed class MainViewModelNavigator
                 InvalidateCategory(category.Id);
                 OpenCategoryById(category.Id);
             }));
-        _showStatus(snippet is null
-            ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
-            : $"{snippet.Title} 편집");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus(snippet is null
+        //     ? $"슬롯 {slotKey.GetDisplayText()}에 새 실행 항목 만들기"
+        //     : $"{snippet.Title} 편집");
     }
 
     private void ShowSettings(Action returnTo)
@@ -146,7 +151,8 @@ internal sealed class MainViewModelNavigator
                 InvalidateCategoryCache();
                 returnTo();
             }));
-        _showStatus("설정");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus("설정");
     }
 
     public void ShowHotkeys()
@@ -158,7 +164,8 @@ internal sealed class MainViewModelNavigator
             ShowHome,
             ShowHotkeys,
             NotifyHotkeysChanged));
-        _showStatus("핫키");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus("핫키");
     }
 
     private void CreateHotkey()
@@ -178,7 +185,8 @@ internal sealed class MainViewModelNavigator
                 NotifyHotkeysChanged();
             },
             _notifyDirectHotkeyCaptureStateChanged));
-        _showStatus("새 핫키 만들기");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus("새 핫키 만들기");
     }
 
     private void EditHotkey(HotkeyAction action)
@@ -198,7 +206,8 @@ internal sealed class MainViewModelNavigator
                 NotifyHotkeysChanged();
             },
             _notifyDirectHotkeyCaptureStateChanged));
-        _showStatus($"{action.Title} 핫키 편집");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus($"{action.Title} 핫키 편집");
     }
 
     private void NotifyHotkeysChanged()
@@ -342,7 +351,8 @@ internal sealed class MainViewModelNavigator
         }
 
         _showViewModel(cached);
-        _showStatus($"{cached.Title} 카테고리");
+        // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
+        // _showStatus($"{cached.Title} 카테고리");
         return true;
     }
 

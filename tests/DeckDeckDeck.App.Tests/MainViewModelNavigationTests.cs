@@ -1,3 +1,4 @@
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;
@@ -63,8 +64,9 @@ public sealed class MainViewModelNavigationTests
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
 
-        Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Writing 카테고리", viewModel.StatusMessage);
+        var category = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal("Writing", category.Title);
+        Assert.Equal("Writing", viewModel.TopBarTitle);
     }
 
     [Fact]
@@ -90,8 +92,9 @@ public sealed class MainViewModelNavigationTests
 
         viewModel.OpenCategoryFromHotkey(SlotKey.NumpadAdd);
 
-        Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Symbols 카테고리", viewModel.StatusMessage);
+        var category = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal("Symbols", category.Title);
+        Assert.Equal("Symbols", viewModel.TopBarTitle);
     }
 
     [Fact]
@@ -105,8 +108,9 @@ public sealed class MainViewModelNavigationTests
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad2);
 
-        Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("슬롯 2에 새 카테고리 만들기", viewModel.StatusMessage);
+        var editor = Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal("2", editor.KeyText);
+        Assert.Contains("카테고리 편집", viewModel.TopBarTitle);
         Assert.True(enteredEditMode);
     }
 
@@ -134,7 +138,7 @@ public sealed class MainViewModelNavigationTests
         home.SettingsCommand.Execute(null);
 
         Assert.IsType<SettingsViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("설정", viewModel.StatusMessage);
+        Assert.Equal("설정", viewModel.TopBarTitle);
     }
 
     [Fact]
@@ -175,7 +179,7 @@ public sealed class MainViewModelNavigationTests
         var home = Assert.IsType<HomeViewModel>(viewModel.CurrentViewModel);
 
         Assert.Equal(string.Empty, viewModel.TopBarTitle);
-        Assert.Equal("준비됨", viewModel.TopBarStatusMessage);
+        Assert.Equal(BluetoothAudioStatusRules.DisconnectedText, viewModel.TopBarStatusMessage);
         Assert.False(viewModel.ShowTopBarTitle);
         Assert.False(viewModel.ShowTopBarBackButton);
         Assert.True(viewModel.ShowTopBarSettingsButton);
@@ -266,8 +270,9 @@ public sealed class MainViewModelNavigationTests
 
         home.NumpadGrid.Numpad1.EditCommand.Execute(null);
 
-        Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Writing 편집", viewModel.StatusMessage);
+        var editor = Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal("카테고리 편집 / 슬롯 1", viewModel.TopBarTitle);
+        Assert.Equal("1", editor.KeyText);
     }
 
     [Fact]
@@ -411,7 +416,7 @@ public sealed class MainViewModelNavigationTests
         categoryViewModel.NumpadGrid.Numpad3.EditCommand.Execute(null);
 
         Assert.IsType<SnippetEditViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Structure 편집", viewModel.StatusMessage);
+        Assert.Equal("실행 항목 편집 / 슬롯 3", viewModel.TopBarTitle);
     }
 
     [Fact]
@@ -425,8 +430,9 @@ public sealed class MainViewModelNavigationTests
         Assert.False(home.NumpadGrid.Numpad2.SelectCommand.CanExecute(null));
         home.NumpadGrid.Numpad2.EditCommand.Execute(null);
 
-        Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("슬롯 2에 새 카테고리 만들기", viewModel.StatusMessage);
+        var editor = Assert.IsType<CategoryEditViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal("2", editor.KeyText);
+        Assert.Equal("카테고리 편집 / 슬롯 2", viewModel.TopBarTitle);
     }
 
     [Fact]
@@ -498,8 +504,21 @@ public sealed class MainViewModelNavigationTests
 
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad4);
 
-        Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
-        Assert.Equal("Writing 카테고리", viewModel.StatusMessage);
+        var category = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        Assert.Equal("Writing", category.Title);
+        Assert.Equal("Writing", viewModel.TopBarTitle);
+    }
+
+    [Fact]
+    public void TopBarStatusMessageShowsBluetoothAudioFromGateway()
+    {
+        var services = CreateServices();
+        var gateway = new StubBluetoothAudioStatusGateway(
+            new BluetoothAudioStatusSnapshot(true, "Buds3 Pro", 69));
+        var viewModel = CreateMainViewModel(services, bluetoothAudioStatusGateway: gateway);
+
+        Assert.Equal("Buds3 Pro · 69%", viewModel.TopBarStatusMessage);
+        Assert.Equal("Buds3 Pro · 69%", viewModel.TopBarStatusToolTip);
     }
 
     [Fact]

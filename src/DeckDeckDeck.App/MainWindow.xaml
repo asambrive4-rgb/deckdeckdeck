@@ -99,10 +99,12 @@
                                    Text="{Binding TopBarTitle}"
                                    Visibility="{Binding ShowTopBarTitle, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
+                        <!-- 기본 재생 블루투스 오디오 기기명·배터리 (상태 문구 역할 제거) -->
                         <TextBlock Grid.Column="2"
                                    Margin="0,0,8,0"
                                    Style="{StaticResource Deck.TopBarStatusTextStyle}"
-                                   Text="{Binding TopBarStatusMessage}" />
+                                   Text="{Binding TopBarStatusMessage}"
+                                   ToolTip="{Binding TopBarStatusToolTip}" />
 
                         <Button Grid.Column="3"
                                 Margin="0,0,8,0"

@@ -13,7 +13,8 @@ internal sealed record MainViewModelDependencies(
     ResolveExecutableHotkeyActionUseCase ResolveExecutableHotkeyActionUseCase,
     Func<ExecutableAction, Task> ExecuteActionAsync,
     IAppLogger? Logger,
-    IAutoBackupCoordinator? AutoBackupCoordinator);
+    IAutoBackupCoordinator? AutoBackupCoordinator,
+    IBluetoothAudioStatusGateway BluetoothAudioStatusGateway);
 
 internal sealed record MainViewModelCallbacks(
     Func<IntPtr> GetPasteTargetWindowHandle,

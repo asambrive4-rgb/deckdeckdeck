@@ -48,6 +48,7 @@ public partial class MainWindow : Window
         WindowStartupLocation = WindowStartupLocation.Manual;
         SourceInitialized += OnSourceInitialized;
         StateChanged += OnStateChanged;
+        Activated += OnActivated;
         Closing += OnClosing;
         Closed += OnClosed;
         _globalHotkeyRegistrar.HotkeyPressed += OnHotkeyPressed;
@@ -58,6 +59,7 @@ public partial class MainWindow : Window
     internal void AttachViewModel(MainViewModel viewModel)
     {
         DataContext = viewModel;
+        _ = viewModel.RefreshBluetoothAudioStatusAsync();
         _directHotkeyCoordinator = new DirectHotkeyCoordinator(
             new DirectHotkeyRegistrar(
                 new ShouldPassThroughDirectHotkeyUseCase(new TextInputFocusDetector())),
@@ -253,6 +255,14 @@ public partial class MainWindow : Window
 
             SaveWindowPlacement();
             Hide();
+        }
+    }
+
+    private void OnActivated(object? sender, EventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            _ = viewModel.RefreshBluetoothAudioStatusAsync();
         }
     }
 

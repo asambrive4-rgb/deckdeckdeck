@@ -295,7 +295,8 @@ internal sealed record AppComposition(
 
     public MainViewModelDependencies CreateMainViewModelDependencies(
         IAutoBackupCoordinator? autoBackupCoordinator,
-        Func<ExecutableAction, Task> executeActionAsync)
+        Func<ExecutableAction, Task> executeActionAsync,
+        IBluetoothAudioStatusGateway? bluetoothAudioStatusGateway = null)
     {
         var loadSettingsUseCase = new LoadSettingsUseCase(SettingsRepository);
         var saveCategoryUseCase = new SaveCategoryUseCase(
@@ -386,7 +387,8 @@ internal sealed record AppComposition(
             new ResolveExecutableHotkeyActionUseCase(HotkeyActionRepository),
             executeActionAsync,
             FileLogger,
-            autoBackupCoordinator);
+            autoBackupCoordinator,
+            bluetoothAudioStatusGateway ?? new WindowsBluetoothAudioStatusGateway(FileLogger));
     }
 
     private static ExecuteSnippetActionUseCase CreateExecuteSnippetActionUseCase(
