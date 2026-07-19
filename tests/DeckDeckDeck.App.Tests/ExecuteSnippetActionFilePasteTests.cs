@@ -116,7 +116,8 @@ public sealed class ExecuteSnippetActionFilePasteTests
             new RecordingSystemMediaActionGatewayAdapter(),
             new RecordingSpotifyMediaActionGatewayAdapter(),
             new RecordingTerminalCommandGatewayAdapter(),
-            filePasteGateway);
+            filePasteGateway,
+            new RecordingDialogAdapter());
     }
 
     private static ExecuteSnippetActionRequest CreateRequest(

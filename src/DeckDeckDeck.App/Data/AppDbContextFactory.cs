@@ -95,6 +95,11 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "TerminalWorkingDirectory",
                 "ALTER TABLE Snippets ADD COLUMN TerminalWorkingDirectory TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "AdbDeviceIp",
+                "ALTER TABLE Snippets ADD COLUMN AdbDeviceIp TEXT NULL");
             var addedSlotImageMode = AddColumnIfMissing(
                 dbContext,
                 existingColumns,
@@ -159,6 +164,7 @@ public sealed class AppDbContextFactory
                     RunAsAdministrator INTEGER NOT NULL DEFAULT 1,
                     OpenTerminalWindow INTEGER NOT NULL DEFAULT 0,
                     TerminalWorkingDirectory TEXT NULL,
+                    AdbDeviceIp TEXT NULL,
                     SlotImageMode TEXT NOT NULL DEFAULT 'Auto',
                     Description TEXT NULL,
                     ImagePath TEXT NULL,
@@ -189,6 +195,11 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "TerminalWorkingDirectory",
                 "ALTER TABLE HotkeyActions ADD COLUMN TerminalWorkingDirectory TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "AdbDeviceIp",
+                "ALTER TABLE HotkeyActions ADD COLUMN AdbDeviceIp TEXT NULL");
 
             using var createIndexCommand = dbContext.Database.GetDbConnection().CreateCommand();
             createIndexCommand.CommandText = """

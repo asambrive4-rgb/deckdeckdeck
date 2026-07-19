@@ -153,7 +153,8 @@ public sealed class UseCaseTests
             new RecordingSystemMediaActionGatewayAdapter(),
             new TestSpotifyMediaActionGateway(),
             new RecordingTerminalCommandGatewayAdapter(),
-            new RecordingFilePasteGateway());
+            new RecordingFilePasteGateway(),
+            new RecordingDialogAdapter());
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
             new Snippet
@@ -183,7 +184,8 @@ public sealed class UseCaseTests
             new RecordingSystemMediaActionGatewayAdapter(),
             new TestSpotifyMediaActionGateway(),
             new RecordingTerminalCommandGatewayAdapter(),
-            filePasteGateway);
+            filePasteGateway,
+            new RecordingDialogAdapter());
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
             new Snippet
@@ -215,7 +217,8 @@ public sealed class UseCaseTests
             new RecordingSystemMediaActionGatewayAdapter(),
             new TestSpotifyMediaActionGateway(),
             terminalService,
-            new RecordingFilePasteGateway());
+            new RecordingFilePasteGateway(),
+            new RecordingDialogAdapter());
 
         var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
             new Snippet
@@ -241,6 +244,116 @@ public sealed class UseCaseTests
         Assert.True(call.RunAsAdministrator);
         Assert.True(call.OpenTerminalWindow);
         Assert.Equal(@"C:\repos\demo", call.WorkingDirectory);
+    }
+
+    [Fact]
+    public async Task ExecuteSnippetActionUseCasePromptsAdbPortAndRunsCommand()
+    {
+        var terminalService = new RecordingTerminalCommandGatewayAdapter();
+        var dialog = new RecordingDialogAdapter
+        {
+            PromptConfirmed = true,
+            AdbPort = "41827"
+        };
+        var useCase = new ExecuteSnippetActionUseCase(
+            new RecordingClipboardPasteGateway(),
+            new RecordingFileLaunchGatewayAdapter(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new TestSpotifyMediaActionGateway(),
+            terminalService,
+            new RecordingFilePasteGateway(),
+            dialog);
+
+        var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
+            new Snippet
+            {
+                Id = Guid.NewGuid(),
+                Title = "ADB Wireless",
+                ActionType = SnippetActionType.TerminalCommand,
+                TerminalCommand =
+                    @"& ""$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"" connect {{IP}}:{{Port}}",
+                TerminalShell = SnippetTerminalShell.PowerShell,
+                OpenTerminalWindow = true,
+                AdbDeviceIp = "10.42.17.83"
+            },
+            new AppSettings(),
+            IntPtr.Zero));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, dialog.AdbPromptCount);
+        Assert.Equal("10.42.17.83", dialog.LastAdbPromptIp);
+        Assert.Contains("ADB 연결 실행됨", result.StatusMessage);
+        var call = Assert.Single(terminalService.Calls);
+        Assert.Equal(
+            @"& ""$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"" connect 10.42.17.83:41827",
+            call.Command);
+    }
+
+    [Fact]
+    public async Task ExecuteSnippetActionUseCaseFailsAdbWhenIpNotConfigured()
+    {
+        var terminalService = new RecordingTerminalCommandGatewayAdapter();
+        var dialog = new RecordingDialogAdapter();
+        var useCase = new ExecuteSnippetActionUseCase(
+            new RecordingClipboardPasteGateway(),
+            new RecordingFileLaunchGatewayAdapter(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new TestSpotifyMediaActionGateway(),
+            terminalService,
+            new RecordingFilePasteGateway(),
+            dialog);
+
+        var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
+            new Snippet
+            {
+                Id = Guid.NewGuid(),
+                Title = "ADB Wireless",
+                ActionType = SnippetActionType.TerminalCommand,
+                TerminalCommand = "adb connect {{IP}}:{{Port}}",
+                AdbDeviceIp = string.Empty
+            },
+            new AppSettings(),
+            IntPtr.Zero));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(0, dialog.AdbPromptCount);
+        Assert.Contains("ADB IP 주소", result.StatusMessage);
+        Assert.Empty(terminalService.Calls);
+    }
+
+    [Fact]
+    public async Task ExecuteSnippetActionUseCaseCancelsAdbConnectWhenPromptCancelled()
+    {
+        var terminalService = new RecordingTerminalCommandGatewayAdapter();
+        var dialog = new RecordingDialogAdapter { PromptConfirmed = false };
+        var useCase = new ExecuteSnippetActionUseCase(
+            new RecordingClipboardPasteGateway(),
+            new RecordingFileLaunchGatewayAdapter(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new TestSpotifyMediaActionGateway(),
+            terminalService,
+            new RecordingFilePasteGateway(),
+            dialog);
+
+        var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
+            new Snippet
+            {
+                Id = Guid.NewGuid(),
+                Title = "ADB Wireless",
+                ActionType = SnippetActionType.TerminalCommand,
+                TerminalCommand = "adb connect {{IP}}:{{Port}}",
+                AdbDeviceIp = "172.16.88.201"
+            },
+            new AppSettings(),
+            IntPtr.Zero));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(1, dialog.AdbPromptCount);
+        Assert.Contains("입력이 취소되었습니다", result.StatusMessage);
+        Assert.Empty(terminalService.Calls);
     }
 
     [Fact]

@@ -1,10 +1,3 @@
-using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
-using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using System.Windows;
 using Microsoft.Win32;
@@ -13,6 +6,8 @@ namespace DeckDeckDeck.App.Infrastructure.Platform;
 
 public class DialogAdapter : IDialogAdapter
 {
+    private readonly Dictionary<string, string> _lastTextInputValues = new(StringComparer.Ordinal);
+
     public virtual bool Confirm(string title, string message)
     {
         return MessageBox.Show(
@@ -29,6 +24,99 @@ public class DialogAdapter : IDialogAdapter
             title,
             MessageBoxButton.OK,
             MessageBoxImage.Information);
+    }
+
+    public virtual bool TryPromptTextInputs(
+        string title,
+        string message,
+        IReadOnlyList<string> fieldNames,
+        out IReadOnlyDictionary<string, string> values)
+    {
+        if (fieldNames.Count == 0)
+        {
+            values = new Dictionary<string, string>(StringComparer.Ordinal);
+            return true;
+        }
+
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            IReadOnlyDictionary<string, string>? captured = null;
+            var confirmed = false;
+            dispatcher.Invoke(() =>
+            {
+                confirmed = TryPromptTextInputs(title, message, fieldNames, out captured!);
+            });
+            values = captured ?? new Dictionary<string, string>(StringComparer.Ordinal);
+            return confirmed;
+        }
+
+        var initialValues = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var name in fieldNames)
+        {
+            if (_lastTextInputValues.TryGetValue(name, out var previous))
+            {
+                initialValues[name] = previous;
+            }
+        }
+
+        var window = new TextInputPromptWindow(title, message, fieldNames, initialValues);
+        var owner = Application.Current?.MainWindow;
+        if (owner is { IsLoaded: true, IsVisible: true })
+        {
+            window.Owner = owner;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        var confirmedResult = window.ShowDialog() == true;
+        if (!confirmedResult)
+        {
+            values = new Dictionary<string, string>(StringComparer.Ordinal);
+            return false;
+        }
+
+        var collected = window.CollectValues();
+        foreach (var (name, value) in collected)
+        {
+            _lastTextInputValues[name] = value;
+        }
+
+        values = collected;
+        return true;
+    }
+
+    public virtual bool TryPromptAdbPort(
+        string title,
+        string fixedIp,
+        out string port)
+    {
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            var capturedPort = string.Empty;
+            var confirmed = false;
+            dispatcher.Invoke(() =>
+            {
+                confirmed = TryPromptAdbPort(title, fixedIp, out capturedPort);
+            });
+            port = capturedPort;
+            return confirmed;
+        }
+
+        var window = new AdbConnectPromptWindow(title, fixedIp);
+        var owner = Application.Current?.MainWindow;
+        if (owner is { IsLoaded: true, IsVisible: true })
+        {
+            window.Owner = owner;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        if (window.ShowDialog() != true)
+        {
+            port = string.Empty;
+            return false;
+        }
+
+        port = window.Port.Trim();
+        return true;
     }
 
     public virtual string? SelectImageFile()

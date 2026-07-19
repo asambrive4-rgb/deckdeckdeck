@@ -22,7 +22,8 @@ public static class ExecutableActionStorageRules
         bool runAsAdministrator,
         FileActionMode fileActionMode,
         bool openTerminalWindow = false,
-        string? terminalWorkingDirectory = null)
+        string? terminalWorkingDirectory = null,
+        string? adbDeviceIp = null)
     {
         var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
         var isTerminal = actionType == SnippetActionType.TerminalCommand;
@@ -60,6 +61,9 @@ public static class ExecutableActionStorageRules
             isTerminal && openTerminalWindow,
             isTerminal
                 ? NormalizeOptionalText(terminalWorkingDirectory)
+                : null,
+            isTerminal
+                ? NormalizeOptionalText(adbDeviceIp)
                 : null);
     }
 
@@ -93,4 +97,5 @@ public sealed record ExecutableActionStorageData(
     bool RunAsAdministrator,
     FileActionMode FileActionMode,
     bool OpenTerminalWindow,
-    string? TerminalWorkingDirectory);
+    string? TerminalWorkingDirectory,
+    string? AdbDeviceIp);

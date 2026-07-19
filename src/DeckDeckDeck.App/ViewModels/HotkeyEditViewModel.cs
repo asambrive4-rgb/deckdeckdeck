@@ -24,6 +24,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
     private readonly Guid? _hotkeyActionId;
     private readonly Action<string> _showStatus;
     private string _errorMessage = string.Empty;
+    private bool _isAdbPairingEnabled;
     private HotkeyGesture? _gesture;
     private bool _isCapturingHotkey;
     private bool _isEnabled = true;
@@ -77,6 +78,8 @@ public sealed class HotkeyEditViewModel : ObservableObject
         ChooseLaunchFileCommand = new RelayCommand(ChooseLaunchFile);
         ChooseLaunchFolderCommand = new RelayCommand(ChooseLaunchFolder);
         ChooseTerminalWorkingDirectoryCommand = new RelayCommand(ChooseTerminalWorkingDirectory);
+        _isAdbPairingEnabled =
+            TerminalCommandParameterRules.IsAdbWirelessConnectCommand(_draft.TerminalCommand);
     }
 
     public string Title => IsExisting ? "핫키 편집" : "새 핫키";
@@ -333,10 +336,23 @@ public sealed class HotkeyEditViewModel : ObservableObject
     public string TerminalCommand
     {
         get => _draft.TerminalCommand;
-        set => SetDraftValue(
-            _draft.TerminalCommand,
-            value,
-            static (draft, newValue) => draft.TerminalCommand = newValue);
+        set
+        {
+            if (!SetDraftValue(
+                    _draft.TerminalCommand,
+                    value,
+                    static (draft, newValue) => draft.TerminalCommand = newValue))
+            {
+                return;
+            }
+
+            var isAdb = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(value);
+            if (_isAdbPairingEnabled != isAdb)
+            {
+                _isAdbPairingEnabled = isAdb;
+                OnPropertyChanged(nameof(IsAdbPairingEnabled));
+            }
+        }
     }
 
     public SnippetTerminalShell SelectedTerminalShell
@@ -366,6 +382,25 @@ public sealed class HotkeyEditViewModel : ObservableObject
             static (draft, newValue) => draft.OpenTerminalWindow = newValue);
     }
 
+    public bool IsAdbPairingEnabled
+    {
+        get => _isAdbPairingEnabled;
+        set
+        {
+            if (_isAdbPairingEnabled == value)
+            {
+                return;
+            }
+
+            _isAdbPairingEnabled = value;
+            OnPropertyChanged();
+            if (value)
+            {
+                ApplyAdbPairingDefaults();
+            }
+        }
+    }
+
     public string TerminalWorkingDirectory
     {
         get => _draft.TerminalWorkingDirectory;
@@ -373,6 +408,15 @@ public sealed class HotkeyEditViewModel : ObservableObject
             _draft.TerminalWorkingDirectory,
             value,
             static (draft, newValue) => draft.TerminalWorkingDirectory = newValue);
+    }
+
+    public string AdbDeviceIp
+    {
+        get => _draft.AdbDeviceIp;
+        set => SetDraftValue(
+            _draft.AdbDeviceIp,
+            value,
+            static (draft, newValue) => draft.AdbDeviceIp = newValue);
     }
 
     public string Description
@@ -624,6 +668,15 @@ public sealed class HotkeyEditViewModel : ObservableObject
         }
 
         TerminalWorkingDirectory = selectedPath;
+        ErrorMessage = string.Empty;
+    }
+
+    private void ApplyAdbPairingDefaults()
+    {
+        TerminalCommand = TerminalCommandParameterRules.AdbWirelessPowerShellExample;
+        SelectedTerminalShell = SnippetTerminalShell.PowerShell;
+        OpenTerminalWindow = true;
+        RunAsAdministrator = false;
         ErrorMessage = string.Empty;
     }
 

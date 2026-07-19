@@ -1,3 +1,4 @@
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Gateways;
@@ -243,6 +244,46 @@ public sealed class SnippetEditViewModelTests
         Assert.NotNull(savedSnippet);
         Assert.Equal(SnippetTerminalShell.PowerShell, savedSnippet.TerminalShell);
         Assert.False(savedSnippet.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void EnablingAdbPairingFillsConnectCommand()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        var viewModel = CreateViewModel(services, category, _ => { });
+
+        viewModel.IsTerminalCommandAction = true;
+        viewModel.IsAdbPairingEnabled = true;
+
+        Assert.True(viewModel.IsAdbPairingEnabled);
+        Assert.True(viewModel.OpenTerminalWindow);
+        Assert.False(viewModel.RunAsAdministrator);
+        Assert.Equal(SnippetTerminalShell.PowerShell, viewModel.SelectedTerminalShell);
+        Assert.Equal(
+            TerminalCommandParameterRules.AdbWirelessPowerShellExample,
+            viewModel.TerminalCommand);
+    }
+
+    [Fact]
+    public void AdbPairingSavesPerSnippetIp()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Phone A";
+        viewModel.IsTerminalCommandAction = true;
+        viewModel.IsAdbPairingEnabled = true;
+        viewModel.AdbDeviceIp = "172.16.88.201";
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.Equal("172.16.88.201", savedSnippet.AdbDeviceIp);
+        Assert.Equal(
+            TerminalCommandParameterRules.AdbWirelessPowerShellExample,
+            savedSnippet.TerminalCommand);
     }
 
     [Fact]

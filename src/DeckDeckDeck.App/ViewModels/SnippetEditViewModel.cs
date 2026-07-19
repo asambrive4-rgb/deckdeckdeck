@@ -25,6 +25,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly Action<string> _showStatus;
     private readonly TransferSnippetUseCase _transferSnippetUseCase;
     private string _errorMessage = string.Empty;
+    private bool _isAdbPairingEnabled;
     private bool _isSlotEnabled;
     private IReadOnlyList<SnippetMediaCommandOption> _mediaCommandOptions = SnippetMediaCommandOption.SystemCommands;
     private SnippetTransferTargetSlot? _selectedTransferTarget;
@@ -83,6 +84,8 @@ public sealed class SnippetEditViewModel : ObservableObject
         ChooseLaunchFileCommand = new RelayCommand(ChooseLaunchFile);
         ChooseLaunchFolderCommand = new RelayCommand(ChooseLaunchFolder);
         ChooseTerminalWorkingDirectoryCommand = new RelayCommand(ChooseTerminalWorkingDirectory);
+        _isAdbPairingEnabled =
+            TerminalCommandParameterRules.IsAdbWirelessConnectCommand(_draft.TerminalCommand);
     }
 
     public string Title => IsExisting ? "실행 항목 편집" : "새 실행 항목";
@@ -334,10 +337,23 @@ public sealed class SnippetEditViewModel : ObservableObject
     public string TerminalCommand
     {
         get => _draft.TerminalCommand;
-        set => SetDraftValue(
-            _draft.TerminalCommand,
-            value,
-            static (draft, newValue) => draft.TerminalCommand = newValue);
+        set
+        {
+            if (!SetDraftValue(
+                    _draft.TerminalCommand,
+                    value,
+                    static (draft, newValue) => draft.TerminalCommand = newValue))
+            {
+                return;
+            }
+
+            var isAdb = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(value);
+            if (_isAdbPairingEnabled != isAdb)
+            {
+                _isAdbPairingEnabled = isAdb;
+                OnPropertyChanged(nameof(IsAdbPairingEnabled));
+            }
+        }
     }
 
     public SnippetTerminalShell SelectedTerminalShell
@@ -367,6 +383,25 @@ public sealed class SnippetEditViewModel : ObservableObject
             static (draft, newValue) => draft.OpenTerminalWindow = newValue);
     }
 
+    public bool IsAdbPairingEnabled
+    {
+        get => _isAdbPairingEnabled;
+        set
+        {
+            if (_isAdbPairingEnabled == value)
+            {
+                return;
+            }
+
+            _isAdbPairingEnabled = value;
+            OnPropertyChanged();
+            if (value)
+            {
+                ApplyAdbPairingDefaults();
+            }
+        }
+    }
+
     public string TerminalWorkingDirectory
     {
         get => _draft.TerminalWorkingDirectory;
@@ -374,6 +409,15 @@ public sealed class SnippetEditViewModel : ObservableObject
             _draft.TerminalWorkingDirectory,
             value,
             static (draft, newValue) => draft.TerminalWorkingDirectory = newValue);
+    }
+
+    public string AdbDeviceIp
+    {
+        get => _draft.AdbDeviceIp;
+        set => SetDraftValue(
+            _draft.AdbDeviceIp,
+            value,
+            static (draft, newValue) => draft.AdbDeviceIp = newValue);
     }
 
     public string Description
@@ -694,6 +738,15 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         TerminalWorkingDirectory = selectedPath;
+        ErrorMessage = string.Empty;
+    }
+
+    private void ApplyAdbPairingDefaults()
+    {
+        TerminalCommand = TerminalCommandParameterRules.AdbWirelessPowerShellExample;
+        SelectedTerminalShell = SnippetTerminalShell.PowerShell;
+        OpenTerminalWindow = true;
+        RunAsAdministrator = false;
         ErrorMessage = string.Empty;
     }
 

@@ -15,7 +15,8 @@ public sealed record ExecutableAction(
     SnippetTerminalShell? TerminalShell,
     bool RunAsAdministrator,
     bool OpenTerminalWindow = false,
-    string? TerminalWorkingDirectory = null)
+    string? TerminalWorkingDirectory = null,
+    string? AdbDeviceIp = null)
 {
     public static ExecutableAction FromSnippet(Snippet snippet)
     {
@@ -34,7 +35,8 @@ public sealed record ExecutableAction(
             snippet.TerminalShell,
             snippet.RunAsAdministrator,
             snippet.OpenTerminalWindow,
-            snippet.TerminalWorkingDirectory);
+            snippet.TerminalWorkingDirectory,
+            snippet.AdbDeviceIp);
     }
 
     public static ExecutableAction FromHotkeyAction(HotkeyAction action)
@@ -54,6 +56,7 @@ public sealed record ExecutableAction(
             action.TerminalShell,
             action.RunAsAdministrator,
             action.OpenTerminalWindow,
-            action.TerminalWorkingDirectory);
+            action.TerminalWorkingDirectory,
+            action.AdbDeviceIp);
     }
 }

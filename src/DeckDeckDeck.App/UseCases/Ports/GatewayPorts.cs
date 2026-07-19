@@ -28,6 +28,23 @@ public interface IDialogAdapter
     string? SelectBackupFolder();
 
     string? SelectBackupZipFile();
+
+    /// <summary>
+    /// Shows a modal form for named text fields. Returns false when the user cancels.
+    /// </summary>
+    bool TryPromptTextInputs(
+        string title,
+        string message,
+        IReadOnlyList<string> fieldNames,
+        out IReadOnlyDictionary<string, string> values);
+
+    /// <summary>
+    /// Shows an ADB connect form for port only. Returns false when the user cancels.
+    /// </summary>
+    bool TryPromptAdbPort(
+        string title,
+        string fixedIp,
+        out string port);
 }
 
 public interface IAppLogger

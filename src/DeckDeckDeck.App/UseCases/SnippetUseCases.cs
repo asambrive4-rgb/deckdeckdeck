@@ -44,7 +44,8 @@ public sealed class SaveSnippetUseCase
             data.TerminalShell ?? SnippetTerminalShell.Cmd,
             data.RunAsAdministrator,
             data.OpenTerminalWindow,
-            data.TerminalWorkingDirectory);
+            data.TerminalWorkingDirectory,
+            data.AdbDeviceIp);
 
         if (!validation.Succeeded)
         {
@@ -72,7 +73,8 @@ public sealed class SaveSnippetUseCase
             TerminalShell = validation.TerminalShell,
             RunAsAdministrator = validation.RunAsAdministrator,
             OpenTerminalWindow = validation.OpenTerminalWindow,
-            TerminalWorkingDirectory = validation.TerminalWorkingDirectory
+            TerminalWorkingDirectory = validation.TerminalWorkingDirectory,
+            AdbDeviceIp = validation.AdbDeviceIp
         })
             .NormalizeForStorage();
 

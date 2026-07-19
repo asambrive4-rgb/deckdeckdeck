@@ -36,6 +36,11 @@ public sealed class Snippet
 
     public string? TerminalWorkingDirectory { get; set; }
 
+    /// <summary>
+    /// Per-action fixed device IP for ADB wireless connect. Port is entered at run time.
+    /// </summary>
+    public string? AdbDeviceIp { get; set; }
+
     public bool RunAsAdministrator { get; set; } = true;
 
     public SlotImageMode SlotImageMode { get; set; } = SlotImageMode.Auto;

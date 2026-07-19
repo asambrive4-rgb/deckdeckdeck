@@ -24,7 +24,8 @@ public static class ExecutableActionSaveDataExtensions
             data.RunAsAdministrator,
             data.FileActionMode,
             data.OpenTerminalWindow,
-            data.TerminalWorkingDirectory);
+            data.TerminalWorkingDirectory,
+            data.AdbDeviceIp);
 
         return data with
         {
@@ -44,7 +45,8 @@ public static class ExecutableActionSaveDataExtensions
             RunAsAdministrator = normalized.RunAsAdministrator,
             FileActionMode = normalized.FileActionMode,
             OpenTerminalWindow = normalized.OpenTerminalWindow,
-            TerminalWorkingDirectory = normalized.TerminalWorkingDirectory
+            TerminalWorkingDirectory = normalized.TerminalWorkingDirectory,
+            AdbDeviceIp = normalized.AdbDeviceIp
         };
     }
 
@@ -68,7 +70,8 @@ public static class ExecutableActionSaveDataExtensions
             data.RunAsAdministrator,
             data.FileActionMode,
             data.OpenTerminalWindow,
-            data.TerminalWorkingDirectory);
+            data.TerminalWorkingDirectory,
+            data.AdbDeviceIp);
 
         return data with
         {
@@ -88,7 +91,8 @@ public static class ExecutableActionSaveDataExtensions
             RunAsAdministrator = normalized.RunAsAdministrator,
             FileActionMode = normalized.FileActionMode,
             OpenTerminalWindow = normalized.OpenTerminalWindow,
-            TerminalWorkingDirectory = normalized.TerminalWorkingDirectory
+            TerminalWorkingDirectory = normalized.TerminalWorkingDirectory,
+            AdbDeviceIp = normalized.AdbDeviceIp
         };
     }
 }

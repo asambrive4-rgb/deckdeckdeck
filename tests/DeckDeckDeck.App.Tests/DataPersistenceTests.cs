@@ -231,7 +231,8 @@ public sealed class DataPersistenceTests
                 TerminalShell: SnippetTerminalShell.PowerShell,
                 RunAsAdministrator: false,
                 OpenTerminalWindow: true,
-                TerminalWorkingDirectory: "  C:\\repos\\demo  ").NormalizeForStorage());
+                TerminalWorkingDirectory: "  C:\\repos\\demo  ",
+                AdbDeviceIp: "  10.42.17.83  ").NormalizeForStorage());
 
         var reloadedServices = CreateServices(services.Storage.AppDataPath);
         var snippet = Assert.Single(reloadedServices.SnippetRepository.GetByCategoryId(category.Id));
@@ -247,6 +248,7 @@ public sealed class DataPersistenceTests
         Assert.False(snippet.RunAsAdministrator);
         Assert.True(snippet.OpenTerminalWindow);
         Assert.Equal(@"C:\repos\demo", snippet.TerminalWorkingDirectory);
+        Assert.Equal("10.42.17.83", snippet.AdbDeviceIp);
         Assert.Null(snippet.AutoIconPath);
     }
 
@@ -639,7 +641,8 @@ public sealed class DataPersistenceTests
                 TerminalShell: SnippetTerminalShell.Cmd,
                 RunAsAdministrator: true,
                 OpenTerminalWindow: true,
-                TerminalWorkingDirectory: @"C:\repos\demo").NormalizeForStorage());
+                TerminalWorkingDirectory: @"C:\repos\demo",
+                AdbDeviceIp: "203.0.113.44").NormalizeForStorage());
 
         services.CategoryRepository.CopyToSlot(source.Id, SlotKey.Numpad5, imageFiles => imageFiles);
 
@@ -652,6 +655,7 @@ public sealed class DataPersistenceTests
         Assert.True(copiedSnippet.RunAsAdministrator);
         Assert.True(copiedSnippet.OpenTerminalWindow);
         Assert.Equal(@"C:\repos\demo", copiedSnippet.TerminalWorkingDirectory);
+        Assert.Equal("203.0.113.44", copiedSnippet.AdbDeviceIp);
     }
 
     [Fact]

@@ -153,14 +153,6 @@ internal sealed record AppComposition(
 
             // Required by action execution on home; keep with core.
             spotifyMediaActionGatewayAdapter = new SpotifyMediaActionGatewayAdapter(settingsRepository);
-            executeSnippetActionUseCase = CreateExecuteSnippetActionUseCase(
-                clipboardPasteGateway,
-                fileLaunchGatewayAdapter,
-                urlLaunchGatewayAdapter,
-                systemMediaActionGatewayAdapter,
-                spotifyMediaActionGatewayAdapter,
-                terminalCommandGatewayAdapter,
-                clipboardPasteGateway);
             resolveCategoryHotkeyUseCase = new ResolveCategoryHotkeyUseCase(
                 categoryRepository,
                 settingsRepository);
@@ -171,6 +163,7 @@ internal sealed record AppComposition(
         ISpotifyConnectionGateway spotifyConnectionGatewayAdapter;
         IStartupRegistrationGateway startupRegistrationGateway;
         ISpotifyConnectionUseCase spotifyConnectionUseCase;
+        DialogAdapter dialogAdapter;
 
         // Secondary services timed separately for L1; still assembled before first home for a complete graph.
         using (startupTiming?.Measure("deferred composition"))
@@ -183,12 +176,22 @@ internal sealed record AppComposition(
                 settingsRepository,
                 spotifyConnectionGatewayAdapter,
                 urlLaunchGatewayAdapter);
+            dialogAdapter = new DialogAdapter();
+            executeSnippetActionUseCase = CreateExecuteSnippetActionUseCase(
+                clipboardPasteGateway,
+                fileLaunchGatewayAdapter,
+                urlLaunchGatewayAdapter,
+                systemMediaActionGatewayAdapter,
+                spotifyMediaActionGatewayAdapter,
+                terminalCommandGatewayAdapter,
+                clipboardPasteGateway,
+                dialogAdapter);
         }
 
         return new AppComposition(
             categoryRepository,
             backupGateway,
-            new DialogAdapter(),
+            dialogAdapter,
             settingsRepository,
             snippetRepository,
             hotkeyActionRepository,
@@ -284,7 +287,8 @@ internal sealed record AppComposition(
                 effectiveSystemMediaActionGatewayAdapter,
                 effectiveSpotifyMediaActionGatewayAdapter,
                 effectiveTerminalCommandGatewayAdapter,
-                effectiveFilePasteGateway),
+                effectiveFilePasteGateway,
+                dialogAdapter),
             new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
             new SpotifyConnectionUseCase(
                 settingsRepository,
@@ -398,7 +402,8 @@ internal sealed record AppComposition(
         IMediaActionGateway mediaActionGateway,
         ISpotifyMediaActionGateway spotifyMediaActionGateway,
         ITerminalCommandGateway terminalCommandGateway,
-        IFilePasteGateway filePasteGateway)
+        IFilePasteGateway filePasteGateway,
+        IDialogAdapter dialogAdapter)
     {
         return new ExecuteSnippetActionUseCase(
             clipboardPasteGateway,
@@ -407,6 +412,7 @@ internal sealed record AppComposition(
             mediaActionGateway,
             spotifyMediaActionGateway,
             terminalCommandGateway,
-            filePasteGateway);
+            filePasteGateway,
+            dialogAdapter);
     }
 }

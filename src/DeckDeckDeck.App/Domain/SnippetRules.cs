@@ -22,7 +22,8 @@ public static class SnippetRules
         SnippetTerminalShell selectedTerminalShell = SnippetTerminalShell.Cmd,
         bool runAsAdministrator = true,
         bool openTerminalWindow = false,
-        string? terminalWorkingDirectory = null)
+        string? terminalWorkingDirectory = null,
+        string? adbDeviceIp = null)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -74,6 +75,28 @@ public static class SnippetRules
                 : terminalWorkingDirectory.Trim())
             : null;
 
+        string? normalizedAdbDeviceIp = null;
+        if (isTerminal
+            && TerminalCommandParameterRules.IsAdbWirelessConnectCommand(normalizedTerminalCommand))
+        {
+            if (!TerminalCommandParameterRules.TryNormalizeAdbIp(
+                    adbDeviceIp,
+                    out var adbIp,
+                    out var adbError))
+            {
+                return SnippetSaveValidationResult.Failure(
+                    adbError ?? TerminalCommandParameterRules.EmptyAdbIpMessage);
+            }
+
+            normalizedAdbDeviceIp = adbIp;
+        }
+        else if (isTerminal)
+        {
+            normalizedAdbDeviceIp = string.IsNullOrWhiteSpace(adbDeviceIp)
+                ? null
+                : adbDeviceIp.Trim();
+        }
+
         return SnippetSaveValidationResult.Success(
             normalizedLaunchUrl,
             mediaProvider,
@@ -82,7 +105,8 @@ public static class SnippetRules
             terminalShell,
             storedRunAsAdministrator,
             storedOpenTerminalWindow,
-            normalizedTerminalWorkingDirectory);
+            normalizedTerminalWorkingDirectory,
+            normalizedAdbDeviceIp);
     }
 }
 
@@ -96,7 +120,8 @@ public sealed record SnippetSaveValidationResult(
     SnippetTerminalShell? TerminalShell,
     bool RunAsAdministrator,
     bool OpenTerminalWindow,
-    string? TerminalWorkingDirectory)
+    string? TerminalWorkingDirectory,
+    string? AdbDeviceIp)
 {
     public static SnippetSaveValidationResult Success(
         string? normalizedLaunchUrl,
@@ -106,7 +131,8 @@ public sealed record SnippetSaveValidationResult(
         SnippetTerminalShell? terminalShell,
         bool runAsAdministrator,
         bool openTerminalWindow = false,
-        string? terminalWorkingDirectory = null)
+        string? terminalWorkingDirectory = null,
+        string? adbDeviceIp = null)
     {
         return new SnippetSaveValidationResult(
             true,
@@ -118,7 +144,8 @@ public sealed record SnippetSaveValidationResult(
             terminalShell,
             runAsAdministrator,
             openTerminalWindow,
-            terminalWorkingDirectory);
+            terminalWorkingDirectory,
+            adbDeviceIp);
     }
 
     public static SnippetSaveValidationResult Failure(string errorMessage)
@@ -133,6 +160,7 @@ public sealed record SnippetSaveValidationResult(
             null,
             false,
             false,
+            null,
             null);
     }
 }

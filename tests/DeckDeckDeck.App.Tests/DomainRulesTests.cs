@@ -75,6 +75,88 @@ public sealed class DomainRulesTests
     }
 
     [Fact]
+    public void TerminalCommandParametersAreExtractedInFirstSeenOrderWithoutDuplicates()
+    {
+        var names = TerminalCommandParameterRules.ExtractParameterNames(
+            "adb connect {{IP}}:{{Port}} && echo {{IP}} {{ }}");
+
+        Assert.Equal(new[] { "IP", "Port" }, names);
+    }
+
+    [Fact]
+    public void TerminalCommandParametersAreAppliedByName()
+    {
+        var command = TerminalCommandParameterRules.ApplyParameters(
+            "adb connect {{IP}}:{{Port}}",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["IP"] = "10.0.0.1",
+                ["Port"] = "5555"
+            });
+
+        Assert.Equal("adb connect 10.0.0.1:5555", command);
+    }
+
+    [Fact]
+    public void TerminalCommandParameterCanBeAddedAndRemoved()
+    {
+        Assert.True(TerminalCommandParameterRules.TryAddParameter(
+            "adb connect",
+            "Port",
+            out var withPort,
+            out var addError));
+        Assert.Null(addError);
+        Assert.Equal("adb connect {{Port}}", withPort);
+
+        Assert.False(TerminalCommandParameterRules.TryAddParameter(
+            withPort,
+            "Port",
+            out _,
+            out var duplicateError));
+        Assert.Equal(
+            TerminalCommandParameterRules.DuplicateParameterNameMessage,
+            duplicateError);
+
+        var removed = TerminalCommandParameterRules.RemoveParameter(
+            "adb connect {{IP}}:{{Port}}",
+            "IP");
+        Assert.Equal("adb connect :{{Port}}", removed);
+    }
+
+    [Fact]
+    public void AdbEndpointAcceptsNumericIpAndPort()
+    {
+        Assert.True(TerminalCommandParameterRules.IsAdbWirelessConnectCommand(
+            TerminalCommandParameterRules.AdbWirelessPowerShellExample));
+
+        Assert.True(TerminalCommandParameterRules.TryNormalizeAdbIp(
+            "10.42.17.83",
+            out var ip,
+            out var ipError));
+        Assert.Null(ipError);
+        Assert.Equal("10.42.17.83", ip);
+
+        Assert.True(TerminalCommandParameterRules.TryNormalizeAdbPort(
+            "12345",
+            out var port,
+            out var portError));
+        Assert.Null(portError);
+        Assert.Equal("12345", port);
+
+        Assert.False(TerminalCommandParameterRules.TryNormalizeAdbIp(
+            "abc",
+            out _,
+            out var invalidIpError));
+        Assert.Equal(TerminalCommandParameterRules.InvalidAdbIpMessage, invalidIpError);
+
+        Assert.False(TerminalCommandParameterRules.TryNormalizeAdbPort(
+            "70000",
+            out _,
+            out var invalidPortError));
+        Assert.Equal(TerminalCommandParameterRules.InvalidAdbPortMessage, invalidPortError);
+    }
+
+    [Fact]
     public void MediaCommandFallsBackWhenProviderDoesNotSupportCommand()
     {
         var command = MediaCommandRules.GetValidCommandForProvider(

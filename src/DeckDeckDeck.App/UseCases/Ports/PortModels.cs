@@ -25,7 +25,8 @@ public sealed record SnippetSaveData(
     bool RunAsAdministrator = true,
     FileActionMode FileActionMode = FileActionMode.Launch,
     bool OpenTerminalWindow = false,
-    string? TerminalWorkingDirectory = null);
+    string? TerminalWorkingDirectory = null,
+    string? AdbDeviceIp = null);
 
 public sealed record HotkeyActionSaveData(
     string Title,
@@ -48,7 +49,8 @@ public sealed record HotkeyActionSaveData(
     bool RunAsAdministrator = true,
     FileActionMode FileActionMode = FileActionMode.Launch,
     bool OpenTerminalWindow = false,
-    string? TerminalWorkingDirectory = null);
+    string? TerminalWorkingDirectory = null,
+    string? AdbDeviceIp = null);
 
 public enum FilePasteGatewayStatus
 {

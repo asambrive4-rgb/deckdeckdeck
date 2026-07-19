@@ -1,3 +1,4 @@
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 
@@ -10,6 +11,7 @@ namespace DeckDeckDeck.App.UseCases;
 public sealed class ExecuteSnippetActionUseCase
 {
     private readonly IClipboardPasteGateway _clipboardPasteGateway;
+    private readonly IDialogAdapter _dialogAdapter;
     private readonly IFileLaunchGateway _fileLaunchGateway;
     private readonly IFilePasteGateway _filePasteGateway;
     private readonly IMediaActionGateway _mediaActionGateway;
@@ -24,7 +26,8 @@ public sealed class ExecuteSnippetActionUseCase
         IMediaActionGateway mediaActionGateway,
         ISpotifyMediaActionGateway spotifyMediaActionGateway,
         ITerminalCommandGateway terminalCommandGateway,
-        IFilePasteGateway filePasteGateway)
+        IFilePasteGateway filePasteGateway,
+        IDialogAdapter dialogAdapter)
     {
         _clipboardPasteGateway = clipboardPasteGateway;
         _fileLaunchGateway = fileLaunchGateway;
@@ -33,6 +36,7 @@ public sealed class ExecuteSnippetActionUseCase
         _spotifyMediaActionGateway = spotifyMediaActionGateway;
         _terminalCommandGateway = terminalCommandGateway;
         _filePasteGateway = filePasteGateway;
+        _dialogAdapter = dialogAdapter;
     }
 
     public async Task<ExecuteSnippetActionResult> ExecuteAsync(
@@ -306,12 +310,23 @@ public sealed class ExecuteSnippetActionUseCase
             return ReportTerminalCommandFailure(action, "실행할 터미널 명령이 없습니다.");
         }
 
+        var commandTemplate = action.TerminalCommand ?? string.Empty;
+        var isAdbConnect = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(commandTemplate);
+        if (!TryResolveTerminalCommand(
+                action,
+                commandTemplate,
+                out var command,
+                out var resolveFailure))
+        {
+            return resolveFailure!;
+        }
+
         var shell = action.TerminalShell ?? SnippetTerminalShell.Cmd;
 
         try
         {
             var executed = _terminalCommandGateway.TryExecute(
-                action.TerminalCommand ?? string.Empty,
+                command,
                 shell,
                 action.RunAsAdministrator,
                 action.OpenTerminalWindow,
@@ -320,12 +335,16 @@ public sealed class ExecuteSnippetActionUseCase
             {
                 return ReportTerminalCommandFailure(
                     action,
-                    "터미널 명령을 시작하지 못했습니다.");
+                    isAdbConnect
+                        ? "ADB 연결 명령을 시작하지 못했습니다."
+                        : "터미널 명령을 시작하지 못했습니다.");
             }
 
             return ExecuteSnippetActionResult.Success(
                 shouldHideWindow: settings.AutoHideAfterPaste,
-                statusMessage: $"{action.Title} 터미널 명령 실행됨");
+                statusMessage: isAdbConnect
+                    ? $"{action.Title} ADB 연결 실행됨"
+                    : $"{action.Title} 터미널 명령 실행됨");
         }
         catch (Exception ex)
         {
@@ -334,6 +353,97 @@ public sealed class ExecuteSnippetActionUseCase
                 "터미널 명령을 실행하지 못했습니다.",
                 ex);
         }
+    }
+
+    private bool TryResolveTerminalCommand(
+        ExecutableAction action,
+        string commandTemplate,
+        out string command,
+        out ExecuteSnippetActionResult? failure)
+    {
+        if (TerminalCommandParameterRules.IsAdbWirelessConnectCommand(commandTemplate))
+        {
+            return TryResolveAdbConnectCommand(
+                action,
+                commandTemplate,
+                out command,
+                out failure);
+        }
+
+        var parameterNames = TerminalCommandParameterRules.ExtractParameterNames(commandTemplate);
+        if (parameterNames.Count == 0)
+        {
+            command = commandTemplate;
+            failure = null;
+            return true;
+        }
+
+        var confirmed = _dialogAdapter.TryPromptTextInputs(
+            title: action.Title,
+            message: "명령에 넣을 값을 입력하세요.",
+            fieldNames: parameterNames,
+            out var values);
+
+        if (!confirmed)
+        {
+            command = string.Empty;
+            failure = ExecuteSnippetActionResult.Failure(
+                statusMessage: $"{action.Title} 입력이 취소되었습니다.");
+            return false;
+        }
+
+        command = TerminalCommandParameterRules.ApplyParameters(commandTemplate, values);
+        failure = null;
+        return true;
+    }
+
+    private bool TryResolveAdbConnectCommand(
+        ExecutableAction action,
+        string commandTemplate,
+        out string command,
+        out ExecuteSnippetActionResult? failure)
+    {
+        if (!TerminalCommandParameterRules.TryNormalizeAdbIp(
+                action.AdbDeviceIp,
+                out var normalizedIp,
+                out var ipError))
+        {
+            command = string.Empty;
+            failure = ReportTerminalCommandFailure(
+                action,
+                ipError ?? TerminalCommandParameterRules.EmptyAdbIpMessage);
+            return false;
+        }
+
+        if (!_dialogAdapter.TryPromptAdbPort(action.Title, normalizedIp, out var port))
+        {
+            command = string.Empty;
+            failure = ExecuteSnippetActionResult.Failure(
+                statusMessage: $"{action.Title} 입력이 취소되었습니다.");
+            return false;
+        }
+
+        if (!TerminalCommandParameterRules.TryNormalizeAdbPort(
+                port,
+                out var normalizedPort,
+                out var portError))
+        {
+            command = string.Empty;
+            failure = ReportTerminalCommandFailure(
+                action,
+                portError ?? TerminalCommandParameterRules.InvalidAdbPortMessage);
+            return false;
+        }
+
+        command = TerminalCommandParameterRules.ApplyParameters(
+            commandTemplate,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [TerminalCommandParameterRules.AdbIpParameterName] = normalizedIp,
+                [TerminalCommandParameterRules.AdbPortParameterName] = normalizedPort
+            });
+        failure = null;
+        return true;
     }
 
     private static ExecuteSnippetActionResult ReportTerminalCommandFailure(

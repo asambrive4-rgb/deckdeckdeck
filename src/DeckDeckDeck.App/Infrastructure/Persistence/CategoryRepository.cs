@@ -185,6 +185,7 @@ public sealed class CategoryRepository : ICategoryRepository
                 TerminalShell = sourceSnippet.TerminalShell,
                 OpenTerminalWindow = sourceSnippet.OpenTerminalWindow,
                 TerminalWorkingDirectory = sourceSnippet.TerminalWorkingDirectory,
+                AdbDeviceIp = sourceSnippet.AdbDeviceIp,
                 RunAsAdministrator = sourceSnippet.RunAsAdministrator,
                 SlotImageMode = sourceSnippet.SlotImageMode,
                 Description = sourceSnippet.Description,

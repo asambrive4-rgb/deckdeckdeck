@@ -34,6 +34,7 @@ public sealed class ExecutableActionStorageRulesTests
         Assert.Equal(snippet.MediaCommand, hotkey.MediaCommand);
         Assert.Equal(snippet.PasteShortcutMode, hotkey.PasteShortcutMode);
         Assert.Equal(snippet.TerminalCommand, hotkey.TerminalCommand);
+        Assert.Equal(snippet.AdbDeviceIp, hotkey.AdbDeviceIp);
         Assert.Equal(snippet.TerminalShell, hotkey.TerminalShell);
         Assert.Equal(snippet.RunAsAdministrator, hotkey.RunAsAdministrator);
         Assert.Equal(snippet.OpenTerminalWindow, hotkey.OpenTerminalWindow);
@@ -119,6 +120,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.False(data.RunAsAdministrator);
                 Assert.False(data.OpenTerminalWindow);
                 Assert.Null(data.TerminalWorkingDirectory);
+                Assert.Null(data.AdbDeviceIp);
                 Assert.Null(data.AutoIcon);
                 Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
@@ -134,6 +136,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.False(data.RunAsAdministrator);
                 Assert.False(data.OpenTerminalWindow);
                 Assert.Null(data.TerminalWorkingDirectory);
+                Assert.Null(data.AdbDeviceIp);
                 Assert.Equal(autoIcon, data.AutoIcon);
                 Assert.Equal(FileActionMode.Paste, data.FileActionMode);
                 break;
@@ -148,6 +151,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.False(data.RunAsAdministrator);
                 Assert.False(data.OpenTerminalWindow);
                 Assert.Null(data.TerminalWorkingDirectory);
+                Assert.Null(data.AdbDeviceIp);
                 Assert.Null(data.AutoIcon);
                 Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
@@ -162,6 +166,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.False(data.RunAsAdministrator);
                 Assert.False(data.OpenTerminalWindow);
                 Assert.Null(data.TerminalWorkingDirectory);
+                Assert.Null(data.AdbDeviceIp);
                 Assert.Null(data.AutoIcon);
                 Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;
@@ -176,6 +181,7 @@ public sealed class ExecutableActionStorageRulesTests
                 Assert.False(data.RunAsAdministrator);
                 Assert.True(data.OpenTerminalWindow);
                 Assert.Equal(@"C:\repos\demo", data.TerminalWorkingDirectory);
+                Assert.Null(data.AdbDeviceIp);
                 Assert.Null(data.AutoIcon);
                 Assert.Equal(FileActionMode.Launch, data.FileActionMode);
                 break;

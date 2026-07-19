@@ -497,6 +497,84 @@ internal sealed class RecordingTerminalCommandGatewayAdapter : ITerminalCommandG
     }
 }
 
+internal sealed class RecordingDialogAdapter : IDialogAdapter
+{
+    public bool PromptConfirmed { get; set; } = true;
+
+    public IReadOnlyDictionary<string, string>? PromptValues { get; set; }
+
+    public List<string> PromptedFieldNames { get; } = [];
+
+    public int PromptCount { get; private set; }
+
+    public int AdbPromptCount { get; private set; }
+
+    public string AdbPort { get; set; } = "12345";
+
+    public string? LastAdbPromptIp { get; private set; }
+
+    public bool Confirm(string title, string message) => true;
+
+    public void ShowInformation(string title, string message)
+    {
+    }
+
+    public string? SelectImageFile() => null;
+
+    public string? SelectLaunchFile() => null;
+
+    public string? SelectPasteFile() => null;
+
+    public string? SelectLaunchFolder() => null;
+
+    public string? SelectBackupFolder() => null;
+
+    public string? SelectBackupZipFile() => null;
+
+    public bool TryPromptTextInputs(
+        string title,
+        string message,
+        IReadOnlyList<string> fieldNames,
+        out IReadOnlyDictionary<string, string> values)
+    {
+        PromptCount++;
+        PromptedFieldNames.Clear();
+        PromptedFieldNames.AddRange(fieldNames);
+
+        if (!PromptConfirmed)
+        {
+            values = new Dictionary<string, string>(StringComparer.Ordinal);
+            return false;
+        }
+
+        if (PromptValues is not null)
+        {
+            values = PromptValues;
+            return true;
+        }
+
+        values = fieldNames.ToDictionary(
+            name => name,
+            name => $"value-{name}",
+            StringComparer.Ordinal);
+        return true;
+    }
+
+    public bool TryPromptAdbPort(string title, string fixedIp, out string port)
+    {
+        AdbPromptCount++;
+        LastAdbPromptIp = fixedIp;
+        if (!PromptConfirmed)
+        {
+            port = string.Empty;
+            return false;
+        }
+
+        port = AdbPort;
+        return true;
+    }
+}
+
 internal sealed record TerminalCommandCall(
     string Command,
     SnippetTerminalShell Shell,

@@ -128,7 +128,8 @@ public sealed class SaveHotkeyActionUseCase
             data.TerminalShell ?? SnippetTerminalShell.Cmd,
             data.RunAsAdministrator,
             data.OpenTerminalWindow,
-            data.TerminalWorkingDirectory);
+            data.TerminalWorkingDirectory,
+            data.AdbDeviceIp);
 
         if (!validation.Succeeded)
         {
@@ -144,7 +145,8 @@ public sealed class SaveHotkeyActionUseCase
             TerminalShell = validation.TerminalShell,
             RunAsAdministrator = validation.RunAsAdministrator,
             OpenTerminalWindow = validation.OpenTerminalWindow,
-            TerminalWorkingDirectory = validation.TerminalWorkingDirectory
+            TerminalWorkingDirectory = validation.TerminalWorkingDirectory,
+            AdbDeviceIp = validation.AdbDeviceIp
         })
             .NormalizeForStorage();
 

@@ -42,6 +42,7 @@ public sealed class ExecutableActionEditDraft
         OpenTerminalWindow = state.ActionType == SnippetActionType.TerminalCommand
             && state.OpenTerminalWindow;
         TerminalWorkingDirectory = state.TerminalWorkingDirectory;
+        AdbDeviceIp = state.AdbDeviceIp;
         RunAsAdministrator = state.ActionType == SnippetActionType.TerminalCommand
             ? state.RunAsAdministrator
             : true;
@@ -76,6 +77,8 @@ public sealed class ExecutableActionEditDraft
     public bool OpenTerminalWindow { get; set; }
 
     public string TerminalWorkingDirectory { get; set; }
+
+    public string AdbDeviceIp { get; set; }
 
     public bool RunAsAdministrator { get; set; }
 
@@ -244,7 +247,8 @@ public sealed class ExecutableActionEditDraft
             RunAsAdministrator,
             FileActionMode,
             OpenTerminalWindow,
-            TerminalWorkingDirectory);
+            TerminalWorkingDirectory,
+            AdbDeviceIp);
     }
 
     public HotkeyActionSaveData ToHotkeyActionSaveData(
@@ -273,7 +277,8 @@ public sealed class ExecutableActionEditDraft
             RunAsAdministrator,
             FileActionMode,
             OpenTerminalWindow,
-            TerminalWorkingDirectory);
+            TerminalWorkingDirectory,
+            AdbDeviceIp);
     }
 
     public void UpdateAutoIconPreview()
@@ -320,6 +325,7 @@ internal sealed record ExecutableActionEditDraftState(
     SnippetTerminalShell TerminalShell,
     bool OpenTerminalWindow,
     string TerminalWorkingDirectory,
+    string AdbDeviceIp,
     bool RunAsAdministrator,
     SlotImageMode SlotImageMode,
     AutoIconCacheEntry? AutoIcon)
@@ -342,6 +348,7 @@ internal sealed record ExecutableActionEditDraftState(
             string.Empty,
             SnippetTerminalShell.Cmd,
             false,
+            string.Empty,
             string.Empty,
             true,
             SlotImageMode.Auto,
@@ -367,6 +374,7 @@ internal sealed record ExecutableActionEditDraftState(
             snippet.TerminalShell ?? SnippetTerminalShell.Cmd,
             snippet.OpenTerminalWindow,
             snippet.TerminalWorkingDirectory ?? string.Empty,
+            snippet.AdbDeviceIp ?? string.Empty,
             snippet.RunAsAdministrator,
             snippet.SlotImageMode,
             AutoIconCacheEntry.FromSnippet(snippet));
@@ -391,6 +399,7 @@ internal sealed record ExecutableActionEditDraftState(
             action.TerminalShell ?? SnippetTerminalShell.Cmd,
             action.OpenTerminalWindow,
             action.TerminalWorkingDirectory ?? string.Empty,
+            action.AdbDeviceIp ?? string.Empty,
             action.RunAsAdministrator,
             action.SlotImageMode,
             AutoIconCacheEntry.FromHotkeyAction(action));
