@@ -367,6 +367,7 @@ public partial class MainWindow : Window
     private void EnterPasteMode()
     {
         _pasteSelectionSession.Start();
+        _directHotkeyCoordinator?.SetPasteSelectionActive(true);
         _numpadCapture.Start(_windowHandle);
     }
 
@@ -385,6 +386,7 @@ public partial class MainWindow : Window
     private void EndPasteSelection()
     {
         _numpadCapture.Stop();
+        _directHotkeyCoordinator?.SetPasteSelectionActive(false);
     }
 
     internal void EnterEditMode()

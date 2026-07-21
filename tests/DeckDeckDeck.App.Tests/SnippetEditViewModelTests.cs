@@ -89,10 +89,29 @@ public sealed class SnippetEditViewModelTests
 
         viewModel.SnippetTitle = "Reconnect Bluetooth";
         viewModel.IsTerminalCommandAction = true;
+        viewModel.OpenTerminalWindow = false;
         viewModel.SaveCommand.Execute(null);
 
         Assert.Null(savedSnippet);
         Assert.Equal("실행할 터미널 명령을 입력해 주세요.", viewModel.ErrorMessage);
+    }
+
+    [Fact]
+    public void TerminalCommandSavesWithOpenTerminalWindowAndEmptyCommand()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
+
+        viewModel.SnippetTitle = "Open Terminal Only";
+        viewModel.IsTerminalCommandAction = true;
+        viewModel.OpenTerminalWindow = true;
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.True(savedSnippet.OpenTerminalWindow);
+        Assert.Null(savedSnippet.TerminalCommand);
     }
 
     [Fact]

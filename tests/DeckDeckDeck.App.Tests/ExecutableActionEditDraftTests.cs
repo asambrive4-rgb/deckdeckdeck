@@ -1,3 +1,4 @@
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -97,6 +98,37 @@ public sealed class ExecutableActionEditDraftTests
 
         Assert.True(terminalData.RunAsAdministrator);
         Assert.False(urlData.RunAsAdministrator);
+    }
+
+    [Fact]
+    public void SetActionTypeToTerminalEnablesOpenTerminalWindowAndAllowsEmptyCommand()
+    {
+        var draft = ExecutableActionEditDraft.FromSnippet(null, imageFileRepository: null);
+        draft.Title = "Terminal Only Window";
+        draft.SetActionType(SnippetActionType.TerminalCommand);
+
+        Assert.True(draft.OpenTerminalWindow);
+        Assert.True(string.IsNullOrWhiteSpace(draft.TerminalCommand));
+
+        var data = draft.ToSnippetSaveData();
+        var validation = SnippetRules.ValidateForSave(
+            data.Title,
+            data.Content,
+            data.ActionType,
+            data.LaunchPath,
+            data.LaunchUrl,
+            data.MediaProvider ?? SnippetMediaProvider.System,
+            data.MediaCommand ?? SnippetMediaCommand.PlayPause,
+            data.TerminalCommand,
+            data.TerminalShell ?? SnippetTerminalShell.Cmd,
+            data.RunAsAdministrator,
+            data.OpenTerminalWindow,
+            data.TerminalWorkingDirectory,
+            data.AdbDeviceIp);
+
+        Assert.True(validation.Succeeded);
+        Assert.True(validation.OpenTerminalWindow);
+        Assert.Null(validation.NormalizedTerminalCommand);
     }
 
     [Fact]

@@ -126,7 +126,12 @@ public sealed class ExecutableActionEditDraft
 
     public void SetActionType(SnippetActionType actionType)
     {
+        var isSwitchingToTerminal = actionType == SnippetActionType.TerminalCommand && ActionType != SnippetActionType.TerminalCommand;
         ActionType = actionType;
+        if (isSwitchingToTerminal)
+        {
+            OpenTerminalWindow = true;
+        }
     }
 
     public void SetLaunchPath(string launchPath)

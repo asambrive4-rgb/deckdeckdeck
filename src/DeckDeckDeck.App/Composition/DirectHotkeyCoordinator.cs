@@ -7,6 +7,7 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
 {
     private readonly IDirectHotkeyRegistrar _directHotkeyRegistrar;
     private readonly MainViewModel _viewModel;
+    private bool _isPasteSelectionActive;
     private bool _isStarted;
 
     public DirectHotkeyCoordinator(
@@ -36,6 +37,12 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
         }
     }
 
+    public void SetPasteSelectionActive(bool isActive)
+    {
+        _isPasteSelectionActive = isActive;
+        UpdateSuspension();
+    }
+
     public void Dispose()
     {
         _viewModel.DirectHotkeyCaptureStateChanged -= OnDirectHotkeyCaptureStateChanged;
@@ -46,7 +53,7 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
 
     private void OnDirectHotkeyCaptureStateChanged(object? sender, EventArgs e)
     {
-        _directHotkeyRegistrar.IsSuspended = _viewModel.IsCapturingHotkeyInput;
+        UpdateSuspension();
     }
 
     private void OnDirectHotkeysChanged(object? sender, EventArgs e)
@@ -58,7 +65,7 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
     {
         var registrations = _viewModel.LoadActiveDirectHotkeys();
         _directHotkeyRegistrar.Refresh(registrations);
-        _directHotkeyRegistrar.IsSuspended = _viewModel.IsCapturingHotkeyInput;
+        UpdateSuspension();
 
         if (_isStarted || registrations.Count == 0)
         {
@@ -68,6 +75,12 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
         var failures = _directHotkeyRegistrar.Start();
         _isStarted = failures.Count == 0;
         return failures;
+    }
+
+    private void UpdateSuspension()
+    {
+        _directHotkeyRegistrar.IsSuspended =
+            _isPasteSelectionActive || _viewModel.IsCapturingHotkeyInput;
     }
 
     private void OnDirectHotkeyPressed(object? sender, DirectHotkeyPressedEventArgs e)

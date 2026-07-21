@@ -59,6 +59,24 @@ public sealed class DirectHotkeyCoordinatorTests
         Assert.Equal(refreshCount, registrar.RefreshCalls.Count);
     }
 
+    [Fact]
+    public void PasteSelectionSuspendsDirectHotkeysUntilSelectionEnds()
+    {
+        var services = CreateServices();
+        var viewModel = CreateMainViewModel(services, initializeHome: false);
+        using var registrar = new RecordingDirectHotkeyRegistrar();
+        using var coordinator = new DirectHotkeyCoordinator(registrar, viewModel);
+        coordinator.Start();
+
+        coordinator.SetPasteSelectionActive(true);
+
+        Assert.True(registrar.IsSuspended);
+
+        coordinator.SetPasteSelectionActive(false);
+
+        Assert.False(registrar.IsSuspended);
+    }
+
     private static HotkeyActionSaveData CreatePasteAction(string title, HotkeyGesture gesture)
     {
         return new HotkeyActionSaveData(
