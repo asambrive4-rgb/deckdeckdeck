@@ -17,6 +17,7 @@ public static class ExecutableActionTypeCatalog
             SnippetActionType.LaunchUrl => ActionEditorPanel.LaunchUrl,
             SnippetActionType.MediaAction => ActionEditorPanel.Media,
             SnippetActionType.TerminalCommand => ActionEditorPanel.TerminalCommand,
+            SnippetActionType.Timer => ActionEditorPanel.Timer,
             _ => ActionEditorPanel.PasteText
         };
     }
@@ -33,6 +34,7 @@ public static class ExecutableActionTypeCatalog
             SnippetActionType.LaunchUrl => "웹 주소 열기",
             SnippetActionType.MediaAction => "음악/미디어 제어",
             SnippetActionType.TerminalCommand => "터미널 명령 실행",
+            SnippetActionType.Timer => "타이머 실행",
             _ => "문구 붙여넣기"
         };
     }
@@ -70,5 +72,6 @@ public enum ActionEditorPanel
     LaunchFile,
     LaunchUrl,
     Media,
-    TerminalCommand
+    TerminalCommand,
+    Timer
 }

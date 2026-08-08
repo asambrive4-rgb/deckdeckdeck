@@ -1,5 +1,6 @@
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
+using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
@@ -8,13 +9,16 @@ public sealed class SlotGridViewModelFactory
 {
     private readonly IStoredImagePathResolver? _storedImagePathResolver;
     private readonly ISnippetImageResolver? _snippetImageResolver;
+    private readonly ISlotTimerUseCases? _timerUseCases;
 
     public SlotGridViewModelFactory(
         IStoredImagePathResolver? storedImagePathResolver = null,
-        ISnippetImageResolver? snippetImageResolver = null)
+        ISnippetImageResolver? snippetImageResolver = null,
+        ISlotTimerUseCases? timerUseCases = null)
     {
         _storedImagePathResolver = storedImagePathResolver;
         _snippetImageResolver = snippetImageResolver;
+        _timerUseCases = timerUseCases;
     }
 
     public NumpadGridViewModel BuildCategoryGrid(
@@ -31,13 +35,16 @@ public sealed class SlotGridViewModelFactory
             SlotKeyCatalog.All.Select(slotKey =>
         {
             categoriesBySlot.TryGetValue(slotKey, out var category);
-            return new SlotViewModel(
+            var vm = new SlotViewModel(
                 slotKey,
                 category?.Name,
                 ResolveDisplayPath(category?.ThumbnailPath),
                 SlotRules.IsEnabled(slotKey, settings.EnabledCategorySlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, category),
                 selectedSlotKey => onEdit(selectedSlotKey, category));
+
+            BindTimerState(vm, isCategoryView: false);
+            return vm;
         }),
             onHotkeySelected is null
                 ? HotkeyTileViewModel.Disabled()
@@ -59,16 +66,60 @@ public sealed class SlotGridViewModelFactory
         {
             snippetsBySlot.TryGetValue(slotKey, out var snippet);
             var thumbnailPath = ResolveSnippetDisplayPath(snippet);
-            return new SlotViewModel(
+            var vm = new SlotViewModel(
                 slotKey,
                 snippet?.Title,
                 thumbnailPath,
                 SlotRules.IsEnabled(slotKey, settings.EnabledSnippetSlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, snippet),
                 selectedSlotKey => onEdit(selectedSlotKey, snippet));
+
+            if (snippet?.ActionType == SnippetActionType.Timer)
+            {
+                vm.IsTimerSlot = true;
+            }
+
+            BindTimerState(vm, isCategoryView: true);
+            return vm;
         }),
             HotkeyTileViewModel.Disabled(),
             onReorder);
+    }
+
+    private void BindTimerState(SlotViewModel vm, bool isCategoryView)
+    {
+        if (_timerUseCases is null) return;
+
+        vm.IsCategoryView = isCategoryView;
+        var initialState = _timerUseCases.GetTimerState(vm.SlotKey);
+        vm.IsTimerRunning = initialState.IsRunning;
+        vm.FormattedTimerRemaining = initialState.FormattedRemainingTime;
+
+        _timerUseCases.TimerStateChanged += (sender, args) =>
+        {
+            if (args.SlotKey == vm.SlotKey)
+            {
+                UpdateSlotVmOnDispatcher(vm, args.State);
+            }
+        };
+    }
+
+    private static void UpdateSlotVmOnDispatcher(SlotViewModel slotVm, SlotTimerState state)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher != null && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(() =>
+            {
+                slotVm.IsTimerRunning = state.IsRunning;
+                slotVm.FormattedTimerRemaining = state.FormattedRemainingTime;
+            });
+        }
+        else
+        {
+            slotVm.IsTimerRunning = state.IsRunning;
+            slotVm.FormattedTimerRemaining = state.FormattedRemainingTime;
+        }
     }
 
     private string? ResolveDisplayPath(string? path)
@@ -98,16 +149,10 @@ public sealed class SlotGridViewModelFactory
             SlotImageMode.Custom => ResolveDisplayPath(snippet.ThumbnailPath),
             SlotImageMode.Auto when snippet.ActionType == SnippetActionType.LaunchFile
                 && !string.IsNullOrWhiteSpace(snippet.AutoIconPath)
-                && CanDisplayStoredPath(snippet.AutoIconPath) =>
-                ResolveDisplayPath(snippet.AutoIconPath),
-            SlotImageMode.Auto when snippet.ActionType == SnippetActionType.MediaAction =>
-                MediaIconResourcePaths.GetIconResourcePath(snippet.MediaCommand),
+                => ResolveDisplayPath(snippet.AutoIconPath),
+            SlotImageMode.Auto when snippet.ActionType == SnippetActionType.MediaAction
+                => MediaIconResourcePaths.GetIconResourcePath(snippet.MediaCommand),
             _ => null
         };
-    }
-
-    private bool CanDisplayStoredPath(string storedPath)
-    {
-        return _storedImagePathResolver?.FileExists(storedPath) == true;
     }
 }

@@ -16,7 +16,8 @@ public sealed record ExecutableAction(
     bool RunAsAdministrator,
     bool OpenTerminalWindow = false,
     string? TerminalWorkingDirectory = null,
-    string? AdbDeviceIp = null)
+    string? AdbDeviceIp = null,
+    SlotKey? TargetSlotKey = null)
 {
     public static ExecutableAction FromSnippet(Snippet snippet)
     {
@@ -36,7 +37,8 @@ public sealed record ExecutableAction(
             snippet.RunAsAdministrator,
             snippet.OpenTerminalWindow,
             snippet.TerminalWorkingDirectory,
-            snippet.AdbDeviceIp);
+            snippet.AdbDeviceIp,
+            snippet.SlotKey);
     }
 
     public static ExecutableAction FromHotkeyAction(HotkeyAction action)
@@ -57,6 +59,7 @@ public sealed record ExecutableAction(
             action.RunAsAdministrator,
             action.OpenTerminalWindow,
             action.TerminalWorkingDirectory,
-            action.AdbDeviceIp);
+            action.AdbDeviceIp,
+            TargetSlotKey: null);
     }
 }

@@ -45,8 +45,18 @@ internal sealed class ActionExecutionCoordinator
             return;
         }
 
+        var completedPasteSelection = 0;
+        void FinishPasteSelection()
+        {
+            if (Interlocked.Exchange(ref completedPasteSelection, 1) == 0)
+            {
+                completePasteSelection();
+            }
+        }
+
         try
         {
+            FinishPasteSelection();
             var settings = _loadSettingsUseCase.Execute();
             var preparation = _prepareSnippetActionUseCase.Execute(
                 new PrepareSnippetActionRequest(action, settings));
@@ -77,7 +87,7 @@ internal sealed class ActionExecutionCoordinator
         {
             try
             {
-                completePasteSelection();
+                FinishPasteSelection();
             }
             finally
             {

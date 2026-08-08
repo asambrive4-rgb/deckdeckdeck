@@ -57,7 +57,9 @@ internal sealed record AppComposition(
     ExecuteSnippetActionUseCase ExecuteSnippetActionUseCase,
     ResolveCategoryHotkeyUseCase ResolveCategoryHotkeyUseCase,
     ISpotifyConnectionUseCase SpotifyConnectionUseCase,
-    IClipboardAdapter ClipboardAdapter)
+    IClipboardAdapter ClipboardAdapter,
+    ISlotTimerUseCases SlotTimerUseCases,
+    ISlotTimerCoordinator SlotTimerCoordinator)
 {
     public static AppComposition CreateDefault(StartupTimingLog? startupTiming = null)
     {
@@ -125,6 +127,8 @@ internal sealed record AppComposition(
         ISpotifyMediaActionGateway spotifyMediaActionGatewayAdapter;
         ExecuteSnippetActionUseCase executeSnippetActionUseCase;
         ResolveCategoryHotkeyUseCase resolveCategoryHotkeyUseCase;
+        ISlotTimerUseCases slotTimerUseCases;
+        ISlotTimerCoordinator slotTimerCoordinator;
 
         using (startupTiming?.Measure("core composition"))
         {
@@ -139,7 +143,11 @@ internal sealed record AppComposition(
                 new ShellFileIconExtractor(),
                 fileLogger);
             snippetImageResolver = new SnippetImageResolver(fileIconCacheRepository, storedImagePathResolver);
-            slotGridViewModelFactory = new SlotGridViewModelFactory(storedImagePathResolver, snippetImageResolver);
+            
+            var toastGateway = new WpfToastNotificationGateway();
+            slotTimerUseCases = new SlotTimerUseCases(toastGateway);
+            slotTimerCoordinator = new SlotTimerCoordinator(slotTimerUseCases);
+            slotGridViewModelFactory = new SlotGridViewModelFactory(storedImagePathResolver, snippetImageResolver, slotTimerUseCases);
 
             clipboardAdapter = new WpfClipboardAdapter();
             fileLaunchGatewayAdapter = new FileLaunchGatewayAdapter();
@@ -185,7 +193,8 @@ internal sealed record AppComposition(
                 spotifyMediaActionGatewayAdapter,
                 terminalCommandGatewayAdapter,
                 clipboardPasteGateway,
-                dialogAdapter);
+                dialogAdapter,
+                slotTimerCoordinator);
         }
 
         return new AppComposition(
@@ -212,7 +221,9 @@ internal sealed record AppComposition(
             executeSnippetActionUseCase,
             resolveCategoryHotkeyUseCase,
             spotifyConnectionUseCase,
-            clipboardAdapter);
+            clipboardAdapter,
+            slotTimerUseCases,
+            slotTimerCoordinator);
     }
 
     public static AppComposition Create(
@@ -236,7 +247,9 @@ internal sealed record AppComposition(
         ImageFileRepository? imageFileRepository,
         SlotGridViewModelFactory slotGridViewModelFactory,
         IClipboardAdapter? clipboardAdapter,
-        IFilePasteGateway? filePasteGateway = null)
+        IFilePasteGateway? filePasteGateway = null,
+        ISlotTimerUseCases? slotTimerUseCases = null,
+        ISlotTimerCoordinator? slotTimerCoordinator = null)
     {
         var effectiveClipboardPasteGateway = clipboardPasteGateway ?? new ClipboardPasteGateway();
         var effectiveFileLaunchGatewayAdapter = fileLaunchGateway ?? new FileLaunchGatewayAdapter();
@@ -259,6 +272,10 @@ internal sealed record AppComposition(
                 new Win32KeyboardInputAdapter(),
                 new Win32WindowFocusAdapter());
 
+        var effectiveToastGateway = new WpfToastNotificationGateway();
+        var effectiveSlotTimerUseCases = slotTimerUseCases ?? new SlotTimerUseCases(effectiveToastGateway);
+        var effectiveSlotTimerCoordinator = slotTimerCoordinator ?? new SlotTimerCoordinator(effectiveSlotTimerUseCases);
+
         return new AppComposition(
             categoryRepository,
             backupGateway,
@@ -279,7 +296,7 @@ internal sealed record AppComposition(
             effectiveStoredImagePathResolver,
             fileLogger,
             imageFileRepository,
-            new SlotGridViewModelFactory(effectiveStoredImagePathResolver, snippetImageResolver),
+            new SlotGridViewModelFactory(effectiveStoredImagePathResolver, snippetImageResolver, effectiveSlotTimerUseCases),
             CreateExecuteSnippetActionUseCase(
                 effectiveClipboardPasteGateway,
                 effectiveFileLaunchGatewayAdapter,
@@ -288,13 +305,16 @@ internal sealed record AppComposition(
                 effectiveSpotifyMediaActionGatewayAdapter,
                 effectiveTerminalCommandGatewayAdapter,
                 effectiveFilePasteGateway,
-                dialogAdapter),
+                dialogAdapter,
+                effectiveSlotTimerCoordinator),
             new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
             new SpotifyConnectionUseCase(
                 settingsRepository,
                 effectiveSpotifyConnectionGatewayAdapter,
                 effectiveUrlLaunchGatewayAdapter),
-            effectiveClipboardAdapter);
+            effectiveClipboardAdapter,
+            effectiveSlotTimerUseCases,
+            effectiveSlotTimerCoordinator);
     }
 
     public MainViewModelDependencies CreateMainViewModelDependencies(
@@ -380,7 +400,8 @@ internal sealed record AppComposition(
             SnippetImageResolver,
             StoredImagePathResolver,
             SpotifyConnectionUseCase,
-            ClipboardAdapter);
+            ClipboardAdapter,
+            SlotTimerCoordinator);
 
         return new MainViewModelDependencies(
             navigatorDependencies,
@@ -403,7 +424,8 @@ internal sealed record AppComposition(
         ISpotifyMediaActionGateway spotifyMediaActionGateway,
         ITerminalCommandGateway terminalCommandGateway,
         IFilePasteGateway filePasteGateway,
-        IDialogAdapter dialogAdapter)
+        IDialogAdapter dialogAdapter,
+        ITimerActionGateway? timerActionGateway = null)
     {
         return new ExecuteSnippetActionUseCase(
             clipboardPasteGateway,
@@ -413,6 +435,7 @@ internal sealed record AppComposition(
             spotifyMediaActionGateway,
             terminalCommandGateway,
             filePasteGateway,
-            dialogAdapter);
+            dialogAdapter,
+            timerActionGateway);
     }
 }

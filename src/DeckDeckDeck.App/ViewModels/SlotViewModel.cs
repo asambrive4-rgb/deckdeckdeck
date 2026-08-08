@@ -14,6 +14,10 @@ public sealed class SlotViewModel : ObservableObject
     private bool _isDropHighlight;
     private bool _isDragging;
     private int _suppressSelectCount;
+    private bool _isTimerRunning;
+    private string? _formattedTimerRemaining;
+    private bool _isCategoryView;
+    private bool _isTimerSlot;
 
     public SlotViewModel(
         SlotKey slotKey,
@@ -78,14 +82,8 @@ public sealed class SlotViewModel : ObservableObject
 
     public bool IsEnabledSlot { get; }
 
-    /// <summary>
-    /// Filled and enabled slots can start a long-press drag reorder.
-    /// </summary>
     public bool CanStartDrag => IsEnabledSlot && !IsEmpty;
 
-    /// <summary>
-    /// Enabled slots (empty or filled) can accept a drag-and-drop reorder.
-    /// </summary>
     public bool CanAcceptDrop => IsEnabledSlot;
 
     public bool IsDropHighlight
@@ -100,7 +98,59 @@ public sealed class SlotViewModel : ObservableObject
         set => SetProperty(ref _isDragging, value);
     }
 
-    public string DisplayText => IsEmpty ? "+" : Title;
+    public bool IsTimerRunning
+    {
+        get => _isTimerRunning;
+        set
+        {
+            if (SetProperty(ref _isTimerRunning, value))
+            {
+                OnPropertyChanged(nameof(DisplayText));
+            }
+        }
+    }
+
+    public string? FormattedTimerRemaining
+    {
+        get => _formattedTimerRemaining;
+        set
+        {
+            if (SetProperty(ref _formattedTimerRemaining, value))
+            {
+                OnPropertyChanged(nameof(DisplayText));
+            }
+        }
+    }
+
+    public bool IsCategoryView
+    {
+        get => _isCategoryView;
+        set
+        {
+            if (SetProperty(ref _isCategoryView, value))
+            {
+                OnPropertyChanged(nameof(DisplayText));
+            }
+        }
+    }
+
+    public bool IsTimerSlot
+    {
+        get => _isTimerSlot;
+        set => SetProperty(ref _isTimerSlot, value);
+    }
+
+    public string DisplayText
+    {
+        get
+        {
+            if (IsCategoryView && IsTimerRunning && !string.IsNullOrEmpty(FormattedTimerRemaining))
+            {
+                return FormattedTimerRemaining;
+            }
+            return IsEmpty ? "+" : Title;
+        }
+    }
 
     public ICommand SelectCommand { get; }
 
@@ -122,9 +172,6 @@ public sealed class SlotViewModel : ObservableObject
         _onSelected(SlotKey);
     }
 
-    /// <summary>
-    /// Starts a new load generation so in-flight decodes for this slot can be ignored.
-    /// </summary>
     public int BeginThumbnailLoadGeneration()
     {
         return Interlocked.Increment(ref _thumbnailLoadGeneration);

@@ -106,6 +106,10 @@
                                              GroupName="SnippetActionType"
                                              IsChecked="{Binding IsTerminalCommandAction, Mode=TwoWay}"
                                              Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="⏱️ 타이머 실행"
+                                             GroupName="SnippetActionType"
+                                             IsChecked="{Binding IsTimerAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
                             </UniformGrid>
                         </StackPanel>
                     </StackPanel>
@@ -295,6 +299,15 @@
                                      Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
                                      TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto" />
+                        </StackPanel>
+                        <!-- 타이머 실행 -->
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsTimerAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="⏱️ 타이머 실행 설정" />
+                            <TextBlock Text="이 슬롯을 클릭하면 타이머 시간(분/초)을 선택하는 팝업이 표시되며 백그라운드 카운트다운이 즉시 시작됩니다."
+                                       Foreground="{StaticResource Deck.Brush.Text.Primary}"
+                                       FontSize="12.5" TextWrapping="Wrap" Margin="0,4,0,0"/>
                         </StackPanel>
 
                         <CheckBox Margin="0,12,0,12"

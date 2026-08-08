@@ -235,6 +235,20 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
     }
 
+    public bool IsTimerAction
+    {
+        get => ExecutableActionTypeCatalog.IsEditorPanel(
+            ActionType,
+            ActionEditorPanel.Timer);
+        set
+        {
+            if (value)
+            {
+                ActionType = SnippetActionType.Timer;
+            }
+        }
+    }
+
     public string LaunchPath
     {
         get => _draft.LaunchPath;
@@ -765,6 +779,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         OnPropertyChanged(nameof(IsLaunchUrlAction));
         OnPropertyChanged(nameof(IsMediaAction));
         OnPropertyChanged(nameof(IsTerminalCommandAction));
+        OnPropertyChanged(nameof(IsTimerAction));
     }
 
     private void NotifyFileActionModeChanged()

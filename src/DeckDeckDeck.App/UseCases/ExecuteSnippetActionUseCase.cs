@@ -18,6 +18,7 @@ public sealed class ExecuteSnippetActionUseCase
     private readonly ISpotifyMediaActionGateway _spotifyMediaActionGateway;
     private readonly ITerminalCommandGateway _terminalCommandGateway;
     private readonly IUrlLaunchGateway _urlLaunchGateway;
+    private readonly ITimerActionGateway? _timerActionGateway;
 
     public ExecuteSnippetActionUseCase(
         IClipboardPasteGateway clipboardPasteGateway,
@@ -27,7 +28,8 @@ public sealed class ExecuteSnippetActionUseCase
         ISpotifyMediaActionGateway spotifyMediaActionGateway,
         ITerminalCommandGateway terminalCommandGateway,
         IFilePasteGateway filePasteGateway,
-        IDialogAdapter dialogAdapter)
+        IDialogAdapter dialogAdapter,
+        ITimerActionGateway? timerActionGateway = null)
     {
         _clipboardPasteGateway = clipboardPasteGateway;
         _fileLaunchGateway = fileLaunchGateway;
@@ -37,6 +39,7 @@ public sealed class ExecuteSnippetActionUseCase
         _terminalCommandGateway = terminalCommandGateway;
         _filePasteGateway = filePasteGateway;
         _dialogAdapter = dialogAdapter;
+        _timerActionGateway = timerActionGateway;
     }
 
     public async Task<ExecuteSnippetActionResult> ExecuteAsync(
@@ -58,6 +61,7 @@ public sealed class ExecuteSnippetActionUseCase
                 SnippetActionType.TerminalCommand => ExecuteTerminalCommandSnippet(
                     request.Action,
                     request.Settings),
+                SnippetActionType.Timer => ExecuteTimerSnippet(request.Action),
                 _ => await PasteTextSnippetAsync(request)
             };
         }
@@ -67,6 +71,16 @@ public sealed class ExecuteSnippetActionUseCase
                 logMessage: $"Paste failed for action {request.Action.Id}.",
                 exception: ex);
         }
+    }
+
+    private ExecuteSnippetActionResult ExecuteTimerSnippet(ExecutableAction action)
+    {
+        if (action.TargetSlotKey.HasValue)
+        {
+            _timerActionGateway?.ExecuteTimerAction(action.TargetSlotKey.Value);
+        }
+
+        return ExecuteSnippetActionResult.Success(shouldHideWindow: false, statusMessage: "타이머 실행");
     }
 
     private async Task<ExecuteSnippetActionResult> PasteFileSnippetAsync(

@@ -6,5 +6,6 @@ public enum SnippetActionType
     LaunchFile,
     LaunchUrl,
     MediaAction,
-    TerminalCommand
+    TerminalCommand,
+    Timer
 }

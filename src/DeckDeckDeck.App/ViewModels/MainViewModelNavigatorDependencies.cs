@@ -35,4 +35,5 @@ internal sealed record MainViewModelNavigatorDependencies(
     ISnippetImageResolver? SnippetImageResolver,
     IStoredImagePathResolver? StoredImagePathResolver,
     ISpotifyConnectionUseCase SpotifyConnectionUseCase,
-    IClipboardTextWriter ClipboardTextWriter);
+    IClipboardTextWriter ClipboardTextWriter,
+    ISlotTimerCoordinator? SlotTimerCoordinator = null);

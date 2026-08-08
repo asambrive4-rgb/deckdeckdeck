@@ -99,17 +99,16 @@ public sealed class MainViewModelPasteTests
         viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
         viewModel.SelectSlot(SlotKey.Numpad3);
         await pasteService.Started;
+        Assert.Equal(1, completedPasteSelections);
 
         viewModel.SelectSlot(SlotKey.Numpad4);
 
         var call = Assert.Single(pasteService.Calls);
         Assert.Equal("First paste.", call.Action.Content);
-        Assert.Equal(1, completedPasteSelections);
+        Assert.Equal(2, completedPasteSelections);
         Assert.Equal("Action is already running.", viewModel.StatusMessage);
 
         pasteService.Complete();
-        await WaitUntilAsync(() => completedPasteSelections == 2);
-
         Assert.Equal(2, completedPasteSelections);
     }
 

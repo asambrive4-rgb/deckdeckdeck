@@ -10,6 +10,7 @@ public sealed class CategoryViewModel
     private readonly Category _category;
     private readonly Action<Category, SlotKey, Snippet?> _editSnippet;
     private readonly Func<Snippet, Task> _pasteSnippet;
+    private readonly ISlotTimerCoordinator? _timerCoordinator;
 
     public CategoryViewModel(
         Category category,
@@ -19,11 +20,13 @@ public sealed class CategoryViewModel
         Action showSettings,
         Action<Category, SlotKey, Snippet?> editSnippet,
         Func<Snippet, Task> pasteSnippet,
-        Action<SlotKey, SlotKey>? reorderSnippet = null)
+        Action<SlotKey, SlotKey>? reorderSnippet = null,
+        ISlotTimerCoordinator? timerCoordinator = null)
     {
         _category = category;
         _editSnippet = editSnippet;
         _pasteSnippet = pasteSnippet;
+        _timerCoordinator = timerCoordinator;
 
         Title = category.Name;
         Subtitle = $"슬롯 {category.SlotKey.GetDisplayText()} 카테고리";
