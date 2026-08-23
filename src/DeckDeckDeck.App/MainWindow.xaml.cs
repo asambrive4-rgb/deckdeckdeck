@@ -135,7 +135,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        e.Handled = viewModel.SelectSlot(slotKey);
+        if (viewModel.CurrentViewModel is not (HomeViewModel or CategoryViewModel))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        PostToUiThread(() => SelectCapturedSlot(slotKey));
     }
 
     private void OnMinimizeButtonClick(object sender, RoutedEventArgs e)
@@ -271,9 +277,9 @@ public partial class MainWindow : Window
         RunOnUiThread(() => HandleHotkey(e.SlotKey));
     }
 
-    private void OnNumpadSlotCaptured(object? sender, HotkeyPressedEventArgs e)
+    internal void OnNumpadSlotCaptured(object? sender, HotkeyPressedEventArgs e)
     {
-        RunOnUiThread(() => SelectCapturedSlot(e.SlotKey));
+        PostToUiThread(() => SelectCapturedSlot(e.SlotKey));
     }
 
     private void OnHotkeyLongPressed(object? sender, HotkeyPressedEventArgs e)
@@ -281,9 +287,10 @@ public partial class MainWindow : Window
         RunOnUiThread(() => HandleHotkeyLongPress(e.SlotKey));
     }
 
-    private void OnDirectHotkeyPressed(object? sender, DirectHotkeyPressedEventArgs e)
+    internal void OnDirectHotkeyPressed(object? sender, DirectHotkeyPressedEventArgs e)
     {
-        RunOnUiThread(() => HandleDirectHotkey(e.HotkeyActionId));
+        var targetWindowHandle = _windowFocusAdapter.GetForegroundWindow();
+        PostToUiThread(() => HandleDirectHotkey(e.HotkeyActionId, targetWindowHandle));
     }
 
     private void RunOnUiThread(Action action)
@@ -294,6 +301,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        _ = Dispatcher.BeginInvoke(
+            () => RunUiActionSafely(action),
+            DispatcherPriority.Normal);
+    }
+
+    private void PostToUiThread(Action action)
+    {
         _ = Dispatcher.BeginInvoke(
             () => RunUiActionSafely(action),
             DispatcherPriority.Normal);
@@ -334,14 +348,14 @@ public partial class MainWindow : Window
         viewModel.OpenCategoryFromHotkey(slotKey);
     }
 
-    private void HandleDirectHotkey(Guid hotkeyActionId)
+    private void HandleDirectHotkey(Guid hotkeyActionId, IntPtr targetWindowHandle)
     {
         if (DataContext is not MainViewModel viewModel)
         {
             return;
         }
 
-        _lastPasteTargetWindowHandle = _windowFocusAdapter.GetForegroundWindow();
+        _lastPasteTargetWindowHandle = targetWindowHandle;
         _ = ExecuteDirectHotkeySafely(viewModel, hotkeyActionId);
     }
 
