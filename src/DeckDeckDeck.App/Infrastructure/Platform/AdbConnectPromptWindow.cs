@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿// 역할: 안드로이드 무선 디버깅(ADB) 연결을 위한 IP 주소와 포트 입력을 받는 창을 띄웁니다.
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;

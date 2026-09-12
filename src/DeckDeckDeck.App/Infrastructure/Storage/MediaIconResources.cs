@@ -1,3 +1,4 @@
+// 역할: 프로그램 내장 미디어 제어 아이콘 및 기본 그래픽 리소스 경로를 제공합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

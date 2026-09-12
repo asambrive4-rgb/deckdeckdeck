@@ -1,3 +1,4 @@
+// 역할: 파일 열기, 저장 확인, 알림 메시지 등 윈도우 표준 대화상자를 화면에 띄웁니다.
 using DeckDeckDeck.App.UseCases.Ports;
 using System.Windows;
 using Microsoft.Win32;

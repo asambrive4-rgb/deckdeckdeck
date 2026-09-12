@@ -1,3 +1,4 @@
+// 역할: 프로그램의 전반적인 환경설정(테마, 자동 시작, 단축키 모드 등)을 보관하는 데이터 모델입니다.
 namespace DeckDeckDeck.App.Models;
 
 public sealed class AppSettings

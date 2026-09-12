@@ -1,3 +1,4 @@
+// 역할: 데이터베이스에 저장된 상대 경로를 실제 컴퓨터의 전체 파일 경로로 변환합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

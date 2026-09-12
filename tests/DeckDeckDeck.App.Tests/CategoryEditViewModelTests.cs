@@ -1,3 +1,4 @@
+// 역할: 카테고리 편집 화면의 입력값 검증과 저장/취소 동작이 정상 작동하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Gateways;

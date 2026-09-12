@@ -1,3 +1,4 @@
+// 역할: 메인 화면을 구동하는 데 필요한 각종 기능과 설정 데이터를 주입하여 화면 모델을 생성합니다.
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.ViewModels;
 

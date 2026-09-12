@@ -1,3 +1,4 @@
+// 역할: 슬롯이 눌렸을 때 설정된 동작(텍스트 붙여넣기, 웹페이지 열기, 미디어 제어 등)을 실제로 실행합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -19,6 +20,7 @@ public sealed class ExecuteSnippetActionUseCase
     private readonly ITerminalCommandGateway _terminalCommandGateway;
     private readonly IUrlLaunchGateway _urlLaunchGateway;
     private readonly ITimerActionGateway? _timerActionGateway;
+    private readonly IDisplayPowerGateway? _displayPowerGateway;
 
     public ExecuteSnippetActionUseCase(
         IClipboardPasteGateway clipboardPasteGateway,
@@ -29,7 +31,8 @@ public sealed class ExecuteSnippetActionUseCase
         ITerminalCommandGateway terminalCommandGateway,
         IFilePasteGateway filePasteGateway,
         IDialogAdapter dialogAdapter,
-        ITimerActionGateway? timerActionGateway = null)
+        ITimerActionGateway? timerActionGateway = null,
+        IDisplayPowerGateway? displayPowerGateway = null)
     {
         _clipboardPasteGateway = clipboardPasteGateway;
         _fileLaunchGateway = fileLaunchGateway;
@@ -40,6 +43,7 @@ public sealed class ExecuteSnippetActionUseCase
         _filePasteGateway = filePasteGateway;
         _dialogAdapter = dialogAdapter;
         _timerActionGateway = timerActionGateway;
+        _displayPowerGateway = displayPowerGateway;
     }
 
     public async Task<ExecuteSnippetActionResult> ExecuteAsync(
@@ -325,6 +329,27 @@ public sealed class ExecuteSnippetActionUseCase
         }
 
         var commandTemplate = action.TerminalCommand ?? string.Empty;
+        var isTurnOffDisplay = TerminalCommandParameterRules.IsTurnOffDisplayCommand(commandTemplate);
+        if (isTurnOffDisplay && _displayPowerGateway is not null)
+        {
+            try
+            {
+                var executed = _displayPowerGateway.TryTurnOffDisplay();
+                if (!executed)
+                {
+                    return ReportTerminalCommandFailure(action, "화면을 끄지 못했습니다.");
+                }
+
+                return ExecuteSnippetActionResult.Success(
+                    shouldHideWindow: true,
+                    statusMessage: string.IsNullOrWhiteSpace(action.Title) ? "화면 끄기 실행됨" : $"{action.Title} 실행됨");
+            }
+            catch (Exception ex)
+            {
+                return ReportTerminalCommandFailure(action, "화면 끄기를 실행하지 못했습니다.", ex);
+            }
+        }
+
         var isAdbConnect = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(commandTemplate);
         if (!TryResolveTerminalCommand(
                 action,
@@ -355,10 +380,12 @@ public sealed class ExecuteSnippetActionUseCase
             }
 
             return ExecuteSnippetActionResult.Success(
-                shouldHideWindow: settings.AutoHideAfterPaste,
+                shouldHideWindow: isTurnOffDisplay || settings.AutoHideAfterPaste,
                 statusMessage: isAdbConnect
                     ? $"{action.Title} ADB 연결 실행됨"
-                    : $"{action.Title} 터미널 명령 실행됨");
+                    : isTurnOffDisplay
+                        ? $"{action.Title} 실행됨"
+                        : $"{action.Title} 터미널 명령 실행됨");
         }
         catch (Exception ex)
         {

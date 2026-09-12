@@ -1,3 +1,4 @@
+// 역할: 현재 사용자가 텍스트 입력창(메모장, 웹 브라우저 등)에 커서를 두고 있는지 감지합니다.
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;

@@ -1,3 +1,4 @@
+// 역할: 윈도우 클립보드에 텍스트를 복사하고 대상 창에 자동으로 붙여넣는 외부 연동을 담당합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

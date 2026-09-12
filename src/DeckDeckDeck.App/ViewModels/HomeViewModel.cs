@@ -1,3 +1,4 @@
+// 역할: 메인 홈 화면에서 9개 카테고리 슬롯 목록을 보여주고 선택 동작을 처리하는 화면 모델입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using System.Windows.Input;

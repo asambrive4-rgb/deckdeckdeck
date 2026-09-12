@@ -1,3 +1,4 @@
+// 역할: 텍스트 붙여넣기 선택 팔레트 창을 화면의 적절한 위치에 띄우고 제어합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

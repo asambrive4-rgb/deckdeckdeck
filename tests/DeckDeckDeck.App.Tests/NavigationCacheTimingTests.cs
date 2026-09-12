@@ -1,3 +1,4 @@
+// 역할: 화면 전환 캐싱 컨트롤이 뷰를 재사용하여 지연 없이 빠르게 렌더링되는지 검증하는 성능 단위 테스트 모음입니다.
 using System.Diagnostics;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.ViewModels;

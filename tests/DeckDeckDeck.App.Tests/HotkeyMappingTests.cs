@@ -1,3 +1,4 @@
+// 역할: 슬롯과 단축키 간의 매핑 데이터 생성 및 변환이 정확한지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

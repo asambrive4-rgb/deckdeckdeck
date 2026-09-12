@@ -1,3 +1,4 @@
+// 역할: 슬롯에 등록된 실행 동작을 받아 적절한 처리 기능으로 연결하고 실행 흐름을 조율합니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -98,17 +99,15 @@ internal sealed class ActionExecutionCoordinator
 
     private void LogSnippetActionResult(ExecuteSnippetActionResult result)
     {
-        if (string.IsNullOrWhiteSpace(result.LogMessage))
-        {
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(result.LogMessage)) return;
 
         if (result.Exception is null)
         {
             _logger?.Log(result.LogMessage);
-            return;
         }
-
-        _logger?.Log(result.LogMessage, result.Exception);
+        else
+        {
+            _logger?.Log(result.LogMessage, result.Exception);
+        }
     }
 }

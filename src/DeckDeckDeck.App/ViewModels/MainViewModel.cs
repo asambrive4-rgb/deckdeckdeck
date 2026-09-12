@@ -1,3 +1,4 @@
+// 역할: 프로그램의 메인 화면 전체 상태를 총괄하며 화면 전환, 슬롯 실행, 타이머 표시 등을 통합 관리하는 화면 모델입니다.
 using CommunityToolkit.Mvvm.ComponentModel;
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
@@ -23,6 +24,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private string _statusMessage = "준비됨.";
     private string _topBarStatusMessage = BluetoothAudioStatusRules.LoadingText;
     private string _topBarStatusToolTip = BluetoothAudioStatusRules.LoadingToolTip;
+    private string _topBarDeviceName = BluetoothAudioStatusRules.LoadingText;
+    private int? _topBarBatteryPercent;
+    private string _topBarBatteryText = string.Empty;
+    private bool _hasTopBarBattery;
+    private bool _isTopBarBatteryLow;
+    private BluetoothDeviceCategory _topBarDeviceCategory = BluetoothDeviceCategory.Unknown;
     private CancellationTokenSource? _bluetoothStatusCancellation;
     private long _bluetoothStatusRequestVersion;
     private int _bluetoothStatusRefreshPosted;
@@ -75,6 +82,42 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         get => _topBarStatusToolTip;
         private set => SetProperty(ref _topBarStatusToolTip, value);
+    }
+
+    public string TopBarDeviceName
+    {
+        get => _topBarDeviceName;
+        private set => SetProperty(ref _topBarDeviceName, value);
+    }
+
+    public int? TopBarBatteryPercent
+    {
+        get => _topBarBatteryPercent;
+        private set => SetProperty(ref _topBarBatteryPercent, value);
+    }
+
+    public string TopBarBatteryText
+    {
+        get => _topBarBatteryText;
+        private set => SetProperty(ref _topBarBatteryText, value);
+    }
+
+    public bool HasTopBarBattery
+    {
+        get => _hasTopBarBattery;
+        private set => SetProperty(ref _hasTopBarBattery, value);
+    }
+
+    public bool IsTopBarBatteryLow
+    {
+        get => _isTopBarBatteryLow;
+        private set => SetProperty(ref _isTopBarBatteryLow, value);
+    }
+
+    public BluetoothDeviceCategory TopBarDeviceCategory
+    {
+        get => _topBarDeviceCategory;
+        private set => SetProperty(ref _topBarDeviceCategory, value);
     }
 
     public string TopBarTitle => CurrentViewModel switch
@@ -194,20 +237,19 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public void OpenCategoryFromHotkey(SlotKey slotKey)
     {
         var resolution = _resolveCategoryHotkeyUseCase.Execute(slotKey);
-        switch (resolution.Kind)
+        if (resolution.Kind == CategoryHotkeyResolutionKind.OpenExisting)
         {
-            case CategoryHotkeyResolutionKind.OpenExisting:
-                OpenResolvedCategoryFromHotkey(resolution.Category!);
-                break;
-            case CategoryHotkeyResolutionKind.CreateNew:
-                _navigator.CreateCategory(resolution.SlotKey);
-                break;
-            case CategoryHotkeyResolutionKind.Blocked:
-            case CategoryHotkeyResolutionKind.Unsupported:
-                // 차단 사유는 내부 StatusMessage에만 남김(상단바 비표시).
-                StatusMessage = resolution.StatusMessage ?? string.Empty;
-                break;
+            OpenResolvedCategoryFromHotkey(resolution.Category!);
+            return;
         }
+
+        if (resolution.Kind == CategoryHotkeyResolutionKind.CreateNew)
+        {
+            _navigator.CreateCategory(resolution.SlotKey);
+            return;
+        }
+
+        StatusMessage = resolution.StatusMessage ?? string.Empty;
     }
 
     public void ReportHotkeyRegistrationFailure(IReadOnlyList<string> failures)
@@ -296,6 +338,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             TopBarStatusMessage = BluetoothAudioStatusRules.DisconnectedText;
             TopBarStatusToolTip = BluetoothAudioStatusRules.DisconnectedToolTip;
+            TopBarDeviceName = BluetoothAudioStatusRules.DisconnectedText;
+            TopBarBatteryPercent = null;
+            TopBarBatteryText = string.Empty;
+            HasTopBarBattery = false;
+            IsTopBarBatteryLow = false;
+            TopBarDeviceCategory = BluetoothDeviceCategory.Unknown;
             return;
         }
 
@@ -305,6 +353,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         TopBarStatusToolTip = BluetoothAudioStatusRules.FormatToolTip(
             snapshot.DeviceName,
             snapshot.BatteryPercent);
+
+        var cleanedName = BluetoothAudioStatusRules.CleanDeviceName(snapshot.DeviceName);
+        TopBarDeviceName = cleanedName.Length > 0 ? cleanedName : BluetoothAudioStatusRules.DisconnectedText;
+        TopBarBatteryPercent = snapshot.BatteryPercent;
+        TopBarBatteryText = BluetoothAudioStatusRules.FormatBatteryText(snapshot.BatteryPercent);
+        HasTopBarBattery = snapshot.BatteryPercent is >= 0 and <= 100;
+        IsTopBarBatteryLow = BluetoothAudioStatusRules.IsBatteryLow(snapshot.BatteryPercent);
+        TopBarDeviceCategory = snapshot.Category;
     }
 
     private void OnBluetoothStatusInvalidated(object? sender, EventArgs e)
@@ -330,36 +386,22 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _synchronizationContext.Post(_ => RefreshOnOwnerContext(), null);
     }
 
-    internal void NotifyDirectHotkeysChanged()
-    {
+    internal void NotifyDirectHotkeysChanged() =>
         DirectHotkeysChanged?.Invoke(this, EventArgs.Empty);
-    }
 
-    internal void NotifyDirectHotkeyCaptureStateChanged()
-    {
+    internal void NotifyDirectHotkeyCaptureStateChanged() =>
         DirectHotkeyCaptureStateChanged?.Invoke(this, EventArgs.Empty);
-    }
 
-    internal void ReportBackgroundStatus(string message)
-    {
-        ShowStatus(message);
-    }
+    internal void ReportBackgroundStatus(string message) => ShowStatus(message);
 
-    public bool SelectSlot(SlotKey slotKey)
+    public bool SelectSlot(SlotKey slotKey) => CurrentViewModel switch
     {
-        return CurrentViewModel switch
-        {
-            HomeViewModel homeViewModel => homeViewModel.SelectSlot(slotKey),
-            CategoryViewModel categoryViewModel => categoryViewModel.SelectSlot(slotKey),
-            _ => false
-        };
-    }
+        HomeViewModel homeViewModel => homeViewModel.SelectSlot(slotKey),
+        CategoryViewModel categoryViewModel => categoryViewModel.SelectSlot(slotKey),
+        _ => false
+    };
 
-    private void ShowStatus(string message)
-    {
-        // 상단바에는 더 이상 반영하지 않음. 실행 결과·저장 등 내부/테스트용으로만 유지.
-        StatusMessage = message;
-    }
+    private void ShowStatus(string message) => StatusMessage = message;
 
     private void OpenResolvedCategoryFromHotkey(Category category)
     {

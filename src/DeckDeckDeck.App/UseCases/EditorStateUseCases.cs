@@ -1,3 +1,4 @@
+// 역할: 카테고리나 슬롯 편집 창을 열 때 필요한 기존 설정과 옵션 목록을 불러와 준비합니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 

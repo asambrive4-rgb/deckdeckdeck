@@ -1,3 +1,4 @@
+// 역할: 프로그램 시작 시 수행된 데이터 정리 및 이전 작업의 상태 기록을 관리합니다.
 using System.Globalization;
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.UseCases.Ports;

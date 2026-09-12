@@ -1,3 +1,4 @@
+// 역할: 메인 화면 표시 시 필요한 카테고리 슬롯 배치와 창 위치, 환경설정을 한 번에 불러와 화면에 제공합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;

@@ -1,3 +1,4 @@
+// 역할: 스포티파이(Spotify) 웹 서비스를 통해 음악 재생, 정지, 다음 곡 넘기기 등의 원격 제어를 실행합니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 using System.Net;

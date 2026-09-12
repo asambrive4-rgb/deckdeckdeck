@@ -1,3 +1,4 @@
+// 역할: 윈도우 멀티미디어 키(재생/정지/볼륨) 시뮬레이션 기능이 올바르게 동작하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

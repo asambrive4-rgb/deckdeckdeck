@@ -1,3 +1,4 @@
+// 역할: 단축키 키 조합을 입력받고 실행할 동작을 지정하는 편집 팝업 화면의 코드 비하인드입니다.
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;

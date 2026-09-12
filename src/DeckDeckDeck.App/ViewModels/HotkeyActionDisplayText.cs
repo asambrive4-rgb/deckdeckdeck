@@ -1,3 +1,4 @@
+// 역할: 단축키 설정 목록에서 각 동작의 내용(파일 경로, URL 등)을 한눈에 알아보기 쉬운 요약 텍스트로 변환합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 

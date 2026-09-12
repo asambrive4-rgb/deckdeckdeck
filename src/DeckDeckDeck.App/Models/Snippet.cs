@@ -1,3 +1,4 @@
+// 역할: 특정 슬롯에 등록된 텍스트 스니펫의 이름, 본문 내용, 표시 설정을 담는 데이터 모델입니다.
 namespace DeckDeckDeck.App.Models;
 
 public sealed class Snippet

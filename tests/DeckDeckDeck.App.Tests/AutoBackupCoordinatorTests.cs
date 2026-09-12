@@ -1,3 +1,4 @@
+// 역할: 설정 변경 시 자동 백업이 누락 없이 적절한 타이밍에 요청되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using static DeckDeckDeck.App.Tests.TestAppFactory;

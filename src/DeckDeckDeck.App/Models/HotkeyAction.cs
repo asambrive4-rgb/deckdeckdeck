@@ -1,3 +1,4 @@
+// 역할: 사용자가 정의한 개별 단축키와 해당 단축키가 실행할 동작 정보를 보관하는 데이터 모델입니다.
 namespace DeckDeckDeck.App.Models;
 
 public sealed class HotkeyAction

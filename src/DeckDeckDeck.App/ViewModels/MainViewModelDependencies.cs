@@ -1,3 +1,4 @@
+// 역할: 메인 화면 모델이 동작하는 데 필요한 유스케이스 및 보조 컴포넌트들을 한곳에 묶어 전달하는 데이터 구조입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;

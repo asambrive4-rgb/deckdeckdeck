@@ -1,3 +1,4 @@
+// 역할: 슬롯 타이머의 시작, 일시정지, 취소 및 만료 처리를 담당하는 핵심 유스케이스를 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;

@@ -9,32 +9,36 @@
     <FontFamily x:Key="Deck.Font.NanumSquareNeo">pack://application:,,,/DeckDeckDeck.App;component/Resources/Fonts/#NanumSquare Neo</FontFamily>
     <FontFamily x:Key="Deck.Font.App">pack://application:,,,/DeckDeckDeck.App;component/Resources/Fonts/#Outfit, pack://application:,,,/DeckDeckDeck.App;component/Resources/Fonts/#SUIT, pack://application:,,,/DeckDeckDeck.App;component/Resources/Fonts/#NanumSquare Neo</FontFamily>
 
-    <Color x:Key="Deck.Color.Brand.Main">#FFF7D1</Color>
-    <Color x:Key="Deck.Color.Brand.Sub">#A77743</Color>
-    <Color x:Key="Deck.Color.Brand.Accent">#FFB15E</Color>
+    <Color x:Key="Deck.Color.Brand.Main">#F2EEE7</Color>
+    <Color x:Key="Deck.Color.Brand.Sub">#5C554E</Color>
+    <Color x:Key="Deck.Color.Brand.Accent">#D97448</Color>
+    <Color x:Key="Deck.Color.Brand.AccentHover">#E28359</Color>
+    <Color x:Key="Deck.Color.Brand.AccentPressed">#BF6036</Color>
 
-    <Color x:Key="Deck.Color.Background.App">#FFF7D1</Color>
-    <Color x:Key="Deck.Color.Background.Surface">#FFFDF4</Color>
-    <Color x:Key="Deck.Color.Background.SurfaceSoft">#FFF3D9</Color>
-    <Color x:Key="Deck.Color.Background.SurfaceMuted">#F3E6CC</Color>
-    <Color x:Key="Deck.Color.Background.Empty">#FFF9EA</Color>
-    <Color x:Key="Deck.Color.Background.Warning">#FFF0C2</Color>
-    <Color x:Key="Deck.Color.Background.DangerSoft">#FFF1EE</Color>
+    <Color x:Key="Deck.Color.Background.App">#F2EEE7</Color>
+    <Color x:Key="Deck.Color.Background.Surface">#FCFAF6</Color>
+    <Color x:Key="Deck.Color.Background.SurfaceSoft">#E7E2D9</Color>
+    <Color x:Key="Deck.Color.Background.SurfaceMuted">#DBD4CB</Color>
+    <Color x:Key="Deck.Color.Background.Empty">#EAE5DC</Color>
+    <Color x:Key="Deck.Color.Background.Warning">#F7E5C8</Color>
+    <Color x:Key="Deck.Color.Background.DangerSoft">#FADED7</Color>
 
-    <Color x:Key="Deck.Color.Line.Soft">#E6CFA8</Color>
-    <Color x:Key="Deck.Color.Line.Strong">#A77743</Color>
-    <Color x:Key="Deck.Color.Line.Muted">#D9C6A2</Color>
+    <Color x:Key="Deck.Color.Line.Soft">#1E1B18</Color>
+    <Color x:Key="Deck.Color.Line.Strong">#000000</Color>
+    <Color x:Key="Deck.Color.Line.Muted">#5C554E</Color>
 
-    <Color x:Key="Deck.Color.Text.Primary">#3B2A1D</Color>
-    <Color x:Key="Deck.Color.Text.Secondary">#7D5E3E</Color>
-    <Color x:Key="Deck.Color.Text.Muted">#9A7A56</Color>
-    <Color x:Key="Deck.Color.Text.Warning">#6F4E00</Color>
-    <Color x:Key="Deck.Color.Text.Danger">#B42318</Color>
-    <Color x:Key="Deck.Color.Shadow">#4A3625</Color>
+    <Color x:Key="Deck.Color.Text.Primary">#1E1B18</Color>
+    <Color x:Key="Deck.Color.Text.Secondary">#5C554E</Color>
+    <Color x:Key="Deck.Color.Text.Muted">#8C8278</Color>
+    <Color x:Key="Deck.Color.Text.Warning">#8C4E03</Color>
+    <Color x:Key="Deck.Color.Text.Danger">#C2410C</Color>
+    <Color x:Key="Deck.Color.Shadow">#1E1B18</Color>
 
     <SolidColorBrush x:Key="Deck.Brush.Brand.Main" Color="{StaticResource Deck.Color.Brand.Main}" />
     <SolidColorBrush x:Key="Deck.Brush.Brand.Sub" Color="{StaticResource Deck.Color.Brand.Sub}" />
     <SolidColorBrush x:Key="Deck.Brush.Brand.Accent" Color="{StaticResource Deck.Color.Brand.Accent}" />
+    <SolidColorBrush x:Key="Deck.Brush.Brand.AccentHover" Color="{StaticResource Deck.Color.Brand.AccentHover}" />
+    <SolidColorBrush x:Key="Deck.Brush.Brand.AccentPressed" Color="{StaticResource Deck.Color.Brand.AccentPressed}" />
     <SolidColorBrush x:Key="Deck.Brush.Background.App" Color="{StaticResource Deck.Color.Background.App}" />
     <SolidColorBrush x:Key="Deck.Brush.Background.Surface" Color="{StaticResource Deck.Color.Background.Surface}" />
     <SolidColorBrush x:Key="Deck.Brush.Background.SurfaceSoft" Color="{StaticResource Deck.Color.Background.SurfaceSoft}" />
@@ -58,23 +62,27 @@
     <Geometry x:Key="Deck.Geometry.Maximize">M 5 5 H 19 V 19 H 5 Z</Geometry>
     <Geometry x:Key="Deck.Geometry.Close">M 6 6 L 18 18 M 18 6 L 6 18</Geometry>
     <Geometry x:Key="Deck.Geometry.Edit">M14.06,9L15,9.94L5.92,19H5V18.08L14.06,9M17.66,3C17.41,3 17.15,3.1 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18.17,3.09 17.92,3 17.66,3M14.06,6.19L3,17.25V21H6.75L17.81,9.94L14.06,6.19Z</Geometry>
+    <Geometry x:Key="Deck.Geometry.Monitor">M2 3H22V17H2ZM8 21H16M12 17V21</Geometry>
+    <Geometry x:Key="Deck.Geometry.Bolt">M13 2L3 14H12L11 22L21 10H12L13 2Z</Geometry>
+    <Geometry x:Key="Deck.Geometry.Terminal">M4 17L10 11L4 5M12 19H20</Geometry>
 
+    <CornerRadius x:Key="Deck.Radius.WindowFrame">10</CornerRadius>
     <CornerRadius x:Key="Deck.Radius.Panel">24</CornerRadius>
     <CornerRadius x:Key="Deck.Radius.Card">20</CornerRadius>
-    <CornerRadius x:Key="Deck.Radius.Control">15</CornerRadius>
-    <CornerRadius x:Key="Deck.Radius.Thumbnail">10</CornerRadius>
+    <CornerRadius x:Key="Deck.Radius.Control">18</CornerRadius>
+    <CornerRadius x:Key="Deck.Radius.Thumbnail">12</CornerRadius>
 
-    <Thickness x:Key="Deck.Thickness.Border">1</Thickness>
-    <Thickness x:Key="Deck.Thickness.Focus">2</Thickness>
+    <Thickness x:Key="Deck.Thickness.Border">2.5</Thickness>
+    <Thickness x:Key="Deck.Thickness.Focus">3</Thickness>
     <Thickness x:Key="Deck.Padding.Panel">16</Thickness>
     <Thickness x:Key="Deck.Padding.Card">12</Thickness>
     <Thickness x:Key="Deck.Padding.Control">12,6</Thickness>
     <Thickness x:Key="Deck.Padding.TextBox">8,6</Thickness>
 
     <DropShadowEffect x:Key="Deck.Effect.CardShadow"
-                      BlurRadius="12"
+                      BlurRadius="10"
                       Color="{StaticResource Deck.Color.Shadow}"
-                      Opacity="0.08"
+                      Opacity="0.06"
                       ShadowDepth="2" />
 
     <Style x:Key="Deck.FocusVisualStyle" TargetType="{x:Type Control}">
@@ -82,11 +90,11 @@
             <Setter.Value>
                 <ControlTemplate>
                     <Rectangle Margin="2"
-                               RadiusX="12"
-                               RadiusY="12"
+                               RadiusX="18"
+                               RadiusY="18"
                                SnapsToDevicePixels="True"
                                Stroke="{StaticResource Deck.Brush.FocusRing}"
-                               StrokeThickness="2" />
+                               StrokeThickness="2.5" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -95,7 +103,11 @@
     <Style x:Key="Deck.MainWindowStyle" TargetType="{x:Type Window}">
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.App}" />
         <Setter Property="FontFamily" Value="{StaticResource Deck.Font.App}" />
-        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="UseLayoutRounding" Value="True" />
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal" />
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
     </Style>
 
     <Style x:Key="Deck.TopBarBorderStyle" TargetType="{x:Type Border}">
@@ -108,8 +120,8 @@
     <Style x:Key="Deck.WindowFrameBorderStyle" TargetType="{x:Type Border}">
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.App}" />
         <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+        <Setter Property="CornerRadius" Value="{StaticResource Deck.Radius.WindowFrame}" />
     </Style>
 
     <Style x:Key="Deck.AppPanelBorderStyle" TargetType="{x:Type Border}">
@@ -118,15 +130,15 @@
         <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
         <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
         <Setter Property="CornerRadius" Value="{StaticResource Deck.Radius.Panel}" />
-        <Setter Property="Effect" Value="{StaticResource Deck.Effect.CardShadow}" />
     </Style>
 
     <Style x:Key="Deck.AppContentBorderStyle" TargetType="{x:Type Border}">
         <Setter Property="Margin" Value="12,0,12,12" />
         <Setter Property="Padding" Value="12,8,12,12" />
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Empty}" />
-        <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="Effect" Value="{StaticResource Deck.Effect.CardShadow}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+        <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+        <Setter Property="CornerRadius" Value="16" />
     </Style>
 
     <Style x:Key="Deck.StatusPanelBorderStyle" TargetType="{x:Type Border}">
@@ -173,6 +185,7 @@
     <Style x:Key="Deck.TextBlockBaseStyle" TargetType="{x:Type TextBlock}">
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
     <Style BasedOn="{StaticResource Deck.TextBlockBaseStyle}" TargetType="{x:Type TextBlock}" />
@@ -188,6 +201,7 @@
            BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
            TargetType="{x:Type TextBlock}">
         <Setter Property="Margin" Value="0,4,0,0" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
     </Style>
 
@@ -195,22 +209,23 @@
            BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
            TargetType="{x:Type TextBlock}">
         <Setter Property="Margin" Value="0,0,0,6" />
-        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
     <Style x:Key="Deck.StatusTextStyle"
            BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
            TargetType="{x:Type TextBlock}">
         <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
     </Style>
 
     <Style x:Key="Deck.TopBarTitleTextStyle"
            BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
            TargetType="{x:Type TextBlock}">
-        <Setter Property="FontSize" Value="14" />
-        <Setter Property="FontWeight" Value="Medium" />
-        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
@@ -220,6 +235,8 @@
            TargetType="{x:Type TextBlock}">
         <Setter Property="MaxWidth" Value="160" />
         <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
@@ -228,6 +245,7 @@
            BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
            TargetType="{x:Type TextBlock}">
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Danger}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
@@ -235,6 +253,7 @@
            BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
            TargetType="{x:Type TextBlock}">
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Warning}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
@@ -243,17 +262,17 @@
            TargetType="{x:Type TextBlock}">
         <Setter Property="FontFamily" Value="{StaticResource Deck.Font.App}" />
         <Setter Property="FontSize" Value="13" />
-        <Setter Property="FontWeight" Value="Medium" />
-        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="Margin" Value="3,0,0,0" />
     </Style>
 
     <Style x:Key="Deck.SlotTitleTextStyle"
            BasedOn="{StaticResource Deck.TextBlockBaseStyle}"
            TargetType="{x:Type TextBlock}">
-        <Setter Property="FontSize" Value="16" />
-        <Setter Property="FontWeight" Value="Medium" />
-        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="TextAlignment" Value="Center" />
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
@@ -262,7 +281,8 @@
            BasedOn="{StaticResource Deck.SlotTitleTextStyle}"
            TargetType="{x:Type TextBlock}">
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
@@ -285,7 +305,7 @@
     <Style x:Key="Deck.TextBoxStyle" TargetType="{x:Type TextBox}">
         <Setter Property="Padding" Value="{StaticResource Deck.Padding.TextBox}" />
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
-        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Muted}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
         <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="FontSize" Value="14" />
@@ -296,7 +316,7 @@
         <Setter Property="Height" Value="36" />
         <Setter Property="Padding" Value="{StaticResource Deck.Padding.TextBox}" />
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
-        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Muted}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
         <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="FontSize" Value="14" />
@@ -317,7 +337,7 @@
         <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FontSize" Value="14" />
-        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
         <Setter Property="Template">
@@ -347,16 +367,16 @@
     <Style x:Key="Deck.SecondaryButtonStyle"
            BasedOn="{StaticResource Deck.BaseButtonStyle}"
            TargetType="{x:Type Button}">
-        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
         <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Empty}" />
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
                 <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.Main}" />
-                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceMuted}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -369,7 +389,7 @@
         <Setter Property="Padding" Value="8,0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="FontSize" Value="13" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
@@ -378,8 +398,8 @@
                 <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.Main}" />
-                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceMuted}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -467,14 +487,19 @@
            BasedOn="{StaticResource Deck.BaseButtonStyle}"
            TargetType="{x:Type Button}">
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Sub}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
-                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.AccentHover}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+                <Setter Property="Foreground" Value="#FFFFFF" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.Main}" />
+                <Setter Property="Background" Value="{StaticResource Deck.Brush.Brand.AccentPressed}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+                <Setter Property="Foreground" Value="#FFFFFF" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -483,7 +508,7 @@
            BasedOn="{StaticResource Deck.BaseButtonStyle}"
            TargetType="{x:Type Button}">
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.DangerSoft}" />
-        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Text.Danger}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Danger}" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
@@ -522,6 +547,18 @@
         <Setter Property="FontSize" Value="13" />
     </Style>
 
+    <Style x:Key="Deck.TerminalPresetButtonStyle"
+           BasedOn="{StaticResource Deck.SecondaryButtonStyle}"
+           TargetType="{x:Type Button}">
+        <Setter Property="Width" Value="Auto" />
+        <Setter Property="MinHeight" Value="58" />
+        <Setter Property="Padding" Value="2,6" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+        <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
     <Style x:Key="Deck.SlotMainButtonStyle" TargetType="{x:Type Button}">
         <Setter Property="Margin" Value="4" />
         <Setter Property="Padding" Value="6" />
@@ -554,8 +591,9 @@
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Deck.Brush.Brand.Main}" />
-                            <Setter TargetName="Root" Property="Margin" Value="0,1,0,-1" />
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceMuted}" />
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+                            <Setter TargetName="Root" Property="Margin" Value="0,2.5,0,-2.5" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Deck.Brush.FocusRing}" />
@@ -612,7 +650,7 @@
                             <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Brand.Sub}" />
+                            <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Brand.Accent}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="0.55" />

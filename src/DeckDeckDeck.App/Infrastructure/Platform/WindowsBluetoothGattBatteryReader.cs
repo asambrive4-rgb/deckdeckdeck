@@ -1,3 +1,4 @@
+// 역할: 블루투스 저전력(BLE GATT) 통신으로 연결된 오디오 기기의 배터리 잔량을 직접 읽어옵니다.
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 

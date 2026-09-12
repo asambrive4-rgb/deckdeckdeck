@@ -1,3 +1,4 @@
+// 역할: 윈도우 운영체제에 전역 단축키를 등록하고 키 입력 이벤트를 감지하여 전달합니다.
 using System.Runtime.InteropServices;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;

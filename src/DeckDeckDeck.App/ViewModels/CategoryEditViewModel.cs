@@ -1,3 +1,4 @@
+// 역할: 카테고리 추가 및 수정 팝업 화면의 입력 데이터와 저장/취소 동작을 관리하는 화면 모델입니다.
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -378,16 +379,5 @@ public sealed class CategoryEditViewModel : ObservableObject
     }
 }
 
-public sealed class CategoryTransferTargetSlot
-{
-    public CategoryTransferTargetSlot(SlotKey slotKey, string label)
-    {
-        SlotKey = slotKey;
-        Label = label;
-    }
-
-    public SlotKey SlotKey { get; }
-
-    public string Label { get; }
-}
+public sealed record CategoryTransferTargetSlot(SlotKey SlotKey, string Label);
 

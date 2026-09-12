@@ -1,3 +1,4 @@
+// 역할: 메인 화면에서 홈, 카테고리, 설정 화면 등으로의 화면 이동 및 뒤로 가기 흐름을 제어합니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 
@@ -210,10 +211,7 @@ internal sealed class MainViewModelNavigator
         // _showStatus($"{action.Title} 핫키 편집");
     }
 
-    private void NotifyHotkeysChanged()
-    {
-        _notifyDirectHotkeysChanged();
-    }
+    private void NotifyHotkeysChanged() => _notifyDirectHotkeysChanged();
 
     private HomeViewModel GetOrCreateHome()
     {

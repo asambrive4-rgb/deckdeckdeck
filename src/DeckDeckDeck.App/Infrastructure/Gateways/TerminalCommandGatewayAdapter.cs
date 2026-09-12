@@ -1,3 +1,4 @@
+// 역할: 파워셸이나 명령 프롬프트(CMD)를 통해 사용자가 지정한 터미널 명령을 실행합니다.
 using System.Diagnostics;
 using System.IO;
 using System.Text;

@@ -1,3 +1,4 @@
+// 역할: 오류 로그가 지정된 형식과 날짜별 파일에 안전하게 기록되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

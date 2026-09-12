@@ -1,3 +1,4 @@
+// 역할: 프로그램 최초 실행 시 중복 실행 여부 확인, 데이터베이스 점검, 구버전 데이터 이전 등 초기 준비 작업을 실행합니다.
 using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.UseCases;
@@ -80,20 +81,13 @@ public sealed record AppStartupDecision(
     string? Message = null,
     string? Detail = null)
 {
-    public static AppStartupDecision RunPrimary()
-    {
-        return new AppStartupDecision(AppStartupDecisionKind.RunPrimary);
-    }
+    public static AppStartupDecision RunPrimary() => new(AppStartupDecisionKind.RunPrimary);
 
-    public static AppStartupDecision ForwardedToPrimaryAndExit()
-    {
-        return new AppStartupDecision(AppStartupDecisionKind.ForwardedToPrimaryAndExit);
-    }
+    public static AppStartupDecision ForwardedToPrimaryAndExit() =>
+        new(AppStartupDecisionKind.ForwardedToPrimaryAndExit);
 
-    public static AppStartupDecision FailedButExit(string message, string? detail = null)
-    {
-        return new AppStartupDecision(AppStartupDecisionKind.FailedButExit, message, detail);
-    }
+    public static AppStartupDecision FailedButExit(string message, string? detail = null) =>
+        new(AppStartupDecisionKind.FailedButExit, message, detail);
 }
 
 public enum AppStartupDecisionKind

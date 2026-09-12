@@ -1,3 +1,4 @@
+// 역할: 데이터 백업 파일 생성과 복원 기능이 파일 누락 없이 정상 동작하는지 검증하는 단위 테스트 모음입니다.
 using System.IO.Compression;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Composition;

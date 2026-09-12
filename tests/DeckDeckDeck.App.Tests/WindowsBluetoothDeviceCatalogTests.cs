@@ -1,3 +1,4 @@
+// 역할: 페어링된 블루투스 장치 목록에서 오디오 기기를 정확히 식별해내는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Infrastructure.Platform;
 
 namespace DeckDeckDeck.App.Tests;

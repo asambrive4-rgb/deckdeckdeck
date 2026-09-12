@@ -1,3 +1,4 @@
+// 역할: 윈도우 셸(Shell) 시스템을 통해 고화질 파일 아이콘을 추출합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

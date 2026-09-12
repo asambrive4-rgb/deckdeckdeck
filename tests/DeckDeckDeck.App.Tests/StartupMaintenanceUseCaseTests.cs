@@ -1,3 +1,4 @@
+// 역할: 시작 시 데이터베이스 점검 및 구버전 경로 이전 유지보수 로직이 성공적으로 완료되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 

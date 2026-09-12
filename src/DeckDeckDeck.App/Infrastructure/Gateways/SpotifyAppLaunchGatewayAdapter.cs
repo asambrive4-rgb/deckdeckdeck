@@ -1,3 +1,4 @@
+// 역할: 윈도우에 설치된 스포티파이(Spotify) 프로그램을 찾아 실행하는 기능을 구현합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

@@ -1,3 +1,4 @@
+// 역할: 여러 슬롯 중 사용자가 선택한 내용을 대상 프로그램에 안전하게 붙여넣는 작업을 관리합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

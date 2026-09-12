@@ -1,3 +1,4 @@
+// 역할: 숫자 키패드의 1번부터 9번까지 슬롯 위치를 식별하는 고유 키 목록입니다.
 namespace DeckDeckDeck.App.Models;
 
 public enum SlotKey

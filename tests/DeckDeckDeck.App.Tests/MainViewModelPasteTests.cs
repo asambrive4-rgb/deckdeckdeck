@@ -1,3 +1,4 @@
+// 역할: 메인 화면을 통한 텍스트 스니펫 붙여넣기 세션 동작이 올바르게 제어되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

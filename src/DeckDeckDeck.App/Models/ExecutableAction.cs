@@ -1,3 +1,4 @@
+// 역할: 파일 실행, 웹 주소 열기, 미디어 제어 등 슬롯에서 실행할 수 있는 다양한 동작의 공통 데이터 모델입니다.
 namespace DeckDeckDeck.App.Models;
 
 public sealed record ExecutableAction(

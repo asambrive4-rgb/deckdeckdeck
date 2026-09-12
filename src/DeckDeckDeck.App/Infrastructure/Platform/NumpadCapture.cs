@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿// 역할: 숫자 키패드(넘패드)의 입력을 가로채어 단축키 슬롯 동작으로 연결합니다.
+using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;

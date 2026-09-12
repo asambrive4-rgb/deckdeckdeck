@@ -1,3 +1,4 @@
+// 역할: 메인 창에서 발생하는 키보드 입력과 단축키 처리가 의도대로 작동하는지 검증하는 단위 테스트 모음입니다.
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;

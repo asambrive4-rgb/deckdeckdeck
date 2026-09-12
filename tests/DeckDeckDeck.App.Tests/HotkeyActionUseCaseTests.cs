@@ -1,3 +1,4 @@
+// 역할: 단축키 동작을 조회하고 등록하는 유스케이스 로직이 예상대로 동작하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.UseCases;

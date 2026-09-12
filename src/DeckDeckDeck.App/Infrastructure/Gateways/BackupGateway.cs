@@ -1,3 +1,4 @@
+// 역할: 프로그램의 모든 설정과 슬롯 데이터를 압축 파일로 백업하거나 이전 백업에서 복원합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

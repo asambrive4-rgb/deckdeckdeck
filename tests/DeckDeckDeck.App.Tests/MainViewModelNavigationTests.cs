@@ -1,3 +1,4 @@
+// 역할: 메인 화면에서 서브 화면(카테고리, 설정 등)으로의 전환 및 뒤로 가기 동작을 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;

@@ -1,3 +1,4 @@
+// 역할: 카테고리 정보를 데이터베이스에 저장하고 수정, 삭제, 조회하는 데이터베이스 연동을 담당합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -117,13 +118,7 @@ public sealed class CategoryRepository : ICategoryRepository
         var category = dbContext.Categories
             .Include(item => item.Snippets)
             .First(item => item.Id == id);
-        var imageFiles = new List<ImageFileSet>
-        {
-            new(category.ImagePath, category.ThumbnailPath)
-        };
-        imageFiles.AddRange(category.Snippets.Select(snippet => new ImageFileSet(
-            snippet.ImagePath,
-            snippet.ThumbnailPath)));
+        var imageFiles = GetImageFiles(category);
 
         dbContext.Categories.Remove(category);
         dbContext.SaveChanges();
@@ -246,23 +241,14 @@ public sealed class CategoryRepository : ICategoryRepository
         return imageFiles;
     }
 
-    private static IReadOnlyList<ImageFileSet> GetImageFiles(Category category)
-    {
-        var imageFiles = new List<ImageFileSet>
-        {
-            new(category.ImagePath, category.ThumbnailPath)
-        };
-        imageFiles.AddRange(category.Snippets.Select(snippet => new ImageFileSet(
-            snippet.ImagePath,
-            snippet.ThumbnailPath)));
+    private static IReadOnlyList<ImageFileSet> GetImageFiles(Category category) =>
+        category.Snippets
+            .Select(snippet => new ImageFileSet(snippet.ImagePath, snippet.ThumbnailPath))
+            .Prepend(new ImageFileSet(category.ImagePath, category.ThumbnailPath))
+            .ToList();
 
-        return imageFiles;
-    }
-
-    private static string? NormalizeOptionalText(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
+    private static string? NormalizeOptionalText(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static void UpdateText(Category category, string name, string? description)
     {
@@ -271,10 +257,8 @@ public sealed class CategoryRepository : ICategoryRepository
         category.UpdatedAt = DateTime.UtcNow;
     }
 
-    IReadOnlyList<UseCaseImageFileReference> ICategoryRepository.Delete(Guid id)
-    {
-        return Delete(id).Select(ToUseCaseImageFileReference).ToList();
-    }
+    IReadOnlyList<UseCaseImageFileReference> ICategoryRepository.Delete(Guid id) =>
+        Delete(id).Select(ToUseCaseImageFileReference).ToList();
 
     CategoryTransferRepositoryResult ICategoryRepository.CopyToSlot(
         Guid sourceId,
@@ -306,9 +290,7 @@ public sealed class CategoryRepository : ICategoryRepository
             result.OverwrittenImageFiles.Select(ToUseCaseImageFileReference).ToList());
     }
 
-    private static UseCaseImageFileReference ToUseCaseImageFileReference(ImageFileSet imageFiles)
-    {
-        return new UseCaseImageFileReference(imageFiles.ImagePath, imageFiles.ThumbnailPath);
-    }
+    private static UseCaseImageFileReference ToUseCaseImageFileReference(ImageFileSet imageFiles) =>
+        new(imageFiles.ImagePath, imageFiles.ThumbnailPath);
 }
 

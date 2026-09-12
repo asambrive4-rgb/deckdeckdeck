@@ -1,3 +1,4 @@
+// 역할: 사용자가 지정한 파일이나 실행 프로그램을 윈도우에서 직접 실행합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

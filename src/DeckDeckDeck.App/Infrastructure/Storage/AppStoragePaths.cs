@@ -1,3 +1,4 @@
+// 역할: 프로그램의 데이터베이스 파일, 로그, 이미지 등이 저장되는 컴퓨터 내 폴더 경로들을 관리합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

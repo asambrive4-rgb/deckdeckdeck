@@ -1,3 +1,4 @@
+// 역할: 블루투스 장치 목록 뷰모델이 기기 상태 변경을 화면에 올바르게 반영하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.UseCases.Ports;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
@@ -35,6 +36,43 @@ public sealed class BluetoothAudioViewModelTests
         Assert.Equal(
             $"Buds3 Pro\n{BluetoothAudioStatusRules.BatteryUnavailableToolTip}",
             viewModel.TopBarStatusToolTip);
+        Assert.Equal("Buds3 Pro", viewModel.TopBarDeviceName);
+        Assert.False(viewModel.HasTopBarBattery);
+        Assert.Empty(viewModel.TopBarBatteryText);
+        Assert.False(viewModel.IsTopBarBatteryLow);
+    }
+
+    [Fact]
+    public async Task ConnectedKeyboardWithBattery_PopulatesBatteryProperties()
+    {
+        var services = CreateServices();
+        var gateway = new StubBluetoothAudioStatusGateway(
+            new BluetoothAudioStatusSnapshot(true, "Smart KBD Trio 500", 100, BluetoothDeviceCategory.Input));
+        using var viewModel = CreateMainViewModel(services, bluetoothAudioStatusGateway: gateway);
+
+        await viewModel.RefreshBluetoothAudioStatusAsync();
+
+        Assert.Equal("Smart KBD Trio 500", viewModel.TopBarDeviceName);
+        Assert.Equal(100, viewModel.TopBarBatteryPercent);
+        Assert.Equal("100%", viewModel.TopBarBatteryText);
+        Assert.True(viewModel.HasTopBarBattery);
+        Assert.False(viewModel.IsTopBarBatteryLow);
+        Assert.Equal(BluetoothDeviceCategory.Input, viewModel.TopBarDeviceCategory);
+    }
+
+    [Fact]
+    public async Task LowBatteryDevice_SetsIsTopBarBatteryLow()
+    {
+        var services = CreateServices();
+        var gateway = new StubBluetoothAudioStatusGateway(
+            new BluetoothAudioStatusSnapshot(true, "Buds3 Pro", 15, BluetoothDeviceCategory.Audio));
+        using var viewModel = CreateMainViewModel(services, bluetoothAudioStatusGateway: gateway);
+
+        await viewModel.RefreshBluetoothAudioStatusAsync();
+
+        Assert.True(viewModel.HasTopBarBattery);
+        Assert.True(viewModel.IsTopBarBatteryLow);
+        Assert.Equal("15%", viewModel.TopBarBatteryText);
     }
 
     [Fact]

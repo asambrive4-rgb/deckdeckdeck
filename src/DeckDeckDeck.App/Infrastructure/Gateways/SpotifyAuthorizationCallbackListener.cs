@@ -1,3 +1,4 @@
+// 역할: 스포티파이 로그인 후 브라우저로부터 전달되는 인증 응답을 수신하는 로컬 웹 수신기를 담당합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

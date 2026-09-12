@@ -1,3 +1,4 @@
+// 역할: 슬롯에 들어갈 썸네일 이미지들을 백그라운드 작업으로 순차 디코딩하여 화면 버벅임을 방지하는 스케줄러입니다.
 using System.Collections.Concurrent;
 using System.Windows;
 using System.Windows.Media;

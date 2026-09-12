@@ -1,3 +1,4 @@
+// 역할: 다양한 실행 동작 데이터를 저장하고 복원할 때 지켜야 할 형식과 규칙을 정의합니다.
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.Domain;
@@ -67,17 +68,13 @@ public static class ExecutableActionStorageRules
                 : null);
     }
 
-    private static string? NormalizeOptionalText(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
+    private static string? NormalizeOptionalText(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static SlotImageMode GetStoredSlotImageMode(SlotImageMode slotImageMode, string? imagePath)
-    {
-        return slotImageMode == SlotImageMode.Auto && !string.IsNullOrWhiteSpace(imagePath)
+    private static SlotImageMode GetStoredSlotImageMode(SlotImageMode slotImageMode, string? imagePath) =>
+        slotImageMode == SlotImageMode.Auto && !string.IsNullOrWhiteSpace(imagePath)
             ? SlotImageMode.Custom
             : slotImageMode;
-    }
 }
 
 public sealed record ExecutableActionStorageData(

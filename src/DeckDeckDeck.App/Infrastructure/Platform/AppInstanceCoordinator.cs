@@ -1,3 +1,4 @@
+// 역할: 프로그램이 중복 실행되지 않도록 확인하고 기존에 켜져 있는 창을 앞으로 불러옵니다.
 using System.IO;
 using System.IO.Pipes;
 using System.Security.Cryptography;

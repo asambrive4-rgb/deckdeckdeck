@@ -1,3 +1,4 @@
+// 역할: 카테고리 이름과 색상, 아이콘을 편집하는 팝업 대화상자 화면의 코드 비하인드입니다.
 using System.Windows;
 using System.Windows.Controls;
 using DeckDeckDeck.App.ViewModels;

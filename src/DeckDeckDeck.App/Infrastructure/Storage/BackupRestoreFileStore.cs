@@ -1,3 +1,4 @@
+// 역할: 백업 파일 저장 및 이전 데이터를 임시 보관하고 복원하는 파일 입출력을 처리합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

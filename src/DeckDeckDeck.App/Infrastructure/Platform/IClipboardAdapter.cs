@@ -1,3 +1,4 @@
+// 역할: 윈도우 클립보드에 접근하여 데이터를 읽거나 쓰는 기능을 추상화한 인터페이스입니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

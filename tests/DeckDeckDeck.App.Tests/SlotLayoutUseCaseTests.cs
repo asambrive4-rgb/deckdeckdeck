@@ -1,3 +1,4 @@
+// 역할: 슬롯의 위치 순서 변경 및 카테고리 간 슬롯 이동 로직이 안전한지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.ViewModels;

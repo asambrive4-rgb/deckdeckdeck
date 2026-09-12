@@ -1,3 +1,4 @@
+// 역할: 저장할 텍스트 스니펫의 내용과 형식이 올바른지 검사하는 규칙을 정의합니다.
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.Domain;
@@ -54,47 +55,34 @@ public static class SnippetRules
             return SnippetSaveValidationResult.Failure(TerminalCommandRequiredMessage);
         }
 
-        var mediaProvider = actionType == SnippetActionType.MediaAction
-            ? selectedMediaProvider
-            : (SnippetMediaProvider?)null;
-        var mediaCommand = actionType == SnippetActionType.MediaAction
-            ? MediaCommandRules.GetValidCommandForProvider(selectedMediaProvider, selectedMediaCommand)
-            : (SnippetMediaCommand?)null;
-        var isTerminal = actionType == SnippetActionType.TerminalCommand;
-        var normalizedTerminalCommand = isTerminal
-            ? (string.IsNullOrWhiteSpace(terminalCommand) ? null : terminalCommand.Trim())
+        var isMedia = actionType == SnippetActionType.MediaAction;
+        var mediaProvider = isMedia ? selectedMediaProvider : (SnippetMediaProvider?)null;
+        var mediaCommand = isMedia
+            ? (SnippetMediaCommand?)MediaCommandRules.GetValidCommandForProvider(selectedMediaProvider, selectedMediaCommand)
             : null;
-        var terminalShell = isTerminal
-            ? selectedTerminalShell
-            : (SnippetTerminalShell?)null;
-        var storedRunAsAdministrator = isTerminal && runAsAdministrator;
-        var storedOpenTerminalWindow = isTerminal && openTerminalWindow;
-        var normalizedTerminalWorkingDirectory = isTerminal
-            ? (string.IsNullOrWhiteSpace(terminalWorkingDirectory)
-                ? null
-                : terminalWorkingDirectory.Trim())
+
+        var isTerminal = actionType == SnippetActionType.TerminalCommand;
+        var normalizedTerminalCommand = isTerminal && !string.IsNullOrWhiteSpace(terminalCommand)
+            ? terminalCommand.Trim()
+            : null;
+        var terminalShell = isTerminal ? selectedTerminalShell : (SnippetTerminalShell?)null;
+        var normalizedTerminalWorkingDirectory = isTerminal && !string.IsNullOrWhiteSpace(terminalWorkingDirectory)
+            ? terminalWorkingDirectory.Trim()
             : null;
 
         string? normalizedAdbDeviceIp = null;
-        if (isTerminal
-            && TerminalCommandParameterRules.IsAdbWirelessConnectCommand(normalizedTerminalCommand))
+        if (isTerminal && TerminalCommandParameterRules.IsAdbWirelessConnectCommand(normalizedTerminalCommand))
         {
-            if (!TerminalCommandParameterRules.TryNormalizeAdbIp(
-                    adbDeviceIp,
-                    out var adbIp,
-                    out var adbError))
+            if (!TerminalCommandParameterRules.TryNormalizeAdbIp(adbDeviceIp, out var adbIp, out var adbError))
             {
-                return SnippetSaveValidationResult.Failure(
-                    adbError ?? TerminalCommandParameterRules.EmptyAdbIpMessage);
+                return SnippetSaveValidationResult.Failure(adbError ?? TerminalCommandParameterRules.EmptyAdbIpMessage);
             }
 
             normalizedAdbDeviceIp = adbIp;
         }
-        else if (isTerminal)
+        else if (isTerminal && !string.IsNullOrWhiteSpace(adbDeviceIp))
         {
-            normalizedAdbDeviceIp = string.IsNullOrWhiteSpace(adbDeviceIp)
-                ? null
-                : adbDeviceIp.Trim();
+            normalizedAdbDeviceIp = adbDeviceIp.Trim();
         }
 
         return SnippetSaveValidationResult.Success(
@@ -103,8 +91,8 @@ public static class SnippetRules
             mediaCommand,
             normalizedTerminalCommand,
             terminalShell,
-            storedRunAsAdministrator,
-            storedOpenTerminalWindow,
+            isTerminal && runAsAdministrator,
+            isTerminal && openTerminalWindow,
             normalizedTerminalWorkingDirectory,
             normalizedAdbDeviceIp);
     }
@@ -132,35 +120,11 @@ public sealed record SnippetSaveValidationResult(
         bool runAsAdministrator,
         bool openTerminalWindow = false,
         string? terminalWorkingDirectory = null,
-        string? adbDeviceIp = null)
-    {
-        return new SnippetSaveValidationResult(
-            true,
-            null,
-            normalizedLaunchUrl,
-            mediaProvider,
-            mediaCommand,
-            normalizedTerminalCommand,
-            terminalShell,
-            runAsAdministrator,
-            openTerminalWindow,
-            terminalWorkingDirectory,
-            adbDeviceIp);
-    }
+        string? adbDeviceIp = null) =>
+        new(true, null, normalizedLaunchUrl, mediaProvider, mediaCommand,
+            normalizedTerminalCommand, terminalShell, runAsAdministrator,
+            openTerminalWindow, terminalWorkingDirectory, adbDeviceIp);
 
-    public static SnippetSaveValidationResult Failure(string errorMessage)
-    {
-        return new SnippetSaveValidationResult(
-            false,
-            errorMessage,
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            false,
-            null,
-            null);
-    }
+    public static SnippetSaveValidationResult Failure(string errorMessage) =>
+        new(false, errorMessage, null, null, null, null, null, false, false, null, null);
 }

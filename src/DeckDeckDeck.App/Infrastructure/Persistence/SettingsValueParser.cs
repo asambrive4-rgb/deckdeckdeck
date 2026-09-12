@@ -1,3 +1,4 @@
+// 역할: 문자열 형태로 저장된 설정값들을 프로그램에서 사용할 수 있는 데이터 형식으로 변환합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

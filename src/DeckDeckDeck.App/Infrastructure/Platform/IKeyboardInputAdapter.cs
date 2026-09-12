@@ -1,3 +1,4 @@
+// 역할: 윈도우 키보드 입력을 시뮬레이션하는 기능의 인터페이스를 정의합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

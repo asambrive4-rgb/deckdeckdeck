@@ -1,3 +1,4 @@
+// 역할: 프로그램 창이 모니터 화면 밖으로 벗어나지 않고 안전한 위치에 표시되도록 보정하는 규칙을 정의합니다.
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.Domain;
@@ -50,5 +51,15 @@ public static class WindowPlacementRules
         }
 
         return HasUsableSavedCoordinates(left, top);
+    }
+
+    /// <summary>
+    /// Checks whether the coordinates are valid finite numbers and not the uninitialized WPF manual origin.
+    /// </summary>
+    public static bool CanSavePlacement(double left, double top)
+    {
+        return double.IsFinite(left)
+            && double.IsFinite(top)
+            && !IsUnsetOrWpfManualOrigin(left, top);
     }
 }

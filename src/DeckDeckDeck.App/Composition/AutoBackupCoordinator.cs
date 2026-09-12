@@ -1,3 +1,4 @@
+// 역할: 설정 변경이나 주기적 시점에 맞춰 사용자 데이터를 자동으로 백업하도록 조율합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -140,11 +141,8 @@ public sealed class AutoBackupCoordinator : IAutoBackupCoordinator, IDisposable
         }
     }
 
-    private BackupResult CreateAutomaticBackup()
-    {
-        var settings = _settingsService.Load();
-        return _backupService.CreateAutomaticBackup(settings);
-    }
+    private BackupResult CreateAutomaticBackup() =>
+        _backupService.CreateAutomaticBackup(_settingsService.Load());
 
     private bool ShouldScheduleBackup()
     {

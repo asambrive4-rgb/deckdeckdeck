@@ -1,3 +1,4 @@
+// 역할: 프로그램의 메인 창 UI 라이프사이클과 키보드 단축키 입력 이벤트를 처리합니다.
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
@@ -201,6 +202,14 @@ public partial class MainWindow : Window
                     _windowHandle,
                     Native.DwmApi.DWMWA_WINDOW_CORNER_PREFERENCE,
                     ref preference,
+                    sizeof(int));
+
+                // OS 기본 창 외곽선(1px)을 완전히 비활성화하여 WPF 둥근 테두리와의 이중선(2줄) 간섭 제거
+                var borderColor = Native.DwmApi.DWMWA_COLOR_NONE;
+                Native.DwmApi.DwmSetWindowAttribute(
+                    _windowHandle,
+                    Native.DwmApi.DWMWA_BORDER_COLOR,
+                    ref borderColor,
                     sizeof(int));
             }
         }
@@ -497,13 +506,7 @@ public partial class MainWindow : Window
             ? new Rect(Left, Top, GetWindowWidthForPlacement(), GetWindowHeightForPlacement())
             : RestoreBounds;
 
-        if (!double.IsFinite(bounds.Left) || !double.IsFinite(bounds.Top))
-        {
-            return;
-        }
-
-        // Never persist WPF Manual origin — that was the shell-first corruption path.
-        if (WindowPlacementRules.IsUnsetOrWpfManualOrigin(bounds.Left, bounds.Top))
+        if (!WindowPlacementRules.CanSavePlacement(bounds.Left, bounds.Top))
         {
             return;
         }

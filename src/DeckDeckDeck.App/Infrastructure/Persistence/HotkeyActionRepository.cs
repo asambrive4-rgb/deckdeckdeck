@@ -1,3 +1,4 @@
+// 역할: 단축키로 실행할 동작 설정 목록을 데이터베이스에 영구 저장하고 불러옵니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;

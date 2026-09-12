@@ -1,3 +1,4 @@
+// 역할: 3x3 그리드에 배치되는 개별 슬롯 타일의 텍스트, 아이콘, 타이머 상태 및 클릭 동작을 관리하는 화면 모델입니다.
 using System.Windows.Input;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -140,17 +141,10 @@ public sealed class SlotViewModel : ObservableObject
         set => SetProperty(ref _isTimerSlot, value);
     }
 
-    public string DisplayText
-    {
-        get
-        {
-            if (IsCategoryView && IsTimerRunning && !string.IsNullOrEmpty(FormattedTimerRemaining))
-            {
-                return FormattedTimerRemaining;
-            }
-            return IsEmpty ? "+" : Title;
-        }
-    }
+    public string DisplayText =>
+        IsCategoryView && IsTimerRunning && !string.IsNullOrEmpty(FormattedTimerRemaining)
+            ? FormattedTimerRemaining
+            : IsEmpty ? "+" : Title;
 
     public ICommand SelectCommand { get; }
 

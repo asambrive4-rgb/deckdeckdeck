@@ -1,3 +1,4 @@
+// 역할: Ctrl, Shift, Alt 등의 보조 키와 일반 키의 조합으로 구성된 단축키 입력 형식을 정의하는 데이터 모델입니다.
 namespace DeckDeckDeck.App.Models;
 
 [Flags]

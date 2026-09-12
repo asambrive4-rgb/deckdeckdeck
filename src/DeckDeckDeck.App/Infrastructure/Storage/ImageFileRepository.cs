@@ -1,3 +1,4 @@
+// 역할: 사용자가 등록한 슬롯 배경 이미지나 아이콘 파일을 로컬 저장소에 안전하게 저장하고 관리합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

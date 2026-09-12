@@ -1,3 +1,4 @@
+// 역할: 단위 테스트에서 일관된 가상 의존성들을 주입하여 테스트 환경을 구성해주는 팩토리 도우미입니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Composition;

@@ -1,3 +1,4 @@
+// 역할: 다양한 다중 모니터 해상도에서 창 위치가 화면 안으로 안전하게 보정되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

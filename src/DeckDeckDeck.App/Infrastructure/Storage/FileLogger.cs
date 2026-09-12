@@ -1,3 +1,4 @@
+// 역할: 프로그램 실행 중 발생하는 오류 및 상태 정보를 날짜별 텍스트 로그 파일로 기록합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

@@ -1,3 +1,4 @@
+// 역할: 슬롯, 카테고리, 텍스트 스니펫 등 도메인 핵심 규칙의 유효성 검증 로직을 시험하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 

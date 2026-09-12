@@ -1,3 +1,4 @@
+// 역할: 프로그램에서 사용하는 데이터베이스 테이블 구조를 정의하고 데이터 읽기/쓰기를 연결합니다.
 using DeckDeckDeck.App.Models;
 using Microsoft.EntityFrameworkCore;
 

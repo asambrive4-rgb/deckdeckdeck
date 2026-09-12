@@ -1,3 +1,4 @@
+// 역할: 웹 주소(URL) 문자열을 다루기 쉽게 파싱하고 유효성을 보장하는 값 객체입니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

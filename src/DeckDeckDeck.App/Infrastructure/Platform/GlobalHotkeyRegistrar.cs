@@ -1,3 +1,4 @@
+// 역할: 윈도우 API를 이용해 프로그램 외부에서도 반응하는 시스템 단축키를 등록하고 관리합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

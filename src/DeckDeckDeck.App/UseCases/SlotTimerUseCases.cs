@@ -1,3 +1,4 @@
+// 역할: 슬롯 타이머의 시작, 일시정지, 재개, 취소 동작을 관리하고 타이머 종료 시 알림을 발생시킵니다.
 using System.Collections.Concurrent;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -56,20 +57,16 @@ public sealed class SlotTimerUseCases : ISlotTimerUseCases, IDisposable
 
     public SlotTimerState GetTimerState(SlotKey slotKey)
     {
-        if (_activeTimers.TryGetValue(slotKey, out var info))
+        if (!_activeTimers.TryGetValue(slotKey, out var info))
         {
-            var remaining = info.TargetEndTimeUtc - DateTimeOffset.UtcNow;
-            if (remaining < TimeSpan.Zero) remaining = TimeSpan.Zero;
-            return new SlotTimerState(slotKey, info.TotalDuration, remaining, true, info.TargetEndTimeUtc);
+            return SlotTimerState.Stopped(slotKey);
         }
 
-        return SlotTimerState.Stopped(slotKey);
+        var remaining = info.TargetEndTimeUtc - DateTimeOffset.UtcNow;
+        return new SlotTimerState(slotKey, info.TotalDuration, remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining, true, info.TargetEndTimeUtc);
     }
 
-    public bool IsRunning(SlotKey slotKey)
-    {
-        return _activeTimers.ContainsKey(slotKey);
-    }
+    public bool IsRunning(SlotKey slotKey) => _activeTimers.ContainsKey(slotKey);
 
     public void StartTimer(SlotKey slotKey, TimeSpan duration)
     {

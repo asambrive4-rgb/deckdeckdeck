@@ -1,3 +1,4 @@
+// 역할: 홈 화면과 카테고리 화면에 표시될 9개 슬롯 타일 뷰모델들을 생성합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;

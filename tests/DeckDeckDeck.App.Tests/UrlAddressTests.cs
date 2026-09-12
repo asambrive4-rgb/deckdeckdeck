@@ -1,3 +1,4 @@
+// 역할: 인터넷 주소(URL) 형식 파싱 및 유효성 검증 규칙이 정확하게 동작하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

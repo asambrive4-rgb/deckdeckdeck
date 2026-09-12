@@ -1,3 +1,4 @@
+// 역할: 슬롯 번호(1~9)와 키패드 키 매핑 목록이 누락 없이 올바르게 구성되어 있는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.Tests;

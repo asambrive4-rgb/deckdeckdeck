@@ -1,3 +1,4 @@
+// 역할: 타이머 시간 설정 대화상자에서 분과 초를 선택하고 확인/취소하는 동작을 처리하는 화면 모델입니다.
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;

@@ -1,3 +1,4 @@
+// 역할: 슬롯에 지정할 텍스트 스니펫을 저장, 삭제하거나 다른 슬롯으로 복사/이동하는 업무 흐름을 처리합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -22,10 +23,8 @@ public sealed class SaveSnippetUseCase
         _autoBackupRequester = autoBackupRequester;
     }
 
-    public SaveSnippetResult Execute(SaveSnippetRequest request)
-    {
-        return Execute(request, requestAutoBackup: true);
-    }
+    public SaveSnippetResult Execute(SaveSnippetRequest request) =>
+        Execute(request, requestAutoBackup: true);
 
     internal SaveSnippetResult Execute(
         SaveSnippetRequest request,
@@ -92,13 +91,10 @@ public sealed class SaveSnippetUseCase
 
     private static bool ShouldTrySaveSlotOnly(
         SaveSnippetRequest request,
-        string? validationError)
-    {
-        return !request.SnippetId.HasValue
-            && request.IsSlotEnabled != request.OriginalIsSlotEnabled
-            && validationError is SnippetRules.TitleRequiredMessage
-                or SnippetRules.PasteContentRequiredMessage;
-    }
+        string? validationError) =>
+        !request.SnippetId.HasValue
+        && request.IsSlotEnabled != request.OriginalIsSlotEnabled
+        && validationError is SnippetRules.TitleRequiredMessage or SnippetRules.PasteContentRequiredMessage;
 
     private SaveSnippetResult? TrySaveSlotOnly(
         SaveSnippetRequest request,
@@ -290,15 +286,8 @@ public sealed class TransferSnippetUseCase
 
     private void DeleteImageFiles(IEnumerable<ImageFileReference> imageFiles)
     {
-        if (_imageFileManager is null)
-        {
-            return;
-        }
-
-        foreach (var imageFileSet in imageFiles)
-        {
-            _imageFileManager.DeleteImageFiles(imageFileSet);
-        }
+        if (_imageFileManager is null) return;
+        foreach (var file in imageFiles) _imageFileManager.DeleteImageFiles(file);
     }
 }
 
@@ -317,20 +306,12 @@ public sealed record SaveSnippetResult(
     bool SavedSlotOnly = false,
     string? NormalizedLaunchUrl = null)
 {
-    public static SaveSnippetResult Success(Snippet snippet, string? normalizedLaunchUrl)
-    {
-        return new SaveSnippetResult(true, snippet, NormalizedLaunchUrl: normalizedLaunchUrl);
-    }
+    public static SaveSnippetResult Success(Snippet snippet, string? normalizedLaunchUrl) =>
+        new(true, snippet, NormalizedLaunchUrl: normalizedLaunchUrl);
 
-    public static SaveSnippetResult SlotOnly()
-    {
-        return new SaveSnippetResult(true, SavedSlotOnly: true);
-    }
+    public static SaveSnippetResult SlotOnly() => new(true, SavedSlotOnly: true);
 
-    public static SaveSnippetResult Failure(string errorMessage)
-    {
-        return new SaveSnippetResult(false, ErrorMessage: errorMessage);
-    }
+    public static SaveSnippetResult Failure(string errorMessage) => new(false, ErrorMessage: errorMessage);
 }
 
 public enum SnippetTransferOperation
@@ -357,22 +338,13 @@ public sealed record TransferSnippetResult(
     string? ExistingTargetTitle = null,
     string? NormalizedLaunchUrl = null)
 {
-    public static TransferSnippetResult Success(Snippet snippet, string? normalizedLaunchUrl)
-    {
-        return new TransferSnippetResult(true, snippet, NormalizedLaunchUrl: normalizedLaunchUrl);
-    }
+    public static TransferSnippetResult Success(Snippet snippet, string? normalizedLaunchUrl) =>
+        new(true, snippet, NormalizedLaunchUrl: normalizedLaunchUrl);
 
-    public static TransferSnippetResult Failure(string errorMessage)
-    {
-        return new TransferSnippetResult(false, ErrorMessage: errorMessage);
-    }
+    public static TransferSnippetResult Failure(string errorMessage) =>
+        new(false, ErrorMessage: errorMessage);
 
-    public static TransferSnippetResult RequiresConfirmation(string existingTargetTitle)
-    {
-        return new TransferSnippetResult(
-            false,
-            NeedsOverwriteConfirmation: true,
-            ExistingTargetTitle: existingTargetTitle);
-    }
+    public static TransferSnippetResult RequiresConfirmation(string existingTargetTitle) =>
+        new(false, NeedsOverwriteConfirmation: true, ExistingTargetTitle: existingTargetTitle);
 }
 

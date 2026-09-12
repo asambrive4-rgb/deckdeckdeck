@@ -1,3 +1,4 @@
+// 역할: 전역 단축키 입력 발생 시 해당 슬롯 동작으로 정확히 연결되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.Models;

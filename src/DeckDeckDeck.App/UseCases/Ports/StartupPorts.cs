@@ -1,3 +1,4 @@
+// 역할: 프로그램 단일 실행 보장, 시작 프로그램 등록, 데이터 마이그레이션 등 시작 단계에 필요한 외부 연동 인터페이스를 정의합니다.
 namespace DeckDeckDeck.App.UseCases.Ports;
 
 public interface IAppInstanceCoordinator : IDisposable

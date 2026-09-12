@@ -1,3 +1,4 @@
+// 역할: 실행 파일이나 폴더의 기본 아이콘을 추출하여 화면에 표시할 수 있는 이미지로 변환합니다.
 using System.IO;
 using System.Collections;
 using System.Resources;

@@ -1,8 +1,11 @@
+// 역할: 프로그램의 진입점으로, 앱 시작 및 종료 흐름과 전역 예외 처리를 관리합니다.
 using System.Windows;
+using System.Windows.Interop;
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Diagnostics;
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.Infrastructure.Storage;
+using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
@@ -24,6 +27,22 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        var logger = new FileLogger(new AppStoragePaths());
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            logger.Log("AppDomain.UnhandledException", args.ExceptionObject as Exception);
+        };
+        DispatcherUnhandledException += (_, args) =>
+        {
+            logger.Log("DispatcherUnhandledException", args.Exception);
+        };
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            logger.Log("TaskScheduler.UnobservedTaskException", args.Exception);
+        };
+
+        logger.Log("App.OnStartup called.");
+
         try
         {
             var startupTiming = new StartupTimingLog();
@@ -37,21 +56,21 @@ public partial class App : Application
                     .GetResult();
             }
 
-            switch (startupDecision.Kind)
+            logger.Log($"Startup decision kind: {startupDecision.Kind}");
+
+            if (startupDecision.Kind == AppStartupDecisionKind.RunPrimary)
             {
-                case AppStartupDecisionKind.RunPrimary:
-                    StartPrimaryInstance(appInstanceCoordinator, startupTiming);
-                    break;
-                case AppStartupDecisionKind.ForwardedToPrimaryAndExit:
-                    appInstanceCoordinator.Dispose();
-                    Shutdown();
-                    break;
-                case AppStartupDecisionKind.FailedButExit:
-                    appInstanceCoordinator.Dispose();
-                    ReportStartupDecisionFailure(startupDecision);
-                    Shutdown();
-                    break;
+                StartPrimaryInstance(appInstanceCoordinator, startupTiming);
+                return;
             }
+
+            appInstanceCoordinator.Dispose();
+            if (startupDecision.Kind == AppStartupDecisionKind.FailedButExit)
+            {
+                ReportStartupDecisionFailure(startupDecision);
+            }
+
+            Shutdown();
         }
         catch (Exception ex)
         {
@@ -64,6 +83,12 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        try
+        {
+            new FileLogger(new AppStoragePaths()).Log($"App.OnExit called with exit code: {e.ApplicationExitCode}");
+        }
+        catch { }
+
         DisposeTrayIcon();
         _appInstanceCoordinator?.Dispose();
         _appInstanceCoordinator = null;
@@ -91,6 +116,7 @@ public partial class App : Application
         using (startupTiming.Measure("shell show"))
         {
             mainWindow.Show();
+            BringToForeground(mainWindow);
         }
 
         // Accept secondary-instance "show" requests as soon as the shell exists.
@@ -259,8 +285,32 @@ public partial class App : Application
             MainWindow.Show();
         }
 
-        MainWindow.Activate();
-        MainWindow.Focus();
+        BringToForeground(MainWindow);
+    }
+
+    private static void BringToForeground(Window window)
+    {
+        if (window.WindowState == WindowState.Minimized)
+        {
+            window.WindowState = WindowState.Normal;
+        }
+
+        if (!window.IsVisible)
+        {
+            window.Show();
+        }
+
+        var handle = new WindowInteropHelper(window).Handle;
+        if (handle != IntPtr.Zero)
+        {
+            User32.ShowWindow(handle, Win32Constants.SwRestore);
+            User32.SetForegroundWindow(handle);
+        }
+
+        window.Topmost = true;
+        window.Activate();
+        window.Focus();
+        window.Topmost = false;
     }
 
     private static void ReportStartupDecisionFailure(AppStartupDecision decision)

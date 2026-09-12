@@ -1,3 +1,4 @@
+// 역할: 프로그램 시작 시 중복 실행 방지 및 초기화 작업이 올바르게 수행되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 

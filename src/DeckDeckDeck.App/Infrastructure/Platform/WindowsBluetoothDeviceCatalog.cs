@@ -1,3 +1,4 @@
+// 역할: 윈도우에 페어링된 블루투스 장치 목록을 검색하고 오디오 기기 정보를 수집합니다.
 using System.Runtime.InteropServices;
 using System.Text;
 using DeckDeckDeck.App.Domain;
@@ -9,6 +10,8 @@ internal interface IWindowsBluetoothDeviceCatalog : IDisposable
     event EventHandler? DevicesChanged;
 
     WindowsBluetoothResolution Resolve(WindowsAudioEndpoint endpoint);
+
+    WindowsBluetoothResolution ResolveBestConnectedDevice(WindowsAudioEndpoint? endpoint);
 
     void WatchMatchedDevices(IReadOnlyList<WindowsBluetoothDevice> devices);
 }
@@ -76,9 +79,56 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
     public WindowsBluetoothResolution Resolve(WindowsAudioEndpoint endpoint)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-
-        var context = BuildEndpointContext(endpoint, out var endpointLooksBluetooth);
         var devices = EnumerateBluetoothDevices();
+        return ResolveCore(endpoint, devices);
+    }
+
+    public WindowsBluetoothResolution ResolveBestConnectedDevice(WindowsAudioEndpoint? endpoint)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var devices = EnumerateBluetoothDevices();
+
+        // 1. 오디오 엔드포인트가 제공되었고, 블루투스 기기로 매칭된다면 오디오 기기 우선 반환
+        if (endpoint is not null)
+        {
+            var audioResolution = ResolveCore(endpoint, devices);
+            if (audioResolution.IsBluetoothAudioConnected)
+            {
+                return audioResolution;
+            }
+        }
+
+        // 2. 오디오가 블루투스가 아닌 경우: 현재 시스템에 연결된 사용자 블루투스 기기 탐색
+        var candidates = devices.Where(IsUserPeripheralDevice).ToList();
+        if (candidates.Count == 0)
+        {
+            return new WindowsBluetoothResolution(false, string.Empty, []);
+        }
+
+        // 우선순위:
+        // 1순위: 배터리가 유효한 기기 (0~100%)
+        // 2순위: 텐키/키보드 등 입력 기기
+        // 3순위: 오디오 기기
+        var best = candidates
+            .OrderByDescending(d => d.BatteryPercent is >= 0 and <= 100)
+            .ThenByDescending(d => BluetoothAudioStatusRules.DetermineDeviceCategory(d.DeviceName) == BluetoothDeviceCategory.Input)
+            .ThenByDescending(d => BluetoothAudioStatusRules.DetermineDeviceCategory(d.DeviceName) == BluetoothDeviceCategory.Audio)
+            .First();
+
+        var matchedDevices = devices
+            .Where(d => (best.ContainerId is not null && d.ContainerId == best.ContainerId)
+                || string.Equals(d.InstanceId, best.InstanceId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var displayName = BluetoothAudioStatusRules.CleanDeviceName(best.DeviceName);
+        return new WindowsBluetoothResolution(true, displayName, matchedDevices);
+    }
+
+    private static WindowsBluetoothResolution ResolveCore(
+        WindowsAudioEndpoint endpoint,
+        IReadOnlyList<WindowsBluetoothDevice> devices)
+    {
+        var context = BuildEndpointContext(endpoint, out var endpointLooksBluetooth);
         var matchCandidates = devices
             .Select(device => new BluetoothDeviceMatchCandidate(
                 device.InstanceId,
@@ -246,14 +296,79 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
         var devices = new Dictionary<string, WindowsBluetoothDevice>(StringComparer.OrdinalIgnoreCase);
         EnumerateBluetoothClassDevices(devices);
         EnumerateBluetoothLeInterfaces(devices);
+
+        // 동일 ContainerId 간 배터리 레벨 전파 (자식 노드/GATT -> 부모 메인 기기 노드)
+        var containerBatteryMap = devices.Values
+            .Where(d => d.ContainerId is not null && d.BatteryPercent is >= 0 and <= 100)
+            .GroupBy(d => d.ContainerId!.Value)
+            .ToDictionary(g => g.Key, g => g.First().BatteryPercent);
+
+        foreach (var (instanceId, device) in devices.ToList())
+        {
+            if (device.BatteryPercent is null
+                && device.ContainerId is { } containerId
+                && containerBatteryMap.TryGetValue(containerId, out var containerBattery))
+            {
+                devices[instanceId] = device with { BatteryPercent = containerBattery };
+            }
+        }
+
         return devices.Values.ToList();
+    }
+
+    private static bool IsUserPeripheralDevice(WindowsBluetoothDevice device)
+    {
+        if (device.BatteryPercent is >= 0 and <= 100)
+        {
+            return true;
+        }
+
+        var instance = device.InstanceId;
+        if (instance.StartsWith(@"BTH\MS_", StringComparison.OrdinalIgnoreCase)
+            || instance.StartsWith(@"USB\", StringComparison.OrdinalIgnoreCase)
+            || instance.StartsWith(@"BTHLEDEVICE\{000018", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var name = device.DeviceName;
+        if (string.IsNullOrWhiteSpace(name) || name == device.InstanceId)
+        {
+            return false;
+        }
+
+        string[] excludedNames =
+        [
+            "Generic Attribute Profile",
+            "Generic Access Profile",
+            "Device Information Service",
+            "Bluetooth LE Generic Attribute Service",
+            "Personal Area Network",
+            "Headset Audio Gateway Service",
+            "Object Push Service",
+            "Phonebook Access",
+            "Microsoft Bluetooth",
+            "Wireless Bluetooth",
+            "Avrcp Transport",
+            "Avrcp 전송"
+        ];
+
+        foreach (var excluded in excludedNames)
+        {
+            if (name.Contains(excluded, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static void EnumerateBluetoothClassDevices(
         IDictionary<string, WindowsBluetoothDevice> devices)
     {
         var classGuid = BluetoothClassGuid;
-        var deviceInfoSet = SetupDiGetClassDevs(ref classGuid, null, IntPtr.Zero, 0);
+        var deviceInfoSet = SetupDiGetClassDevs(ref classGuid, null, IntPtr.Zero, DigcfPresent);
         if (IsInvalidHandle(deviceInfoSet))
         {
             return;

@@ -1,3 +1,4 @@
+// 역할: 시작 프로그램 등록 및 등록 해제 유스케이스가 정상 작동하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 

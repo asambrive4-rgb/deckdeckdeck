@@ -1,3 +1,4 @@
+// 역할: 사용자가 지정한 단축키 입력을 실시간으로 감시하고 해당 슬롯의 동작을 실행하도록 연결합니다.
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.ViewModels;
 
@@ -23,10 +24,7 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
 
     public event EventHandler<DirectHotkeyPressedEventArgs>? DirectHotkeyPressed;
 
-    public IReadOnlyList<string> Start()
-    {
-        return RefreshAndStartWhenNeeded();
-    }
+    public IReadOnlyList<string> Start() => RefreshAndStartWhenNeeded();
 
     public void Refresh()
     {
@@ -51,15 +49,8 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
         _directHotkeyRegistrar.Dispose();
     }
 
-    private void OnDirectHotkeyCaptureStateChanged(object? sender, EventArgs e)
-    {
-        UpdateSuspension();
-    }
-
-    private void OnDirectHotkeysChanged(object? sender, EventArgs e)
-    {
-        Refresh();
-    }
+    private void OnDirectHotkeyCaptureStateChanged(object? sender, EventArgs e) => UpdateSuspension();
+    private void OnDirectHotkeysChanged(object? sender, EventArgs e) => Refresh();
 
     private IReadOnlyList<string> RefreshAndStartWhenNeeded()
     {
@@ -77,14 +68,9 @@ internal sealed class DirectHotkeyCoordinator : IDisposable
         return failures;
     }
 
-    private void UpdateSuspension()
-    {
-        _directHotkeyRegistrar.IsSuspended =
-            _isPasteSelectionActive || _viewModel.IsCapturingHotkeyInput;
-    }
+    private void UpdateSuspension() =>
+        _directHotkeyRegistrar.IsSuspended = _isPasteSelectionActive || _viewModel.IsCapturingHotkeyInput;
 
-    private void OnDirectHotkeyPressed(object? sender, DirectHotkeyPressedEventArgs e)
-    {
+    private void OnDirectHotkeyPressed(object? sender, DirectHotkeyPressedEventArgs e) =>
         DirectHotkeyPressed?.Invoke(this, e);
-    }
 }

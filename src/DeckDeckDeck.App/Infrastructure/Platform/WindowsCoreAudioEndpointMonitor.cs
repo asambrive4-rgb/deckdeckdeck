@@ -1,3 +1,4 @@
+// 역할: 윈도우 기본 오디오 출력 장치의 변경 및 볼륨 상태를 실시간으로 모니터링합니다.
 using System.Runtime.InteropServices;
 
 namespace DeckDeckDeck.App.Infrastructure.Platform;

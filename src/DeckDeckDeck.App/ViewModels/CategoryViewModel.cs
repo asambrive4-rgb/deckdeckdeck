@@ -1,3 +1,4 @@
+// 역할: 선택된 카테고리에 속한 9개 슬롯의 상태를 화면에 표시하고 클릭 입력을 처리하는 화면 모델입니다.
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;

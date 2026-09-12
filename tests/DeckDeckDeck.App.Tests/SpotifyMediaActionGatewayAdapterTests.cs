@@ -1,3 +1,4 @@
+// 역할: 스포티파이 원격 재생, 정지, 곡 넘기기 API 연동 기능이 정상 동작하는지 검증하는 단위 테스트 모음입니다.
 using System.Net;
 using System.Net.Http;
 using System.Text;

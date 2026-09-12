@@ -1,3 +1,4 @@
+// 역할: 데이터베이스에 안전하게 접속하고 관리할 수 있도록 데이터베이스 연결 객체를 생성합니다.
 using Microsoft.EntityFrameworkCore;
 
 namespace DeckDeckDeck.App.Data;

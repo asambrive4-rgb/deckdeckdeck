@@ -1,3 +1,4 @@
+// 역할: 동작 편집 화면의 임시 상태 저장 및 유효성 검증 로직이 정확한지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
@@ -209,6 +210,19 @@ public sealed class ExecutableActionEditDraftTests
                 new DateTime(2026, 6, 25, 0, 0, 0, DateTimeKind.Utc),
                 123);
         }
+    }
+
+    [Fact]
+    public void ApplyAdbPairingDefaults_SetsExpectedPowerShellCommandAndDisablesAdministrator()
+    {
+        var draft = ExecutableActionEditDraft.FromSnippet(null, null);
+
+        draft.ApplyAdbPairingDefaults();
+
+        Assert.Equal(TerminalCommandParameterRules.AdbWirelessPowerShellExample, draft.TerminalCommand);
+        Assert.Equal(SnippetTerminalShell.PowerShell, draft.TerminalShell);
+        Assert.True(draft.OpenTerminalWindow);
+        Assert.False(draft.RunAsAdministrator);
     }
 
     private sealed class PrefixPathResolver : IStoredImagePathResolver

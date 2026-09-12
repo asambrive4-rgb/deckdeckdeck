@@ -1,3 +1,4 @@
+// 역할: 사용자로부터 간단한 텍스트 한 줄을 입력받는 입력 대화상자 창을 띄웁니다.
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;

@@ -1,3 +1,4 @@
+// 역할: 현재 포커스가 텍스트 입력창에 위치해 있는지 감지하는 로직이 정확한지 검증하는 단위 테스트 모음입니다.
 using System.Windows.Controls;
 using System.Windows.Automation;
 using DeckDeckDeck.App.Infrastructure.Platform;

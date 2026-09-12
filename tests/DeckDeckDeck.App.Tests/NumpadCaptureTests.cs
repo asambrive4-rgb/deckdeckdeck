@@ -1,4 +1,5 @@
-﻿using DeckDeckDeck.App.Infrastructure.Platform;
+﻿// 역할: 숫자 키패드(1~9번) 키 입력 감지 및 슬롯 매핑 로직이 정확한지 검증하는 단위 테스트 모음입니다.
+using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 

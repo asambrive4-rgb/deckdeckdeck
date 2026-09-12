@@ -1,3 +1,4 @@
+// 역할: 프로그램 업데이트 시 구버전의 파일 저장 경로를 최신 경로로 안전하게 이전합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

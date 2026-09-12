@@ -1,3 +1,4 @@
+// 역할: 블루투스 오디오 기기의 연결 상태 및 배터리 잔량 판별 규칙이 정확한지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Domain;
 
 namespace DeckDeckDeck.App.Tests;
@@ -29,6 +30,42 @@ public sealed class BluetoothAudioStatusRulesTests
         Assert.Equal(
             $"WH-1000XM5\n{BluetoothAudioStatusRules.BatteryUnavailableToolTip}",
             BluetoothAudioStatusRules.FormatToolTip("WH-1000XM5", null));
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(15, true)]
+    [InlineData(20, true)]
+    [InlineData(21, false)]
+    [InlineData(100, false)]
+    [InlineData(null, false)]
+    public void IsBatteryLow_IdentifiesLowThreshold(int? battery, bool expected)
+    {
+        Assert.Equal(expected, BluetoothAudioStatusRules.IsBatteryLow(battery));
+    }
+
+    [Theory]
+    [InlineData(100, "100%")]
+    [InlineData(50, "50%")]
+    [InlineData(0, "0%")]
+    [InlineData(null, "")]
+    [InlineData(120, "")]
+    public void FormatBatteryText_FormatsCorrectly(int? battery, string expected)
+    {
+        Assert.Equal(expected, BluetoothAudioStatusRules.FormatBatteryText(battery));
+    }
+
+    [Theory]
+    [InlineData("Smart KBD Trio 500", BluetoothDeviceCategory.Input)]
+    [InlineData("Logitech MX Master 3 Mouse", BluetoothDeviceCategory.Input)]
+    [InlineData("주상의 Buds3 Pro", BluetoothDeviceCategory.Audio)]
+    [InlineData("WH-1000XM5", BluetoothDeviceCategory.Audio)]
+    [InlineData("JBL Flip 4", BluetoothDeviceCategory.Audio)]
+    [InlineData("Custom Gadget", BluetoothDeviceCategory.Other)]
+    [InlineData(null, BluetoothDeviceCategory.Unknown)]
+    public void DetermineDeviceCategory_ClassifiesCorrectly(string? deviceName, BluetoothDeviceCategory expected)
+    {
+        Assert.Equal(expected, BluetoothAudioStatusRules.DetermineDeviceCategory(deviceName));
     }
 
     [Theory]

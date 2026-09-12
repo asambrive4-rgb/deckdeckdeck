@@ -1,3 +1,4 @@
+// 역할: 스포티파이(Spotify) 계정 연동을 위한 웹 인증 요청과 로그인 토큰 관리를 담당합니다.
 using DeckDeckDeck.App.UseCases.Ports;
 using System.Net.Http;
 using System.Security.Cryptography;

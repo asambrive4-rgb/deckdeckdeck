@@ -1,3 +1,4 @@
+// 역할: 3x3 넘패드 형태의 타일 그리드를 시각적으로 렌더링하고 사용자 클릭을 처리하는 공용 뷰의 코드 비하인드입니다.
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;

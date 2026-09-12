@@ -1,3 +1,4 @@
+// 역할: 유스케이스와 외부 연동 장치 사이에서 주고받는 이미지 참조, 저장 데이터 등의 공통 데이터 규격을 정의합니다.
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.UseCases.Ports;

@@ -1,3 +1,4 @@
+// 역할: 불리언(참/거짓) 값을 반대로 뒤집어 화면 요소를 보이거나 숨기는(Visibility) WPF 변환기입니다.
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;

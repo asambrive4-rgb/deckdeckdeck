@@ -1,3 +1,4 @@
+// 역할: 뷰모델이 클린 아키텍처의 의존성 경계를 벗어나지 않는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;

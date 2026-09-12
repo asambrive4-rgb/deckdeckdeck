@@ -1,3 +1,4 @@
+// 역할: 사용자의 키 입력이나 클릭에 따라 홈 화면, 카테고리 화면, 설정 화면 간의 이동 경로를 결정합니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 
@@ -47,10 +48,7 @@ public sealed class GetCategoryByIdUseCase
         _categoryRepository = categoryRepository;
     }
 
-    public Category? Execute(Guid categoryId)
-    {
-        return _categoryRepository.GetById(categoryId);
-    }
+    public Category? Execute(Guid categoryId) => _categoryRepository.GetById(categoryId);
 }
 
 public enum CategoryHotkeyResolutionKind
@@ -67,33 +65,16 @@ public sealed record CategoryHotkeyResolution(
     Category? Category = null,
     string? StatusMessage = null)
 {
-    public static CategoryHotkeyResolution OpenExisting(Category category)
-    {
-        return new CategoryHotkeyResolution(
-            CategoryHotkeyResolutionKind.OpenExisting,
-            category.SlotKey,
-            Category: category);
-    }
+    public static CategoryHotkeyResolution OpenExisting(Category category) =>
+        new(CategoryHotkeyResolutionKind.OpenExisting, category.SlotKey, Category: category);
 
-    public static CategoryHotkeyResolution CreateNew(SlotKey slotKey)
-    {
-        return new CategoryHotkeyResolution(CategoryHotkeyResolutionKind.CreateNew, slotKey);
-    }
+    public static CategoryHotkeyResolution CreateNew(SlotKey slotKey) =>
+        new(CategoryHotkeyResolutionKind.CreateNew, slotKey);
 
-    public static CategoryHotkeyResolution Blocked(string statusMessage)
-    {
-        return new CategoryHotkeyResolution(
-            CategoryHotkeyResolutionKind.Blocked,
-            SlotKey.Numpad0,
-            StatusMessage: statusMessage);
-    }
+    public static CategoryHotkeyResolution Blocked(string statusMessage) =>
+        new(CategoryHotkeyResolutionKind.Blocked, SlotKey.Numpad0, StatusMessage: statusMessage);
 
-    public static CategoryHotkeyResolution Unsupported(string statusMessage)
-    {
-        return new CategoryHotkeyResolution(
-            CategoryHotkeyResolutionKind.Unsupported,
-            SlotKey.Numpad0,
-            StatusMessage: statusMessage);
-    }
+    public static CategoryHotkeyResolution Unsupported(string statusMessage) =>
+        new(CategoryHotkeyResolutionKind.Unsupported, SlotKey.Numpad0, StatusMessage: statusMessage);
 }
 

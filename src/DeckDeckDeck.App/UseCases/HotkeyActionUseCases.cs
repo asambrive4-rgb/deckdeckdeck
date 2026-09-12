@@ -1,3 +1,4 @@
+// 역할: 등록된 단축키 목록을 조회하고 새 단축키를 저장하거나 실행할 동작을 찾아 연결합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -13,10 +14,7 @@ public sealed class LoadHotkeyActionsUseCase
         _hotkeyActionRepository = hotkeyActionRepository;
     }
 
-    public IReadOnlyList<HotkeyAction> Execute()
-    {
-        return _hotkeyActionRepository.GetAll();
-    }
+    public IReadOnlyList<HotkeyAction> Execute() => _hotkeyActionRepository.GetAll();
 }
 
 public sealed class GetHotkeyActionByIdUseCase
@@ -28,10 +26,7 @@ public sealed class GetHotkeyActionByIdUseCase
         _hotkeyActionRepository = hotkeyActionRepository;
     }
 
-    public HotkeyAction? Execute(Guid id)
-    {
-        return _hotkeyActionRepository.GetById(id);
-    }
+    public HotkeyAction? Execute(Guid id) => _hotkeyActionRepository.GetById(id);
 }
 
 public sealed class LoadDirectHotkeyRegistrationsUseCase
@@ -43,14 +38,12 @@ public sealed class LoadDirectHotkeyRegistrationsUseCase
         _hotkeyActionRepository = hotkeyActionRepository;
     }
 
-    public IReadOnlyList<DirectHotkeyRegistration> Execute()
-    {
-        return _hotkeyActionRepository
+    public IReadOnlyList<DirectHotkeyRegistration> Execute() =>
+        _hotkeyActionRepository
             .GetAll()
             .Where(action => action.IsEnabled && action.Gesture?.IsComplete == true)
             .Select(action => new DirectHotkeyRegistration(action.Id, action.Gesture!))
             .ToList();
-    }
 }
 
 public sealed class ResolveExecutableHotkeyActionUseCase
@@ -65,9 +58,7 @@ public sealed class ResolveExecutableHotkeyActionUseCase
     public ExecutableAction? Execute(Guid hotkeyActionId)
     {
         var action = _hotkeyActionRepository.GetById(hotkeyActionId);
-        return action?.IsEnabled == true
-            ? ExecutableAction.FromHotkeyAction(action)
-            : null;
+        return action?.IsEnabled == true ? ExecutableAction.FromHotkeyAction(action) : null;
     }
 }
 
@@ -80,11 +71,8 @@ public sealed class LoadHotkeyActionEditorStateUseCase
         _settingsRepository = settingsRepository;
     }
 
-    public HotkeyActionEditorState Execute()
-    {
-        return new HotkeyActionEditorState(
-            SpotifyConnectionState.FromSettings(_settingsRepository.Load()));
-    }
+    public HotkeyActionEditorState Execute() =>
+        new(SpotifyConnectionState.FromSettings(_settingsRepository.Load()));
 }
 
 public sealed class SaveHotkeyActionUseCase
@@ -231,15 +219,11 @@ public sealed record SaveHotkeyActionResult(
     string? ErrorMessage = null,
     string? NormalizedLaunchUrl = null)
 {
-    public static SaveHotkeyActionResult Success(HotkeyAction action, string? normalizedLaunchUrl)
-    {
-        return new SaveHotkeyActionResult(true, action, NormalizedLaunchUrl: normalizedLaunchUrl);
-    }
+    public static SaveHotkeyActionResult Success(HotkeyAction action, string? normalizedLaunchUrl) =>
+        new(true, action, NormalizedLaunchUrl: normalizedLaunchUrl);
 
-    public static SaveHotkeyActionResult Failure(string errorMessage)
-    {
-        return new SaveHotkeyActionResult(false, ErrorMessage: errorMessage);
-    }
+    public static SaveHotkeyActionResult Failure(string errorMessage) =>
+        new(false, ErrorMessage: errorMessage);
 }
 
 public sealed record SetHotkeyActionEnabledResult(
@@ -247,13 +231,7 @@ public sealed record SetHotkeyActionEnabledResult(
     HotkeyAction? HotkeyAction = null,
     string? ErrorMessage = null)
 {
-    public static SetHotkeyActionEnabledResult Success(HotkeyAction action)
-    {
-        return new SetHotkeyActionEnabledResult(true, action);
-    }
+    public static SetHotkeyActionEnabledResult Success(HotkeyAction action) => new(true, action);
 
-    public static SetHotkeyActionEnabledResult Failure(string errorMessage)
-    {
-        return new SetHotkeyActionEnabledResult(false, ErrorMessage: errorMessage);
-    }
+    public static SetHotkeyActionEnabledResult Failure(string errorMessage) => new(false, ErrorMessage: errorMessage);
 }

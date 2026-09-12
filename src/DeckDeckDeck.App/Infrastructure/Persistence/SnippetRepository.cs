@@ -1,3 +1,4 @@
+// 역할: 슬롯에 저장된 텍스트 스니펫 목록을 데이터베이스에서 추가, 수정, 삭제, 조회합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -355,10 +356,8 @@ public sealed class SnippetRepository : ISnippetRepository
         SetAutoIcon(snippet, data.AutoIcon);
     }
 
-    UseCaseImageFileReference ISnippetRepository.Delete(Guid id)
-    {
-        return ToUseCaseImageFileReference(Delete(id));
-    }
+    UseCaseImageFileReference ISnippetRepository.Delete(Guid id) =>
+        ToUseCaseImageFileReference(Delete(id));
 
     SnippetTransferRepositoryResult ISnippetRepository.CopyToSlot(
         Guid sourceId,
@@ -390,9 +389,7 @@ public sealed class SnippetRepository : ISnippetRepository
             result.OverwrittenImageFiles.Select(ToUseCaseImageFileReference).ToList());
     }
 
-    private static UseCaseImageFileReference ToUseCaseImageFileReference(ImageFileSet imageFiles)
-    {
-        return new UseCaseImageFileReference(imageFiles.ImagePath, imageFiles.ThumbnailPath);
-    }
+    private static UseCaseImageFileReference ToUseCaseImageFileReference(ImageFileSet imageFiles) =>
+        new(imageFiles.ImagePath, imageFiles.ThumbnailPath);
 }
 

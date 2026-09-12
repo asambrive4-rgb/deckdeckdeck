@@ -1,3 +1,4 @@
+// 역할: 각 계층 간의 의존성 방향이 클린 아키텍처 원칙을 위반하지 않는지 검증하는 아키텍처 단위 테스트 모음입니다.
 namespace DeckDeckDeck.App.Tests;
 
 public sealed class CleanArchitectureDependencyTests

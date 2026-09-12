@@ -1,3 +1,4 @@
+// 역할: 스니펫 편집 화면의 텍스트 입력, 동작 종류 변경, 저장 동작을 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Composition;

@@ -1,3 +1,4 @@
+// 역할: 윈도우 운영체제 시스템 API 호출 시 사용되는 상수 및 메시지 코드들을 정의합니다.
 namespace DeckDeckDeck.App.Native;
 
 public static class Win32Constants
@@ -7,6 +8,14 @@ public static class Win32Constants
     public static readonly IntPtr HwndNotopmost = new(-2);
 
     public static readonly IntPtr HwndBottom = new(1);
+
+    public static readonly IntPtr HwndBroadcast = new(0xFFFF);
+
+    public const uint WmSyscommand = 0x0112;
+
+    public static readonly IntPtr ScMonitorpower = new(0xF170);
+
+    public static readonly IntPtr MonitorPowerOff = new(2);
 
     public const int WmHotkey = 0x0312;
 
@@ -21,6 +30,10 @@ public static class Win32Constants
     public const int WhKeyboardLl = 13;
 
     public const int SwShownoactivate = 4;
+
+    public const int SwShow = 5;
+
+    public const int SwRestore = 9;
 
     public const uint SwpNosize = 0x0001;
 

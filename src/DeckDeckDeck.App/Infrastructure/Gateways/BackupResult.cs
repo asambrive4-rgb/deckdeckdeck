@@ -1,3 +1,4 @@
+// 역할: 데이터 백업 및 복원 작업의 성공 여부와 결과 메시지를 담는 데이터 모델입니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

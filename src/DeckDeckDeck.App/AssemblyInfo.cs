@@ -1,3 +1,4 @@
+// 역할: 프로그램 어셈블리의 기본 메타데이터와 WPF 테마 리소스 위치를 선언합니다.
 using System.Runtime.CompilerServices;
 using System.Windows;
 

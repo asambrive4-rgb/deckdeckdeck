@@ -1,3 +1,4 @@
+// 역할: 사용자가 카테고리 편집 화면에서 수정 중인 임시 데이터(이름, 색상, 이미지)를 보관하고 유효성을 검사합니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 

@@ -1,8 +1,8 @@
+// 역할: 슬롯에서 실행되는 타이머 상태 변화를 감지하여 화면에 남은 시간을 갱신하고 알림을 띄우는 중계자 역할을 합니다.
 using System.Windows;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
-using DeckDeckDeck.App.Views;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -14,10 +14,14 @@ public interface ISlotTimerCoordinator : ITimerActionGateway
 public sealed class SlotTimerCoordinator : ISlotTimerCoordinator
 {
     private readonly ISlotTimerUseCases _timerUseCases;
+    private readonly Func<TimeSpan?>? _promptDuration;
 
-    public SlotTimerCoordinator(ISlotTimerUseCases timerUseCases)
+    public SlotTimerCoordinator(
+        ISlotTimerUseCases timerUseCases,
+        Func<TimeSpan?>? promptDuration = null)
     {
         _timerUseCases = timerUseCases ?? throw new ArgumentNullException(nameof(timerUseCases));
+        _promptDuration = promptDuration;
     }
 
     public void ExecuteTimerAction(SlotKey slotKey)
@@ -41,17 +45,10 @@ public sealed class SlotTimerCoordinator : ISlotTimerCoordinator
             return;
         }
 
-        var vm = new TimerTimePickerViewModel();
-        var mainWindow = Application.Current?.MainWindow;
-        var window = new TimerTimePickerWindow(vm)
+        var duration = _promptDuration?.Invoke();
+        if (duration.HasValue && duration.Value > TimeSpan.Zero)
         {
-            Owner = mainWindow
-        };
-
-        var result = window.ShowDialog();
-        if (result == true && vm.IsValidDuration)
-        {
-            _timerUseCases.StartTimer(slotKey, vm.TotalDuration);
+            _timerUseCases.StartTimer(slotKey, duration.Value);
         }
     }
 }

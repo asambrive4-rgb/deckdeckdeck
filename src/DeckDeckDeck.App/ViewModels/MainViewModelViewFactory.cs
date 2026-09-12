@@ -1,3 +1,4 @@
+// 역할: 각 화면 경로(홈, 카테고리, 설정 등)에 알맞은 서브 뷰모델을 생성해주는 팩토리입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 

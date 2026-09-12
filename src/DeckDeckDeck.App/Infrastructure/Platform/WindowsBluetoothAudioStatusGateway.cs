@@ -1,3 +1,5 @@
+// 역할: 윈도우 시스템에서 블루투스 오디오 장치의 연결 상태와 배터리 잔량, 볼륨 정보를 조회합니다.
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.UseCases.Ports;
 using Microsoft.Win32;
@@ -80,30 +82,21 @@ public sealed class WindowsBluetoothAudioStatusGateway : IBluetoothAudioStatusGa
         ObjectDisposedException.ThrowIf(_disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
 
-        WindowsAudioEndpoint? endpoint;
+        WindowsAudioEndpoint? endpoint = null;
         try
         {
             endpoint = _endpointMonitor.GetDefaultRenderEndpoint();
         }
         catch (Exception ex)
         {
-            _logger?.Log("bluetooth audio: default endpoint query failed", ex);
-            ClearActiveDeviceMonitoring();
-            return BluetoothAudioStatusSnapshot.Disconnected;
-        }
-
-        if (endpoint is null)
-        {
-            ClearActiveDeviceMonitoring();
-            Log("bluetooth audio: no default render endpoint");
-            return BluetoothAudioStatusSnapshot.Disconnected;
+            _logger?.Log("bluetooth device: default endpoint query failed", ex);
         }
 
         WindowsBluetoothResolution resolution;
         try
         {
             resolution = await Task.Run(
-                () => _deviceCatalog.Resolve(endpoint),
+                () => _deviceCatalog.ResolveBestConnectedDevice(endpoint),
                 cancellationToken);
         }
         catch (OperationCanceledException)
@@ -112,7 +105,7 @@ public sealed class WindowsBluetoothAudioStatusGateway : IBluetoothAudioStatusGa
         }
         catch (Exception ex)
         {
-            _logger?.Log("bluetooth audio: device catalog query failed", ex);
+            _logger?.Log("bluetooth device: device catalog query failed", ex);
             ClearActiveDeviceMonitoring();
             return BluetoothAudioStatusSnapshot.Disconnected;
         }
@@ -122,7 +115,9 @@ public sealed class WindowsBluetoothAudioStatusGateway : IBluetoothAudioStatusGa
             || string.IsNullOrWhiteSpace(resolution.DeviceName))
         {
             ClearActiveDeviceMonitoring();
-            Log($"bluetooth audio: non-bluetooth default name=[{endpoint.DeviceName}]");
+            Log(endpoint is not null
+                ? $"bluetooth device: no active bluetooth device found (default audio=[{endpoint.DeviceName}])"
+                : "bluetooth device: no active bluetooth device found");
             return BluetoothAudioStatusSnapshot.Disconnected;
         }
 
@@ -148,7 +143,7 @@ public sealed class WindowsBluetoothAudioStatusGateway : IBluetoothAudioStatusGa
             }
             catch (Exception ex)
             {
-                _logger?.Log("bluetooth audio: standard GATT battery query failed", ex);
+                _logger?.Log("bluetooth device: standard GATT battery query failed", ex);
             }
         }
         else
@@ -157,13 +152,15 @@ public sealed class WindowsBluetoothAudioStatusGateway : IBluetoothAudioStatusGa
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        var category = BluetoothAudioStatusRules.DetermineDeviceCategory(resolution.DeviceName);
         Log(
-            $"bluetooth audio: connected name=[{resolution.DeviceName}] "
-            + $"battery=[{batteryPercent?.ToString() ?? "-"}] source=[{source}]");
+            $"bluetooth device: connected name=[{resolution.DeviceName}] "
+            + $"category=[{category}] battery=[{batteryPercent?.ToString() ?? "-"}] source=[{source}]");
         return new BluetoothAudioStatusSnapshot(
             true,
             resolution.DeviceName,
-            batteryPercent);
+            batteryPercent,
+            category);
     }
 
     public void Dispose()

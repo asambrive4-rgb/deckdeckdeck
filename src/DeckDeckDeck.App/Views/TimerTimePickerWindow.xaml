@@ -6,16 +6,18 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
+        FontFamily="{StaticResource Deck.Font.App}"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="ClearType"
         ResizeMode="NoResize">
 
-    <Border Background="#FFF7D1"
-            BorderBrush="#A77743"
-            BorderThickness="2"
-            CornerRadius="16"
-            Padding="20">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="15" ShadowDepth="4" Direction="270" Color="#50000000" />
-        </Border.Effect>
+    <Border Background="{StaticResource Deck.Brush.Background.App}"
+            BorderBrush="{StaticResource Deck.Brush.Line.Soft}"
+            BorderThickness="{StaticResource Deck.Thickness.Border}"
+            CornerRadius="20"
+            Padding="22">
 
         <Grid>
             <Grid.RowDefinitions>
@@ -29,39 +31,41 @@
             <TextBlock Grid.Row="0"
                        Text="⏱️ 타이머 시간 선택"
                        FontSize="18"
-                       FontWeight="Bold"
-                       Foreground="#A77743"
+                       FontWeight="SemiBold"
+                       Foreground="{StaticResource Deck.Brush.Text.Primary}"
                        HorizontalAlignment="Center"
                        Margin="0,0,0,15"/>
 
             <!-- Time Inputs -->
             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel Orientation="Vertical" Margin="5">
-                    <TextBlock Text="분 (Min)" FontSize="12" Foreground="#A77743" HorizontalAlignment="Center"/>
+                    <TextBlock Text="분 (Min)" FontSize="12" Foreground="{StaticResource Deck.Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                     <TextBox Text="{Binding Minutes, UpdateSourceTrigger=PropertyChanged}"
-                             Width="70" Height="40" FontSize="20" FontWeight="Bold"
+                             Width="72" Height="42" FontSize="20" FontWeight="SemiBold"
                              TextAlignment="Center" VerticalContentAlignment="Center"
-                             Background="#FFFFFF" Foreground="#A77743" BorderBrush="#FFB15E" BorderThickness="1.5"/>
+                             Style="{StaticResource Deck.TextBoxStyle}"
+                             BorderBrush="{StaticResource Deck.Brush.Line.Strong}" />
                 </StackPanel>
 
-                <TextBlock Text=":" FontSize="24" FontWeight="Bold" Foreground="#A77743" VerticalAlignment="Center" Margin="5,15,5,0"/>
+                <TextBlock Text=":" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource Deck.Brush.Text.Secondary}" VerticalAlignment="Center" Margin="6,16,6,0"/>
 
                 <StackPanel Orientation="Vertical" Margin="5">
-                    <TextBlock Text="초 (Sec)" FontSize="12" Foreground="#A77743" HorizontalAlignment="Center"/>
+                    <TextBlock Text="초 (Sec)" FontSize="12" Foreground="{StaticResource Deck.Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                     <TextBox Text="{Binding Seconds, UpdateSourceTrigger=PropertyChanged}"
-                             Width="70" Height="40" FontSize="20" FontWeight="Bold"
+                             Width="72" Height="42" FontSize="20" FontWeight="SemiBold"
                              TextAlignment="Center" VerticalContentAlignment="Center"
-                             Background="#FFFFFF" Foreground="#A77743" BorderBrush="#FFB15E" BorderThickness="1.5"/>
+                             Style="{StaticResource Deck.TextBoxStyle}"
+                             BorderBrush="{StaticResource Deck.Brush.Line.Strong}" />
                 </StackPanel>
             </StackPanel>
 
             <!-- Presets -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,15">
-                <Button Content="30초" Command="{Binding SelectPresetCommand}" CommandParameter="30" Margin="3" Padding="8,4" Background="#FFB15E" Foreground="#FFFFFF" FontWeight="Bold" BorderThickness="0"/>
-                <Button Content="1분" Command="{Binding SelectPresetCommand}" CommandParameter="60" Margin="3" Padding="8,4" Background="#FFB15E" Foreground="#FFFFFF" FontWeight="Bold" BorderThickness="0"/>
-                <Button Content="3분" Command="{Binding SelectPresetCommand}" CommandParameter="180" Margin="3" Padding="8,4" Background="#FFB15E" Foreground="#FFFFFF" FontWeight="Bold" BorderThickness="0"/>
-                <Button Content="5분" Command="{Binding SelectPresetCommand}" CommandParameter="300" Margin="3" Padding="8,4" Background="#FFB15E" Foreground="#FFFFFF" FontWeight="Bold" BorderThickness="0"/>
-                <Button Content="10분" Command="{Binding SelectPresetCommand}" CommandParameter="600" Margin="3" Padding="8,4" Background="#FFB15E" Foreground="#FFFFFF" FontWeight="Bold" BorderThickness="0"/>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,18">
+                <Button Content="30초" Command="{Binding SelectPresetCommand}" CommandParameter="30" Margin="3" MinHeight="28" Padding="10,4" FontSize="12" Style="{StaticResource Deck.SecondaryButtonStyle}" />
+                <Button Content="1분" Command="{Binding SelectPresetCommand}" CommandParameter="60" Margin="3" MinHeight="28" Padding="10,4" FontSize="12" Style="{StaticResource Deck.SecondaryButtonStyle}" />
+                <Button Content="3분" Command="{Binding SelectPresetCommand}" CommandParameter="180" Margin="3" MinHeight="28" Padding="10,4" FontSize="12" Style="{StaticResource Deck.SecondaryButtonStyle}" />
+                <Button Content="5분" Command="{Binding SelectPresetCommand}" CommandParameter="300" Margin="3" MinHeight="28" Padding="10,4" FontSize="12" Style="{StaticResource Deck.SecondaryButtonStyle}" />
+                <Button Content="10분" Command="{Binding SelectPresetCommand}" CommandParameter="600" Margin="3" MinHeight="28" Padding="10,4" FontSize="12" Style="{StaticResource Deck.SecondaryButtonStyle}" />
             </StackPanel>
 
             <!-- Action Buttons -->
@@ -73,9 +77,9 @@
                 </Grid.ColumnDefinitions>
 
                 <Button Grid.Column="0" Content="취소" Command="{Binding CancelCommand}"
-                        Height="36" Background="#A77743" Foreground="#FFF7D1" FontWeight="Bold" BorderThickness="0"/>
+                        Height="36" Style="{StaticResource Deck.SecondaryButtonStyle}" />
                 <Button Grid.Column="2" Content="타이머 시작" Command="{Binding ConfirmCommand}" IsEnabled="{Binding IsValidDuration}"
-                        Height="36" Background="#FFB15E" Foreground="#FFFFFF" FontWeight="Bold" BorderThickness="0"/>
+                        Height="36" Style="{StaticResource Deck.PrimaryButtonStyle}" />
             </Grid>
         </Grid>
     </Border>

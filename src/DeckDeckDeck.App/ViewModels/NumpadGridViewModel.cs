@@ -1,3 +1,4 @@
+// 역할: 3x3 격자 형태의 숫자 키패드 슬롯 UI 상태를 표현하고 타일 클릭을 중계하는 화면 모델입니다.
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;

@@ -1,3 +1,4 @@
+// 역할: 큰 이미지 파일을 슬롯 화면에 맞게 작은 썸네일 크기로 최적화하여 생성합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

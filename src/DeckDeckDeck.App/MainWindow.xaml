@@ -8,13 +8,18 @@
         xmlns:navigation="clr-namespace:DeckDeckDeck.App.Views.Navigation"
         xmlns:viewModels="clr-namespace:DeckDeckDeck.App.ViewModels"
         mc:Ignorable="d"
-        Title="{Binding WindowTitle}"
+        Title="{Binding WindowTitle, FallbackValue=DeckDeckDeck, TargetNullValue=DeckDeckDeck}"
+        ShowInTaskbar="True"
         Width="440"
         Height="580"
         MinWidth="440"
         MinHeight="580"
         Style="{StaticResource Deck.MainWindowStyle}"
-        ShowActivated="False"
+        ShowActivated="True"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="ClearType"
         PreviewKeyDown="OnPreviewKeyDown">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="46"
@@ -25,14 +30,8 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        <!-- First-show fade is owned by CachingContentControl (cache hits skip animation). -->
-        <Style x:Key="Deck.ViewTransitionContainerStyle" TargetType="{x:Type Border}">
-            <Setter Property="CacheMode">
-                <Setter.Value>
-                    <BitmapCache />
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- Crisp vector/ClearType rendering without BitmapCache rasterization blur -->
+        <Style x:Key="Deck.ViewTransitionContainerStyle" TargetType="{x:Type Border}" />
         <DataTemplate DataType="{x:Type viewModels:HomeViewModel}">
             <Border Style="{StaticResource Deck.ViewTransitionContainerStyle}">
                 <views:HomeView />
@@ -70,7 +69,7 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid Background="{StaticResource Deck.Brush.Background.App}">
+    <Grid>
         <Border Style="{StaticResource Deck.WindowFrameBorderStyle}">
             <Grid>
                 <Grid.RowDefinitions>
@@ -99,12 +98,79 @@
                                    Text="{Binding TopBarTitle}"
                                    Visibility="{Binding ShowTopBarTitle, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                        <!-- 기본 재생 블루투스 오디오 기기명·배터리 (상태 문구 역할 제거) -->
-                        <TextBlock Grid.Column="2"
-                                   Margin="0,0,8,0"
-                                   Style="{StaticResource Deck.TopBarStatusTextStyle}"
-                                   Text="{Binding TopBarStatusMessage}"
-                                   ToolTip="{Binding TopBarStatusToolTip}" />
+                        <!-- 블루투스 기기명 및 배터리 표시 영역 -->
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,8,0"
+                                    ToolTip="{Binding TopBarStatusToolTip}">
+                            <!-- 기기명 (말줄임) -->
+                            <TextBlock Style="{StaticResource Deck.TopBarStatusTextStyle}"
+                                       MaxWidth="120"
+                                       Text="{Binding TopBarDeviceName}" />
+
+                            <!-- 배터리 뱃지 (배터리 정보가 있을 때만 표시) -->
+                            <Border Visibility="{Binding HasTopBarBattery, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Margin="6,0,0,0"
+                                    Padding="5,1,5,1"
+                                    CornerRadius="8"
+                                    BorderThickness="1"
+                                    VerticalAlignment="Center">
+                                <Border.Style>
+                                    <Style TargetType="{x:Type Border}">
+                                        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTopBarBatteryLow}" Value="True">
+                                                <Setter Property="Background" Value="#FFEEDD" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- 배터리 미니 아이콘 -->
+                                    <Path Width="11"
+                                          Height="8"
+                                          Stretch="Uniform"
+                                          Margin="0,0,3,0"
+                                          VerticalAlignment="Center">
+                                        <Path.Style>
+                                            <Style TargetType="{x:Type Path}">
+                                                <Setter Property="Fill" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsTopBarBatteryLow}" Value="True">
+                                                        <Setter Property="Fill" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Path.Style>
+                                        <Path.Data>
+                                            <GeometryGroup>
+                                                <RectangleGeometry Rect="0,0,10,7" RadiusX="1" RadiusY="1" />
+                                                <RectangleGeometry Rect="10,2,1.5,3" RadiusX="0.5" RadiusY="0.5" />
+                                            </GeometryGroup>
+                                        </Path.Data>
+                                    </Path>
+                                    <!-- 배터리 잔량 텍스트 -->
+                                    <TextBlock Text="{Binding TopBarBatteryText}"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="{x:Type TextBlock}">
+                                                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsTopBarBatteryLow}" Value="True">
+                                                        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
 
                         <Button Grid.Column="3"
                                 Margin="0,0,8,0"

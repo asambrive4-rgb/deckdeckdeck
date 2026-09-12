@@ -1,3 +1,4 @@
+// 역할: 애플리케이션 환경설정 값의 저장 및 복원 로직이 안전하게 동작하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

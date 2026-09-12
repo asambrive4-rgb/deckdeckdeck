@@ -1,3 +1,4 @@
+// 역할: WPF 화면 및 컨트롤들이 오류 없이 메모리에 로드되고 렌더링되는지 검증하는 UI 렌더링 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

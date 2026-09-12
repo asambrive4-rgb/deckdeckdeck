@@ -1,3 +1,4 @@
+// 역할: 편집 화면에서 사용자가 선택한 이미지 파일의 유효성을 확인하고 임시 상태를 관리합니다.
 using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.UseCases;

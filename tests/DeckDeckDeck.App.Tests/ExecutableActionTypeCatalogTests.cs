@@ -1,3 +1,4 @@
+// 역할: 지원하는 실행 동작 유형 카탈로그의 메타데이터와 패널 매핑이 올바른지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 

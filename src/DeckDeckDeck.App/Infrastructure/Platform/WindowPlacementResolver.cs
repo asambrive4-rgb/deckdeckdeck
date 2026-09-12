@@ -1,3 +1,4 @@
+// 역할: 여러 모니터 환경에서 창이 화면 경계를 벗어나지 않도록 최적의 표시 위치와 크기를 계산합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using System.Windows;

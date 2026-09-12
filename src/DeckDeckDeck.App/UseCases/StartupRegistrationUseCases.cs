@@ -1,3 +1,4 @@
+// 역할: 사용자의 설정에 따라 윈도우 부팅 시 프로그램 자동 실행 여부를 등록하거나 해제합니다.
 using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.UseCases;

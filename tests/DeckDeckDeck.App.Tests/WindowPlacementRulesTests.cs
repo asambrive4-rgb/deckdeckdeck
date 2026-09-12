@@ -1,3 +1,4 @@
+// 역할: 창 표시 위치와 크기가 작업 영역(WorkArea)을 벗어나지 않도록 계산하는 규칙을 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;

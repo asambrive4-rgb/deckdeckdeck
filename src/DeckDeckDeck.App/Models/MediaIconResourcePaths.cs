@@ -1,3 +1,4 @@
+// 역할: 미디어 제어 버튼(재생, 정지 등)에 사용되는 기본 아이콘 이미지 리소스 경로를 정의합니다.
 namespace DeckDeckDeck.App.Models;
 
 public static class MediaIconResourcePaths

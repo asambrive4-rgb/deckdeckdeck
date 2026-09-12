@@ -1,7 +1,9 @@
+// 역할: 환경설정 화면의 옵션(테마, 자동 시작, 백업/복원, 스포티파이/블루투스 연동) 상태와 사용자 동작을 관리하는 화면 모델입니다.
 using System.IO;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
@@ -71,8 +73,11 @@ public sealed class SettingsViewModel : ObservableObject
         _autoBackupEnabled = _settings.AutoBackupEnabled;
         _backupFolderPath = _settings.BackupFolderPath;
         var startupState = _startupRegistrationUseCase.GetState();
-        _launchAtStartup = startupState.IsEnabled;
-        _runAsAdministratorAtStartup = startupState.IsEnabled && startupState.RunAsAdministrator;
+        var normalizedStartup = StartupRegistrationRules.Normalize(
+            startupState.IsEnabled,
+            startupState.RunAsAdministrator);
+        _launchAtStartup = normalizedStartup.LaunchAtStartup;
+        _runAsAdministratorAtStartup = normalizedStartup.RunAsAdministrator;
         RefreshSpotifyConnectionState();
 
         SaveCommand = new RelayCommand(Save);
@@ -142,7 +147,7 @@ public sealed class SettingsViewModel : ObservableObject
             }
 
             OnPropertyChanged(nameof(CanRunAsAdministratorAtStartup));
-            if (!value)
+            if (!StartupRegistrationRules.CanRunAsAdministrator(value))
             {
                 RunAsAdministratorAtStartup = false;
             }
@@ -152,10 +157,15 @@ public sealed class SettingsViewModel : ObservableObject
     public bool RunAsAdministratorAtStartup
     {
         get => _runAsAdministratorAtStartup;
-        set => SetProperty(ref _runAsAdministratorAtStartup, value);
+        set
+        {
+            var normalized = StartupRegistrationRules.Normalize(LaunchAtStartup, value);
+            SetProperty(ref _runAsAdministratorAtStartup, normalized.RunAsAdministrator);
+        }
     }
 
-    public bool CanRunAsAdministratorAtStartup => LaunchAtStartup;
+    public bool CanRunAsAdministratorAtStartup =>
+        StartupRegistrationRules.CanRunAsAdministrator(LaunchAtStartup);
 
     public string BackupFolderPath
     {
@@ -507,12 +517,8 @@ public sealed class SettingsViewModel : ObservableObject
             : "Spotify 연결되어 있지 않음";
     }
 
-    private static string FormatSpotifyDisplayName(SpotifyConnectionState state)
-    {
-        return string.IsNullOrWhiteSpace(state.DisplayName)
-            ? string.Empty
-            : $" ({state.DisplayName})";
-    }
+    private static string FormatSpotifyDisplayName(SpotifyConnectionState state) =>
+        string.IsNullOrWhiteSpace(state.DisplayName) ? string.Empty : $" ({state.DisplayName})";
 
 }
 

@@ -1,3 +1,4 @@
+// 역할: 비밀번호나 API 인증 토큰처럼 민감한 설정값을 윈도우 암호화 기술로 안전하게 보호합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

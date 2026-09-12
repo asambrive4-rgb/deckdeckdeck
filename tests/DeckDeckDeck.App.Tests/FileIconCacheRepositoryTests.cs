@@ -1,3 +1,4 @@
+// 역할: 파일 아이콘 캐시의 저장, 조회 및 수명 주기 관리가 올바르게 이루어지는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

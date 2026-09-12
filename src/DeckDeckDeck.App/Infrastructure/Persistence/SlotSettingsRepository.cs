@@ -1,3 +1,4 @@
+// 역할: 특정 슬롯에 지정된 개별 설정값들을 데이터베이스에서 관리합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

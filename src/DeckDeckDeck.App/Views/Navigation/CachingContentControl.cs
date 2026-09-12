@@ -1,3 +1,4 @@
+// 역할: 화면을 전환할 때 이미 생성된 뷰를 버리지 않고 재사용하여 화면 전환 속도를 극대화하는 커스텀 컨트롤입니다.
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;

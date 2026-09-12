@@ -1,3 +1,4 @@
+// 역할: 썸네일 이미지 백그라운드 로딩 스케줄러가 UI 스레드를 방해하지 않고 순차 처리하는지 검증하는 단위 테스트 모음입니다.
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using DeckDeckDeck.App.Models;

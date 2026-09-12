@@ -1,3 +1,4 @@
+// 역할: 환경설정 화면 뷰모델의 데이터 바인딩과 사용자 명령 처리가 올바른지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

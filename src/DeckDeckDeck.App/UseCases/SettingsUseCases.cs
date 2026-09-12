@@ -1,3 +1,4 @@
+// 역할: 프로그램 환경설정 저장, 불러오기, 수동 데이터 백업 및 복원 작업을 수행하는 업무 흐름을 처리합니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 
@@ -309,15 +310,8 @@ public sealed record SaveSettingsRequest(
 
 public sealed record SaveSettingsResult(bool Succeeded, string? ErrorMessage = null)
 {
-    public static SaveSettingsResult Success()
-    {
-        return new SaveSettingsResult(true);
-    }
-
-    public static SaveSettingsResult Failure(string errorMessage)
-    {
-        return new SaveSettingsResult(false, errorMessage);
-    }
+    public static SaveSettingsResult Success() => new(true);
+    public static SaveSettingsResult Failure(string errorMessage) => new(false, errorMessage);
 }
 
 public sealed record SaveAppPreferencesRequest(
@@ -336,26 +330,11 @@ public sealed record SaveAppPreferencesResult(
     SaveAppPreferencesFailureKind FailureKind = SaveAppPreferencesFailureKind.None,
     string? ErrorMessage = null)
 {
-    public static SaveAppPreferencesResult Success()
-    {
-        return new SaveAppPreferencesResult(true);
-    }
-
-    public static SaveAppPreferencesResult SettingsFailure(string errorMessage)
-    {
-        return new SaveAppPreferencesResult(
-            false,
-            SaveAppPreferencesFailureKind.Settings,
-            errorMessage);
-    }
-
-    public static SaveAppPreferencesResult StartupRegistrationFailure(string errorMessage)
-    {
-        return new SaveAppPreferencesResult(
-            false,
-            SaveAppPreferencesFailureKind.StartupRegistration,
-            errorMessage);
-    }
+    public static SaveAppPreferencesResult Success() => new(true);
+    public static SaveAppPreferencesResult SettingsFailure(string errorMessage) =>
+        new(false, SaveAppPreferencesFailureKind.Settings, errorMessage);
+    public static SaveAppPreferencesResult StartupRegistrationFailure(string errorMessage) =>
+        new(false, SaveAppPreferencesFailureKind.StartupRegistration, errorMessage);
 }
 
 public sealed record CreateManualBackupResult(
@@ -363,15 +342,8 @@ public sealed record CreateManualBackupResult(
     string? BackupPath = null,
     string? ErrorMessage = null)
 {
-    public static CreateManualBackupResult Success(string backupPath)
-    {
-        return new CreateManualBackupResult(true, backupPath);
-    }
-
-    public static CreateManualBackupResult Failure(string errorMessage)
-    {
-        return new CreateManualBackupResult(false, ErrorMessage: errorMessage);
-    }
+    public static CreateManualBackupResult Success(string backupPath) => new(true, backupPath);
+    public static CreateManualBackupResult Failure(string errorMessage) => new(false, ErrorMessage: errorMessage);
 }
 
 public sealed record RestoreBackupUseCaseResult(
@@ -379,15 +351,9 @@ public sealed record RestoreBackupUseCaseResult(
     string? SafetyBackupPath = null,
     string? ErrorMessage = null)
 {
-    public static RestoreBackupUseCaseResult Success(string safetyBackupPath)
-    {
-        return new RestoreBackupUseCaseResult(true, safetyBackupPath);
-    }
-
-    public static RestoreBackupUseCaseResult Failure(string errorMessage, string? safetyBackupPath = null)
-    {
-        return new RestoreBackupUseCaseResult(false, safetyBackupPath, errorMessage);
-    }
+    public static RestoreBackupUseCaseResult Success(string safetyBackupPath) => new(true, safetyBackupPath);
+    public static RestoreBackupUseCaseResult Failure(string errorMessage, string? safetyBackupPath = null) =>
+        new(false, safetyBackupPath, errorMessage);
 }
 
 public sealed record SpotifyConnectionUseCaseResult(
@@ -395,14 +361,7 @@ public sealed record SpotifyConnectionUseCaseResult(
     SpotifyConnectionState? State = null,
     string? ErrorMessage = null)
 {
-    public static SpotifyConnectionUseCaseResult Success(SpotifyConnectionState state)
-    {
-        return new SpotifyConnectionUseCaseResult(true, state);
-    }
-
-    public static SpotifyConnectionUseCaseResult Failure(string errorMessage)
-    {
-        return new SpotifyConnectionUseCaseResult(false, ErrorMessage: errorMessage);
-    }
+    public static SpotifyConnectionUseCaseResult Success(SpotifyConnectionState state) => new(true, state);
+    public static SpotifyConnectionUseCaseResult Failure(string errorMessage) => new(false, ErrorMessage: errorMessage);
 }
 

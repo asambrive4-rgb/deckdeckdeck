@@ -1,3 +1,4 @@
+// 역할: 여러 항목 중 하나를 골라 붙여넣는 세션 흐름과 대상 창 활성화가 정상 처리되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Gateways;

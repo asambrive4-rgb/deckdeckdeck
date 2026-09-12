@@ -1,3 +1,4 @@
+// 역할: 스포티파이 웹 인증 요청과 토큰 갱신 흐름이 올바르게 처리되는지 검증하는 단위 테스트 모음입니다.
 using System.Net;
 using System.Net.Http;
 using System.Text;

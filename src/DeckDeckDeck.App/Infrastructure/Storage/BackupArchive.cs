@@ -1,3 +1,4 @@
+// 역할: 프로그램 데이터와 이미지 파일들을 ZIP 압축 파일로 묶거나 압축을 해제합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

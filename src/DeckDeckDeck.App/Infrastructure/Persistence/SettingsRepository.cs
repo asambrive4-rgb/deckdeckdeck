@@ -1,3 +1,4 @@
+// 역할: 프로그램 전체 환경설정 및 사용자 맞춤 옵션을 읽어오고 안전하게 저장합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

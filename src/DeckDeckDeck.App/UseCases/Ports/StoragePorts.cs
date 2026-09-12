@@ -1,3 +1,4 @@
+// 역할: 이미지 파일 저장소 및 저장된 파일 경로 변환에 필요한 입출력 규격을 정의합니다.
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.UseCases.Ports;

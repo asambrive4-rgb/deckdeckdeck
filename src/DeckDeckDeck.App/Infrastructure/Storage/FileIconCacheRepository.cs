@@ -1,3 +1,4 @@
+// 역할: 한 번 추출한 프로그램 아이콘 이미지를 로컬에 캐시하여 다음 실행 시 빠르게 불러옵니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

@@ -1,3 +1,4 @@
+// 역할: 주요 비즈니스 유스케이스들이 외부 게이트웨이와 정상적으로 상호작용하는지 종합 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Gateways;

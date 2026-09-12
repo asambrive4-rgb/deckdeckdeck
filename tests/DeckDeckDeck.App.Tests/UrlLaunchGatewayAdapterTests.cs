@@ -1,3 +1,4 @@
+// 역할: 웹 브라우저를 통한 인터넷 주소 열기 연동이 올바르게 수행되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

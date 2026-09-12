@@ -1,3 +1,4 @@
+// 역할: 프로그램에서 사용하는 설정 항목들의 고유 이름(키) 목록을 상수로 정의합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

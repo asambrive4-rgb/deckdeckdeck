@@ -1,3 +1,4 @@
+// 역할: 이미지 파일 경로나 바이트 배열을 WPF 화면에서 바인딩할 수 있는 이미지 소스로 변환하고 캐시합니다.
 using System.Globalization;
 using System.Windows.Data;
 using DeckDeckDeck.App.Views.Imaging;

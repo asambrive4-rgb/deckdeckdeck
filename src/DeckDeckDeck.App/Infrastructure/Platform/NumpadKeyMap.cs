@@ -1,3 +1,4 @@
+// 역할: 숫자 키패드의 가상 키 코드를 프로그램의 슬롯 번호(1~9번)와 매핑합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

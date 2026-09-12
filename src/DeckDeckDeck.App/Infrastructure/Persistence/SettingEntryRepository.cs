@@ -1,3 +1,4 @@
+// 역할: 프로그램의 개별 설정 키와 값을 데이터베이스에 저장하고 조회합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

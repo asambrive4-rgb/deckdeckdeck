@@ -1,3 +1,4 @@
+// 역할: 테스트 환경에서 실제 블루투스 장치 없이도 오디오 상태를 시뮬레이션할 수 있도록 돕는 테스트용 가짜 객체입니다.
 using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.Tests;

@@ -1,3 +1,4 @@
+// 역할: 웹 브라우저로 열려는 인터넷 주소(URL) 형식이 올바른지 검증하는 규칙을 정의합니다.
 using System.Net;
 
 namespace DeckDeckDeck.App.Domain;

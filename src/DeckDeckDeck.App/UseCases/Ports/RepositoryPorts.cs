@@ -1,3 +1,4 @@
+// 역할: 카테고리, 슬롯, 단축키, 설정 데이터를 영구 저장소에서 관리하기 위한 저장소 인터페이스들을 정의합니다.
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.UseCases.Ports;

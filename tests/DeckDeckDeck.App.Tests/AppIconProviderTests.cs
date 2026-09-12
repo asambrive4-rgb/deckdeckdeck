@@ -1,3 +1,4 @@
+// 역할: 파일이나 프로그램에서 실행 아이콘을 추출하는 기능이 정상 동작하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Infrastructure.Platform;
 using static DeckDeckDeck.App.Tests.TestAppFactory;
 

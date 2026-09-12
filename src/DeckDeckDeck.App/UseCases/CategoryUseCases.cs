@@ -1,3 +1,4 @@
+// 역할: 카테고리를 새로 만들거나 수정하고, 삭제하거나 슬롯 위치를 이동하는 핵심 업무 흐름을 처리합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -22,10 +23,8 @@ public sealed class SaveCategoryUseCase
         _autoBackupRequester = autoBackupRequester;
     }
 
-    public SaveCategoryResult Execute(SaveCategoryRequest request)
-    {
-        return Execute(request, requestAutoBackup: true);
-    }
+    public SaveCategoryResult Execute(SaveCategoryRequest request) =>
+        Execute(request, requestAutoBackup: true);
 
     internal SaveCategoryResult Execute(
         SaveCategoryRequest request,
@@ -132,15 +131,8 @@ public sealed class DeleteCategoryUseCase
 
     private void DeleteImageFiles(IEnumerable<ImageFileReference> imageFiles)
     {
-        if (_imageFileManager is null)
-        {
-            return;
-        }
-
-        foreach (var imageFileSet in imageFiles)
-        {
-            _imageFileManager.DeleteImageFiles(imageFileSet);
-        }
+        if (_imageFileManager is null) return;
+        foreach (var file in imageFiles) _imageFileManager.DeleteImageFiles(file);
     }
 }
 
@@ -266,15 +258,8 @@ public sealed class TransferCategoryUseCase
 
     private void DeleteImageFiles(IEnumerable<ImageFileReference> imageFiles)
     {
-        if (_imageFileManager is null)
-        {
-            return;
-        }
-
-        foreach (var imageFileSet in imageFiles)
-        {
-            _imageFileManager.DeleteImageFiles(imageFileSet);
-        }
+        if (_imageFileManager is null) return;
+        foreach (var file in imageFiles) _imageFileManager.DeleteImageFiles(file);
     }
 }
 
@@ -294,20 +279,9 @@ public sealed record SaveCategoryResult(
     string? ErrorMessage = null,
     bool SavedSlotOnly = false)
 {
-    public static SaveCategoryResult Success(Category category)
-    {
-        return new SaveCategoryResult(true, category);
-    }
-
-    public static SaveCategoryResult SlotOnly()
-    {
-        return new SaveCategoryResult(true, SavedSlotOnly: true);
-    }
-
-    public static SaveCategoryResult Failure(string errorMessage)
-    {
-        return new SaveCategoryResult(false, ErrorMessage: errorMessage);
-    }
+    public static SaveCategoryResult Success(Category category) => new(true, category);
+    public static SaveCategoryResult SlotOnly() => new(true, SavedSlotOnly: true);
+    public static SaveCategoryResult Failure(string errorMessage) => new(false, ErrorMessage: errorMessage);
 }
 
 public enum CategoryTransferOperation
@@ -332,35 +306,15 @@ public sealed record TransferCategoryResult(
     bool NeedsOverwriteConfirmation = false,
     string? ExistingTargetName = null)
 {
-    public static TransferCategoryResult Success(Category category)
-    {
-        return new TransferCategoryResult(true, category);
-    }
-
-    public static TransferCategoryResult Failure(string errorMessage)
-    {
-        return new TransferCategoryResult(false, ErrorMessage: errorMessage);
-    }
-
-    public static TransferCategoryResult RequiresConfirmation(string existingTargetName)
-    {
-        return new TransferCategoryResult(
-            false,
-            NeedsOverwriteConfirmation: true,
-            ExistingTargetName: existingTargetName);
-    }
+    public static TransferCategoryResult Success(Category category) => new(true, category);
+    public static TransferCategoryResult Failure(string errorMessage) => new(false, ErrorMessage: errorMessage);
+    public static TransferCategoryResult RequiresConfirmation(string existingTargetName) =>
+        new(false, NeedsOverwriteConfirmation: true, ExistingTargetName: existingTargetName);
 }
 
 internal sealed record SlotSettingSaveResult(bool Succeeded, string? ErrorMessage = null)
 {
-    public static SlotSettingSaveResult Success()
-    {
-        return new SlotSettingSaveResult(true);
-    }
-
-    public static SlotSettingSaveResult Failure(string errorMessage)
-    {
-        return new SlotSettingSaveResult(false, errorMessage);
-    }
+    public static SlotSettingSaveResult Success() => new(true);
+    public static SlotSettingSaveResult Failure(string errorMessage) => new(false, errorMessage);
 }
 

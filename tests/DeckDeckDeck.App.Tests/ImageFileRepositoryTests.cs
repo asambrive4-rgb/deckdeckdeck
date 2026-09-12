@@ -1,3 +1,4 @@
+// 역할: 이미지 파일의 저장, 조회, 삭제 및 캐시 관리가 정상 작동하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

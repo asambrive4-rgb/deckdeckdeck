@@ -222,37 +222,216 @@
                                        Visibility="{Binding ShowSpotifyMediaConnectionNotice, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         </StackPanel>
 
+                        <!-- 터미널 명령 실행 -->
                         <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
                                     Visibility="{Binding IsTerminalCommandAction, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="실행 셸" />
-                            <ComboBox ItemsSource="{Binding TerminalShellOptions}"
-                                      SelectedValue="{Binding SelectedTerminalShell, Mode=TwoWay}"
-                                      SelectedValuePath="Shell"
-                                      DisplayMemberPath="Label"
-                                      Style="{StaticResource Deck.ComboBoxStyle}" />
-                            <CheckBox Margin="0,10,0,0"
-                                      Content="관리자 권한으로 실행"
-                                      Style="{StaticResource Deck.CheckBoxStyle}"
-                                      IsChecked="{Binding RunAsAdministrator}" />
-                            <CheckBox Margin="0,8,0,0"
-                                      Content="터미널 창으로 열기"
-                                      Style="{StaticResource Deck.CheckBoxStyle}"
-                                      IsChecked="{Binding OpenTerminalWindow}" />
-                            <CheckBox Margin="0,8,0,0"
-                                      Content="ADB 페어링 기능"
-                                      Style="{StaticResource Deck.CheckBoxStyle}"
-                                      IsChecked="{Binding IsAdbPairingEnabled}" />
-                            <Border Margin="0,8,0,0"
+                                       Text="빠른 설정 프리셋" />
+                            
+                            <!-- 3분할 스마트 프리셋 키캡 버튼 (DPI 및 폰트 크기 변경에 따른 잘림 방지 Grid 레이아웃) -->
+                            <Grid Margin="0,4,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 1. 화면 끄기 -->
+                                <Button Grid.Column="0"
+                                        Command="{Binding SelectTurnOffDisplayPresetCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsTurnOffDisplayPresetActive}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid VerticalAlignment="Center">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Path HorizontalAlignment="Center" Width="16" Height="14" Stretch="Uniform"
+                                              Data="{StaticResource Deck.Geometry.Monitor}">
+                                            <Path.Style>
+                                                <Style TargetType="{x:Type Path}">
+                                                    <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                                                    <Setter Property="StrokeThickness" Value="1.5" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsTurnOffDisplayPresetActive}" Value="True">
+                                                            <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
+                                        <TextBlock Grid.Row="1" Text="화면 끄기" FontSize="12" FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" Margin="0,4,0,1"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}"/>
+                                        <TextBlock Grid.Row="2" Text="모니터 절전" FontSize="10"
+                                                   HorizontalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- 2. 무선 ADB -->
+                                <Button Grid.Column="2"
+                                        Command="{Binding SelectAdbPairingPresetCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAdbPairingPresetActive}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid VerticalAlignment="Center">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Path HorizontalAlignment="Center" Width="14" Height="14" Stretch="Uniform"
+                                              Data="{StaticResource Deck.Geometry.Bolt}">
+                                            <Path.Style>
+                                                <Style TargetType="{x:Type Path}">
+                                                    <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                                                    <Setter Property="StrokeThickness" Value="1.5" />
+                                                    <Setter Property="Fill" Value="Transparent" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsAdbPairingPresetActive}" Value="True">
+                                                            <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
+                                        <TextBlock Grid.Row="1" Text="무선 ADB" FontSize="12" FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" Margin="0,4,0,1"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}"/>
+                                        <TextBlock Grid.Row="2" Text="디버깅 연결" FontSize="10"
+                                                   HorizontalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"/>
+                                    </Grid>
+                                </Button>
+
+                                <!-- 3. 직접 입력 -->
+                                <Button Grid.Column="4"
+                                        Command="{Binding SelectCustomTerminalCommandPresetCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCustomTerminalCommandActive}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Grid VerticalAlignment="Center">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <Path HorizontalAlignment="Center" Width="15" Height="14" Stretch="Uniform"
+                                              Data="{StaticResource Deck.Geometry.Terminal}">
+                                            <Path.Style>
+                                                <Style TargetType="{x:Type Path}">
+                                                    <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                                                    <Setter Property="StrokeThickness" Value="1.5" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCustomTerminalCommandActive}" Value="True">
+                                                            <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
+                                        <TextBlock Grid.Row="1" Text="직접 입력" FontSize="12" FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" Margin="0,4,0,1"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}"/>
+                                        <TextBlock Grid.Row="2" Text="커스텀 명령" FontSize="10"
+                                                   HorizontalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"/>
+                                    </Grid>
+                                </Button>
+                            </Grid>
+
+                            <!-- 화면 끄기 요약 안내 카드 (DPI/창폭 대응 완벽 잘림 방지) -->
+                            <Border Margin="0,2,0,8"
+                                    Padding="12,10"
+                                    CornerRadius="12"
+                                    BorderThickness="1"
+                                    BorderBrush="{StaticResource Deck.Brush.Line.Soft}"
+                                    Background="{StaticResource Deck.Brush.Background.Surface}"
+                                    Visibility="{Binding IsTurnOffDisplayPresetActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <DockPanel LastChildFill="True" Margin="0,0,0,6">
+                                        <Path DockPanel.Dock="Left"
+                                              Width="14" Height="14" Stretch="Uniform"
+                                              Data="{StaticResource Deck.Geometry.Monitor}"
+                                              Stroke="{StaticResource Deck.Brush.Brand.Accent}"
+                                              StrokeThickness="1.5"
+                                              Margin="0,0,6,0"
+                                              VerticalAlignment="Center"/>
+                                        <TextBlock FontWeight="SemiBold"
+                                                   FontSize="12.5"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}"
+                                                   TextWrapping="Wrap"
+                                                   Text="화면 끄기 모드가 적용되었습니다" />
+                                    </DockPanel>
+                                    <TextBlock Margin="0,2,0,2"
+                                               FontSize="11.5"
+                                               TextWrapping="Wrap"
+                                               Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                               Text="• 실행 시 앱 창이 즉시 닫히며 모니터 화면만 꺼집니다." />
+                                    <TextBlock Margin="0,2,0,2"
+                                               FontSize="11.5"
+                                               TextWrapping="Wrap"
+                                               Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                               Text="• PC 본체와 핫스팟, Wi-Fi 및 백그라운드 작업은 유지됩니다." />
+                                    <TextBlock Margin="0,2,0,6"
+                                               FontSize="11.5"
+                                               TextWrapping="Wrap"
+                                               Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                               Text="• 마우스를 움직이거나 키를 누르면 화면이 다시 켜집니다." />
+                                    <Button Command="{Binding ToggleAdvancedTerminalSettingsCommand}"
+                                            HorizontalAlignment="Left"
+                                            Padding="10,4"
+                                            MinHeight="28"
+                                            Width="Auto"
+                                            FontSize="11.5"
+                                            Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                            Content="고급 설정 열기/닫기 ⌵" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ADB 무선 디버깅 카드 -->
+                            <Border Margin="0,2,0,8"
                                     Style="{StaticResource Deck.InfoPanelBorderStyle}"
-                                    Visibility="{Binding IsAdbPairingEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    Visibility="{Binding IsAdbPairingPresetActive, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
                                     <TextBlock FontWeight="SemiBold"
                                                Foreground="{StaticResource Deck.Brush.Text.Primary}"
                                                Text="무선 디버깅 연결" />
                                     <TextBlock Margin="0,4,0,8"
                                                Foreground="{StaticResource Deck.Brush.Text.Secondary}"
-                                               Text="이 핫키에 쓸 기기 IP를 입력하세요. 저장 후 실행하면 포트만 입력하는 창이 뜨고 adb connect 합니다. 핫키마다 다른 IP를 둘 수 있습니다."
+                                               Text="이 핫키에 쓸 기기 IP를 입력하세요. 저장 후 실행하면 포트만 입력하는 창이 뜨고 adb connect 합니다."
                                                TextWrapping="Wrap" />
                                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                                Text="기기 IP 주소" />
@@ -261,34 +440,63 @@
                                              Style="{StaticResource Deck.TextBoxStyle}"
                                              Text="{Binding AdbDeviceIp, UpdateSourceTrigger=PropertyChanged}"
                                              ToolTip="예: 10.42.17.83" />
+                                    <Button Command="{Binding ToggleAdvancedTerminalSettingsCommand}"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,8,0,0"
+                                            Padding="10,4"
+                                            MinHeight="28"
+                                            Width="Auto"
+                                            FontSize="11.5"
+                                            Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                            Content="고급 설정 열기/닫기 ⌵" />
                                 </StackPanel>
                             </Border>
-                            <TextBlock Margin="0,12,0,0"
-                                       Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="작업 폴더 (선택)" />
-                            <TextBox Height="36"
-                                     Style="{StaticResource Deck.TextBoxStyle}"
-                                     Text="{Binding TerminalWorkingDirectory, UpdateSourceTrigger=PropertyChanged}" />
-                            <Button Margin="0,8,0,8"
-                                    HorizontalAlignment="Left"
-                                    Command="{Binding ChooseTerminalWorkingDirectoryCommand}"
-                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                    Content="폴더 선택" />
-                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="터미널 명령" />
-                            <TextBox MinHeight="80"
-                                     MaxHeight="180"
-                                     AcceptsReturn="True"
-                                     AcceptsTab="True"
-                                     FontFamily="Cascadia Code, Consolas"
-                                     Style="{StaticResource Deck.TextBoxStyle}"
-                                     Text="{Binding TerminalCommand, UpdateSourceTrigger=PropertyChanged}"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto" />
-                            <TextBlock Margin="0,8,0,0"
-                                       Foreground="{StaticResource Deck.Brush.Text.Secondary}"
-                                       Text="신뢰하는 명령만 저장하고 실행하세요. 명령을 비우면 작업 폴더에서 셸만 엽니다. 관리자 권한 실행 시 Windows 확인창이 표시될 수 있습니다."
-                                       TextWrapping="Wrap" />
+
+                            <!-- 고급 / 직접 입력 터미널 설정 (점진적 공개) -->
+                            <StackPanel Visibility="{Binding ShowAdvancedTerminalSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Margin="0,6,0,0"
+                                           Text="실행 셸" />
+                                <ComboBox ItemsSource="{Binding TerminalShellOptions}"
+                                          SelectedValue="{Binding SelectedTerminalShell, Mode=TwoWay}"
+                                          SelectedValuePath="Shell"
+                                          DisplayMemberPath="Label"
+                                          Style="{StaticResource Deck.ComboBoxStyle}" />
+                                <CheckBox Margin="0,10,0,0"
+                                          Content="관리자 권한으로 실행"
+                                          Style="{StaticResource Deck.CheckBoxStyle}"
+                                          IsChecked="{Binding RunAsAdministrator}" />
+                                <CheckBox Margin="0,8,0,0"
+                                          Content="터미널 창으로 열기"
+                                          Style="{StaticResource Deck.CheckBoxStyle}"
+                                          IsChecked="{Binding OpenTerminalWindow}" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="작업 폴더 (선택)" />
+                                <TextBox Height="36"
+                                         Style="{StaticResource Deck.TextBoxStyle}"
+                                         Text="{Binding TerminalWorkingDirectory, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Margin="0,8,0,8"
+                                        HorizontalAlignment="Left"
+                                        Command="{Binding ChooseTerminalWorkingDirectoryCommand}"
+                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                        Content="폴더 선택" />
+                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="터미널 명령" />
+                                <TextBox MinHeight="80"
+                                         MaxHeight="180"
+                                         AcceptsReturn="True"
+                                         AcceptsTab="True"
+                                         FontFamily="Cascadia Code, Consolas"
+                                         Style="{StaticResource Deck.TextBoxStyle}"
+                                         Text="{Binding TerminalCommand, UpdateSourceTrigger=PropertyChanged}"
+                                         TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto" />
+                                <TextBlock Margin="0,8,0,0"
+                                           Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                           Text="신뢰하는 명령만 저장하고 실행하세요. 명령을 비우면 작업 폴더에서 셸만 엽니다. 관리자 권한 실행 시 Windows 확인창이 표시될 수 있습니다."
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
                 </Border>

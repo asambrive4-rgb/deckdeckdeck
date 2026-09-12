@@ -1,3 +1,4 @@
+// 역할: 프로그램이 켜지는 동안 각 단계별 소요 시간을 측정하고 기록하여 성능을 진단합니다.
 using System.Diagnostics;
 using DeckDeckDeck.App.UseCases.Ports;
 

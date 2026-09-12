@@ -1,3 +1,4 @@
+// 역할: 사용자가 편집 화면에서 작성 중인 다양한 동작(파일 실행, URL 열기 등)의 임시 입력 상태를 관리합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -175,6 +176,22 @@ public sealed class ExecutableActionEditDraft
     public void SetMediaCommand(SnippetMediaCommand command)
     {
         MediaCommand = command;
+    }
+
+    public void ApplyAdbPairingDefaults()
+    {
+        TerminalCommand = TerminalCommandParameterRules.AdbWirelessPowerShellExample;
+        TerminalShell = SnippetTerminalShell.PowerShell;
+        OpenTerminalWindow = true;
+        RunAsAdministrator = false;
+    }
+
+    public void ApplyTurnOffDisplayDefaults()
+    {
+        TerminalCommand = TerminalCommandParameterRules.TurnOffDisplayCommand;
+        TerminalShell = SnippetTerminalShell.Cmd;
+        OpenTerminalWindow = false;
+        RunAsAdministrator = false;
     }
 
     public void ReplaceImageFromPath(string sourcePath)

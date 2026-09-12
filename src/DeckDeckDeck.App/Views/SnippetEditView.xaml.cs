@@ -1,3 +1,4 @@
+// 역할: 슬롯의 텍스트 스니펫 내용과 실행 동작을 설정하는 편집 팝업 화면의 코드 비하인드입니다.
 using System.Windows;
 using System.Windows.Controls;
 using DeckDeckDeck.App.ViewModels;

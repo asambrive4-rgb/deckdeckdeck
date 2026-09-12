@@ -1,3 +1,4 @@
+// 역할: 사용자 환경설정 변경 사항이 저장소에 올바르게 반영되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;

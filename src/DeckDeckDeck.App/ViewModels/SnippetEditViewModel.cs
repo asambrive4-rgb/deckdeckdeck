@@ -1,3 +1,4 @@
+// 역할: 텍스트 스니펫 및 동작(URL, 파일, 미디어 등) 편집 화면의 모든 입력 필드와 저장 동작을 관리하는 화면 모델입니다.
 using System.Windows.Input;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -26,6 +27,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly TransferSnippetUseCase _transferSnippetUseCase;
     private string _errorMessage = string.Empty;
     private bool _isAdbPairingEnabled;
+    private bool _showAdvancedTerminalSettings;
     private bool _isSlotEnabled;
     private IReadOnlyList<SnippetMediaCommandOption> _mediaCommandOptions = SnippetMediaCommandOption.SystemCommands;
     private SnippetTransferTargetSlot? _selectedTransferTarget;
@@ -84,6 +86,10 @@ public sealed class SnippetEditViewModel : ObservableObject
         ChooseLaunchFileCommand = new RelayCommand(ChooseLaunchFile);
         ChooseLaunchFolderCommand = new RelayCommand(ChooseLaunchFolder);
         ChooseTerminalWorkingDirectoryCommand = new RelayCommand(ChooseTerminalWorkingDirectory);
+        SelectTurnOffDisplayPresetCommand = new RelayCommand(SelectTurnOffDisplayPreset);
+        SelectAdbPairingPresetCommand = new RelayCommand(SelectAdbPairingPreset);
+        SelectCustomTerminalCommandPresetCommand = new RelayCommand(SelectCustomTerminalCommandPreset);
+        ToggleAdvancedTerminalSettingsCommand = new RelayCommand(ToggleAdvancedTerminalSettings);
         _isAdbPairingEnabled =
             TerminalCommandParameterRules.IsAdbWirelessConnectCommand(_draft.TerminalCommand);
     }
@@ -367,8 +373,42 @@ public sealed class SnippetEditViewModel : ObservableObject
                 _isAdbPairingEnabled = isAdb;
                 OnPropertyChanged(nameof(IsAdbPairingEnabled));
             }
+
+            OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
+            OnPropertyChanged(nameof(IsAdbPairingPresetActive));
+            OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
+            OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
         }
     }
+
+    public bool ShowAdvancedTerminalSettings
+    {
+        get => _showAdvancedTerminalSettings || IsCustomTerminalCommandActive;
+        set
+        {
+            if (_showAdvancedTerminalSettings == value)
+            {
+                return;
+            }
+
+            _showAdvancedTerminalSettings = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsTurnOffDisplayPresetActive =>
+        TerminalCommandParameterRules.IsTurnOffDisplayCommand(TerminalCommand);
+
+    public bool IsAdbPairingPresetActive =>
+        TerminalCommandParameterRules.IsAdbWirelessConnectCommand(TerminalCommand);
+
+    public bool IsCustomTerminalCommandActive =>
+        !IsTurnOffDisplayPresetActive && !IsAdbPairingPresetActive;
+
+    public IRelayCommand SelectTurnOffDisplayPresetCommand { get; }
+    public IRelayCommand SelectAdbPairingPresetCommand { get; }
+    public IRelayCommand SelectCustomTerminalCommandPresetCommand { get; }
+    public IRelayCommand ToggleAdvancedTerminalSettingsCommand { get; }
 
     public SnippetTerminalShell SelectedTerminalShell
     {
@@ -757,10 +797,63 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private void ApplyAdbPairingDefaults()
     {
-        TerminalCommand = TerminalCommandParameterRules.AdbWirelessPowerShellExample;
-        SelectedTerminalShell = SnippetTerminalShell.PowerShell;
-        OpenTerminalWindow = true;
-        RunAsAdministrator = false;
+        _draft.ApplyAdbPairingDefaults();
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void SelectTurnOffDisplayPreset()
+    {
+        _draft.ApplyTurnOffDisplayDefaults();
+        if (string.IsNullOrWhiteSpace(SnippetTitle) || SnippetTitle == "새 실행 항목")
+        {
+            SnippetTitle = "화면 끄기";
+        }
+
+        if (string.IsNullOrWhiteSpace(Description))
+        {
+            Description = "모니터 화면을 끕니다. 핫스팟과 백그라운드 작업은 유지됩니다.";
+        }
+
+        _isAdbPairingEnabled = false;
+        _showAdvancedTerminalSettings = false;
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void SelectAdbPairingPreset()
+    {
+        IsAdbPairingEnabled = true;
+        _showAdvancedTerminalSettings = false;
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void SelectCustomTerminalCommandPreset()
+    {
+        if (IsTurnOffDisplayPresetActive)
+        {
+            TerminalCommand = string.Empty;
+        }
+
+        _isAdbPairingEnabled = false;
+        _showAdvancedTerminalSettings = true;
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void ToggleAdvancedTerminalSettings()
+    {
+        ShowAdvancedTerminalSettings = !_showAdvancedTerminalSettings;
+    }
+
+    private void NotifyTerminalPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(TerminalCommand));
+        OnPropertyChanged(nameof(SelectedTerminalShell));
+        OnPropertyChanged(nameof(OpenTerminalWindow));
+        OnPropertyChanged(nameof(RunAsAdministrator));
+        OnPropertyChanged(nameof(IsAdbPairingEnabled));
+        OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
+        OnPropertyChanged(nameof(IsAdbPairingPresetActive));
+        OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
+        OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
         ErrorMessage = string.Empty;
     }
 
@@ -836,20 +929,9 @@ public sealed class SnippetEditViewModel : ObservableObject
     }
 }
 
-public sealed class SnippetTransferTargetSlot
-{
-    public SnippetTransferTargetSlot(SlotKey slotKey, string label)
-    {
-        SlotKey = slotKey;
-        Label = label;
-    }
+public sealed record SnippetTransferTargetSlot(SlotKey SlotKey, string Label);
 
-    public SlotKey SlotKey { get; }
-
-    public string Label { get; }
-}
-
-public sealed class SnippetMediaCommandOption
+public sealed record SnippetMediaCommandOption(SnippetMediaCommand Command, string Label)
 {
     public static IReadOnlyList<SnippetMediaCommandOption> SystemCommands { get; } =
     [
@@ -873,109 +955,50 @@ public sealed class SnippetMediaCommandOption
     ];
 
     public static IReadOnlyList<SnippetMediaCommandOption> All { get; } =
-        SystemCommands.Concat(SpotifyCommands)
-            .GroupBy(option => option.Command)
-            .Select(group => group.First())
-            .ToList();
+        SystemCommands.Concat(SpotifyCommands).DistinctBy(option => option.Command).ToList();
 
-    public static IReadOnlyList<SnippetMediaCommandOption> ForProvider(SnippetMediaProvider provider)
-    {
-        return provider == SnippetMediaProvider.Spotify
-            ? SpotifyCommands
-            : SystemCommands;
-    }
+    public static IReadOnlyList<SnippetMediaCommandOption> ForProvider(SnippetMediaProvider provider) =>
+        provider == SnippetMediaProvider.Spotify ? SpotifyCommands : SystemCommands;
 
     public static SnippetMediaCommand GetValidCommandForProvider(
         SnippetMediaProvider provider,
-        SnippetMediaCommand command)
-    {
-        return MediaCommandRules.GetValidCommandForProvider(provider, command);
-    }
-
-    public SnippetMediaCommandOption(SnippetMediaCommand command, string label)
-    {
-        Command = command;
-        Label = label;
-    }
-
-    public SnippetMediaCommand Command { get; }
-
-    public string Label { get; }
+        SnippetMediaCommand command) =>
+        MediaCommandRules.GetValidCommandForProvider(provider, command);
 }
 
-public sealed class PasteShortcutModeOption
+public sealed record PasteShortcutModeOption(PasteShortcutMode Mode, string Label)
 {
     public static IReadOnlyList<PasteShortcutModeOption> All { get; } =
     [
         new(PasteShortcutMode.CtrlV, "기본 붙여넣기 (Ctrl+V)"),
         new(PasteShortcutMode.CtrlShiftV, "터미널 붙여넣기 (Ctrl+Shift+V)")
     ];
-
-    public PasteShortcutModeOption(PasteShortcutMode mode, string label)
-    {
-        Mode = mode;
-        Label = label;
-    }
-
-    public PasteShortcutMode Mode { get; }
-
-    public string Label { get; }
 }
 
-public sealed class FileActionModeOption
+public sealed record FileActionModeOption(FileActionMode Mode, string Label)
 {
     public static IReadOnlyList<FileActionModeOption> All { get; } =
     [
         new(FileActionMode.Launch, "실행"),
         new(FileActionMode.Paste, "파일 붙여넣기")
     ];
-
-    public FileActionModeOption(FileActionMode mode, string label)
-    {
-        Mode = mode;
-        Label = label;
-    }
-
-    public FileActionMode Mode { get; }
-
-    public string Label { get; }
 }
 
-public sealed class TerminalShellOption
+public sealed record TerminalShellOption(SnippetTerminalShell Shell, string Label)
 {
     public static IReadOnlyList<TerminalShellOption> All { get; } =
     [
         new(SnippetTerminalShell.Cmd, "cmd"),
         new(SnippetTerminalShell.PowerShell, "PowerShell")
     ];
-
-    public TerminalShellOption(SnippetTerminalShell shell, string label)
-    {
-        Shell = shell;
-        Label = label;
-    }
-
-    public SnippetTerminalShell Shell { get; }
-
-    public string Label { get; }
 }
 
-public sealed class SnippetMediaProviderOption
+public sealed record SnippetMediaProviderOption(SnippetMediaProvider Provider, string Label)
 {
     public static IReadOnlyList<SnippetMediaProviderOption> All { get; } =
     [
         new(SnippetMediaProvider.System, "Windows 기본 미디어 제어"),
         new(SnippetMediaProvider.Spotify, "Spotify")
     ];
-
-    public SnippetMediaProviderOption(SnippetMediaProvider provider, string label)
-    {
-        Provider = provider;
-        Label = label;
-    }
-
-    public SnippetMediaProvider Provider { get; }
-
-    public string Label { get; }
 }
 

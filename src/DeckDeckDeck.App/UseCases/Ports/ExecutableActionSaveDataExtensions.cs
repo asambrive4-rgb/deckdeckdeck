@@ -1,3 +1,4 @@
+// 역할: 동작 데이터를 저장소에 보관하거나 화면에 표시하기 위한 형식으로 상호 변환하는 도우미 기능을 제공합니다.
 using DeckDeckDeck.App.Domain;
 
 namespace DeckDeckDeck.App.UseCases.Ports;

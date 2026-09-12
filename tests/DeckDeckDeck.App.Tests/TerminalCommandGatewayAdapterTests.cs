@@ -1,3 +1,4 @@
+// 역할: 터미널 명령어(PowerShell/CMD) 실행 기능이 예외 없이 의도대로 호출되는지 검증하는 단위 테스트 모음입니다.
 using System.Diagnostics;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Models;

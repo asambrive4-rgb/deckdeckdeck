@@ -1,3 +1,4 @@
+// 역할: 데이터베이스에 저장된 카테고리와 슬롯 데이터가 영구적으로 보존되고 정상 조회되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;

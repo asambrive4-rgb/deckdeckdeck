@@ -1,3 +1,4 @@
+// 역할: 화면에 자주 표시되는 이미지들을 메모리에 고정(Freeze)하여 여러 곳에서 끊김 없이 빠르게 공유하도록 돕는 캐시입니다.
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;

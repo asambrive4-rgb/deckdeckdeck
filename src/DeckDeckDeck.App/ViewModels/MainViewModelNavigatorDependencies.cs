@@ -1,3 +1,4 @@
+// 역할: 화면 이동 제어기(Navigator)가 필요로 하는 화면 생성 팩토리 및 의존성들을 묶어둔 데이터 구조입니다.
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 

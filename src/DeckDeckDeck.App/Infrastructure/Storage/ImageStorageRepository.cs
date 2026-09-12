@@ -1,3 +1,4 @@
+// 역할: 이미지 파일의 실제 저장 경로를 추적하고 불필요해진 이전 이미지를 정리합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

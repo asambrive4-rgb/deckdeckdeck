@@ -1,3 +1,4 @@
+// 역할: 클립보드 복사 및 대상 프로그램에 텍스트 붙여넣기 기능이 올바르게 실행되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.Composition;

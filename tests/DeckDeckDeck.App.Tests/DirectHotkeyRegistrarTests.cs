@@ -1,3 +1,4 @@
+// 역할: 윈도우 시스템에 전역 단축키를 등록하고 해제하는 기능이 정상 동작하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Infrastructure.Platform;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;

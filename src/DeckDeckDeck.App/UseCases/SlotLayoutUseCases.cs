@@ -1,3 +1,4 @@
+// 역할: 슬롯의 번호나 위치를 드래그 앤 드롭 등으로 변경할 때 데이터 순서를 안전하게 재배치합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -82,15 +83,8 @@ public sealed class MoveCategorySlotUseCase
 
     private void DeleteImageFiles(IEnumerable<ImageFileReference> imageFiles)
     {
-        if (_imageFileManager is null)
-        {
-            return;
-        }
-
-        foreach (var imageFileSet in imageFiles)
-        {
-            _imageFileManager.DeleteImageFiles(imageFileSet);
-        }
+        if (_imageFileManager is null) return;
+        foreach (var file in imageFiles) _imageFileManager.DeleteImageFiles(file);
     }
 }
 
@@ -173,15 +167,8 @@ public sealed class MoveSnippetSlotUseCase
 
     private void DeleteImageFiles(IEnumerable<ImageFileReference> imageFiles)
     {
-        if (_imageFileManager is null)
-        {
-            return;
-        }
-
-        foreach (var imageFileSet in imageFiles)
-        {
-            _imageFileManager.DeleteImageFiles(imageFileSet);
-        }
+        if (_imageFileManager is null) return;
+        foreach (var file in imageFiles) _imageFileManager.DeleteImageFiles(file);
     }
 }
 
@@ -198,28 +185,11 @@ public sealed record MoveCategorySlotResult(
     string? ExistingTargetName = null,
     bool IsNoOp = false)
 {
-    public static MoveCategorySlotResult Success(Category category)
-    {
-        return new MoveCategorySlotResult(true, category);
-    }
-
-    public static MoveCategorySlotResult Failure(string errorMessage)
-    {
-        return new MoveCategorySlotResult(false, ErrorMessage: errorMessage);
-    }
-
-    public static MoveCategorySlotResult RequiresConfirmation(string existingTargetName)
-    {
-        return new MoveCategorySlotResult(
-            false,
-            NeedsOverwriteConfirmation: true,
-            ExistingTargetName: existingTargetName);
-    }
-
-    public static MoveCategorySlotResult NoOp()
-    {
-        return new MoveCategorySlotResult(true, IsNoOp: true);
-    }
+    public static MoveCategorySlotResult Success(Category category) => new(true, category);
+    public static MoveCategorySlotResult Failure(string errorMessage) => new(false, ErrorMessage: errorMessage);
+    public static MoveCategorySlotResult RequiresConfirmation(string existingTargetName) =>
+        new(false, NeedsOverwriteConfirmation: true, ExistingTargetName: existingTargetName);
+    public static MoveCategorySlotResult NoOp() => new(true, IsNoOp: true);
 }
 
 public sealed record MoveSnippetSlotRequest(
@@ -236,26 +206,9 @@ public sealed record MoveSnippetSlotResult(
     string? ExistingTargetName = null,
     bool IsNoOp = false)
 {
-    public static MoveSnippetSlotResult Success(Snippet snippet)
-    {
-        return new MoveSnippetSlotResult(true, snippet);
-    }
-
-    public static MoveSnippetSlotResult Failure(string errorMessage)
-    {
-        return new MoveSnippetSlotResult(false, ErrorMessage: errorMessage);
-    }
-
-    public static MoveSnippetSlotResult RequiresConfirmation(string existingTargetName)
-    {
-        return new MoveSnippetSlotResult(
-            false,
-            NeedsOverwriteConfirmation: true,
-            ExistingTargetName: existingTargetName);
-    }
-
-    public static MoveSnippetSlotResult NoOp()
-    {
-        return new MoveSnippetSlotResult(true, IsNoOp: true);
-    }
+    public static MoveSnippetSlotResult Success(Snippet snippet) => new(true, snippet);
+    public static MoveSnippetSlotResult Failure(string errorMessage) => new(false, ErrorMessage: errorMessage);
+    public static MoveSnippetSlotResult RequiresConfirmation(string existingTargetName) =>
+        new(false, NeedsOverwriteConfirmation: true, ExistingTargetName: existingTargetName);
+    public static MoveSnippetSlotResult NoOp() => new(true, IsNoOp: true);
 }

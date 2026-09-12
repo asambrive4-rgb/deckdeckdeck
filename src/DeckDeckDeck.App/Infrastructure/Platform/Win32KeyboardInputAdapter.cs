@@ -1,3 +1,4 @@
+// 역할: 윈도우 시스템 API를 호출하여 키보드 키 입력을 가상으로 발생시킵니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

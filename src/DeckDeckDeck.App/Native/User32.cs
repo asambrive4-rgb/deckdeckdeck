@@ -1,3 +1,4 @@
+// 역할: 윈도우 유저 인터페이스 API를 호출하여 창 위치 이동, 키보드 입력 전달, 단축키 등록을 수행합니다.
 using System.Runtime.InteropServices;
 
 namespace DeckDeckDeck.App.Native;
@@ -52,6 +53,10 @@ public static partial class User32
         int cx,
         int cy,
         uint uFlags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);

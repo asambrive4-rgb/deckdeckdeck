@@ -1,3 +1,4 @@
+// 역할: 등록된 단축키 목록을 화면에 보여주고 추가, 편집, 삭제 동작을 처리하는 화면 모델입니다.
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;

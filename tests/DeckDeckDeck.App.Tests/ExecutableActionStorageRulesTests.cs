@@ -1,3 +1,4 @@
+// 역할: 실행 동작 데이터의 저장소 변환 및 복원 규칙이 오차 없이 동작하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 

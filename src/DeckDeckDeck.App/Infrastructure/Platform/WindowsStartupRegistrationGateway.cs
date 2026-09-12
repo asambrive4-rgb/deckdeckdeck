@@ -1,3 +1,4 @@
+// 역할: 윈도우 작업 스케줄러를 등록하거나 삭제하여 부팅 시 프로그램이 자동 실행되도록 설정합니다.
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;

@@ -1,3 +1,4 @@
+// 역할: 파일이나 프로그램에서 추출한 아이콘의 캐시 정보를 담는 데이터 모델입니다.
 using System.IO;
 
 namespace DeckDeckDeck.App.Models;

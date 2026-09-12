@@ -1,3 +1,4 @@
+// 역할: 파일이나 프로그램의 아이콘 이미지를 추출하는 기능의 인터페이스를 정의합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

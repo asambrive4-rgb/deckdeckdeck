@@ -1,3 +1,4 @@
+// 역할: 카테고리 편집 임시 데이터가 유효성 검사 및 변경 사항 추적을 정확히 수행하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;

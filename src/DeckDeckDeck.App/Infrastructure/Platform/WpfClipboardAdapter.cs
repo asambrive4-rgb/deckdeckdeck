@@ -1,3 +1,4 @@
+// 역할: WPF 프레임워크를 통해 윈도우 클립보드에 텍스트나 파일을 복사하는 기능을 수행합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

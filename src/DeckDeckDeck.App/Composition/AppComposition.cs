@@ -1,3 +1,4 @@
+// 역할: 프로그램 시작 시 필요한 화면, 저장소, 외부 연동 부품들을 하나로 조립하고 초기화합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Diagnostics;
 using DeckDeckDeck.App.Infrastructure.Gateways;
@@ -8,6 +9,8 @@ using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
+using DeckDeckDeck.App.Views;
+using System.Windows;
 
 namespace DeckDeckDeck.App.Composition;
 
@@ -146,7 +149,7 @@ internal sealed record AppComposition(
             
             var toastGateway = new WpfToastNotificationGateway();
             slotTimerUseCases = new SlotTimerUseCases(toastGateway);
-            slotTimerCoordinator = new SlotTimerCoordinator(slotTimerUseCases);
+            slotTimerCoordinator = new SlotTimerCoordinator(slotTimerUseCases, PromptTimerDuration);
             slotGridViewModelFactory = new SlotGridViewModelFactory(storedImagePathResolver, snippetImageResolver, slotTimerUseCases);
 
             clipboardAdapter = new WpfClipboardAdapter();
@@ -274,7 +277,8 @@ internal sealed record AppComposition(
 
         var effectiveToastGateway = new WpfToastNotificationGateway();
         var effectiveSlotTimerUseCases = slotTimerUseCases ?? new SlotTimerUseCases(effectiveToastGateway);
-        var effectiveSlotTimerCoordinator = slotTimerCoordinator ?? new SlotTimerCoordinator(effectiveSlotTimerUseCases);
+        var effectiveSlotTimerCoordinator = slotTimerCoordinator
+            ?? new SlotTimerCoordinator(effectiveSlotTimerUseCases, PromptTimerDuration);
 
         return new AppComposition(
             categoryRepository,
@@ -437,5 +441,18 @@ internal sealed record AppComposition(
             filePasteGateway,
             dialogAdapter,
             timerActionGateway);
+    }
+
+    private static TimeSpan? PromptTimerDuration()
+    {
+        var vm = new TimerTimePickerViewModel();
+        var mainWindow = Application.Current?.MainWindow;
+        var window = new TimerTimePickerWindow(vm)
+        {
+            Owner = mainWindow
+        };
+
+        var result = window.ShowDialog();
+        return result == true && vm.IsValidDuration ? vm.TotalDuration : null;
     }
 }

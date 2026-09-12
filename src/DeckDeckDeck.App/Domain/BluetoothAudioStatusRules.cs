@@ -1,3 +1,4 @@
+// 역할: 블루투스 오디오 기기의 연결 상태와 배터리, 볼륨 제어 가능 여부를 판단하는 규칙을 정의합니다.
 using System.Text;
 
 namespace DeckDeckDeck.App.Domain;
@@ -8,10 +9,22 @@ namespace DeckDeckDeck.App.Domain;
 public static class BluetoothAudioStatusRules
 {
     public const string LoadingText = "확인 중…";
-    public const string LoadingToolTip = "블루투스 오디오 상태를 확인하고 있습니다.";
+    public const string LoadingToolTip = "블루투스 기기 상태를 확인하고 있습니다.";
     public const string DisconnectedText = "연결 없음";
-    public const string DisconnectedToolTip = "기본 출력으로 연결된 블루투스 오디오가 없습니다.";
+    public const string DisconnectedToolTip = "연결된 블루투스 기기가 없습니다.";
     public const string BatteryUnavailableToolTip = "배터리 정보를 확인할 수 없습니다.";
+
+    public static bool IsBatteryLow(int? batteryPercent)
+    {
+        return batteryPercent is >= 0 and <= 20;
+    }
+
+    public static string FormatBatteryText(int? batteryPercent)
+    {
+        return batteryPercent is >= 0 and <= 100
+            ? $"{batteryPercent.Value}%"
+            : string.Empty;
+    }
 
     public static string FormatDisplayText(string? deviceName, int? batteryPercent)
     {
@@ -258,11 +271,45 @@ public static class BluetoothAudioStatusRules
         }
     }
 
+    public static BluetoothDeviceCategory DetermineDeviceCategory(string? deviceName)
+    {
+        if (string.IsNullOrWhiteSpace(deviceName))
+        {
+            return BluetoothDeviceCategory.Unknown;
+        }
+
+        var lower = deviceName.ToLowerInvariant();
+        if (lower.Contains("kbd") || lower.Contains("keyboard") || lower.Contains("keypad")
+            || lower.Contains("numpad") || lower.Contains("키보드") || lower.Contains("텐키")
+            || lower.Contains("mouse") || lower.Contains("마우스"))
+        {
+            return BluetoothDeviceCategory.Input;
+        }
+
+        if (lower.Contains("buds") || lower.Contains("headphone") || lower.Contains("headset")
+            || lower.Contains("wh-") || lower.Contains("wf-") || lower.Contains("airpod")
+            || lower.Contains("speaker") || lower.Contains("flip") || lower.Contains("헤드폰")
+            || lower.Contains("헤드셋") || lower.Contains("이어폰") || lower.Contains("스피커"))
+        {
+            return BluetoothDeviceCategory.Audio;
+        }
+
+        return BluetoothDeviceCategory.Other;
+    }
+
     private static bool IsTwelveHex(string value)
     {
         return value.Length == 12 && value.All(character =>
             character is >= '0' and <= '9' or >= 'A' and <= 'F');
     }
+}
+
+public enum BluetoothDeviceCategory
+{
+    Unknown,
+    Input,
+    Audio,
+    Other
 }
 
 internal sealed record BluetoothDeviceMatchContext(

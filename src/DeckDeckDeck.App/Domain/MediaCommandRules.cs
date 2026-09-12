@@ -1,3 +1,4 @@
+// 역할: 재생, 정지, 음량 조절 등 미디어 제어 명령이 유효한지 확인하는 규칙을 정의합니다.
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.Domain;

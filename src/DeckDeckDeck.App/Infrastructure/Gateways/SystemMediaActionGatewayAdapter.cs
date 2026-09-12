@@ -1,3 +1,4 @@
+// 역할: 윈도우 멀티미디어 키 신호를 발생시켜 PC 전체의 재생/정지 및 볼륨을 제어합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

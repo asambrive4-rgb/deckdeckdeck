@@ -1,3 +1,4 @@
+// 역할: 터미널이나 명령 프롬프트에서 실행할 명령어 및 매개변수의 형식을 검증하는 규칙을 정의합니다.
 using System.Text.RegularExpressions;
 
 namespace DeckDeckDeck.App.Domain;
@@ -18,10 +19,24 @@ public static partial class TerminalCommandParameterRules
     public const string AdbWirelessPowerShellExample =
         @"& ""$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"" connect {{IP}}:{{Port}}";
 
+    public const string TurnOffDisplayCommand =
+        @"(Add-Type '[DllImport(\""user32.dll\"")]public static extern int PostMessage(int hWnd,int hMsg,int wParam,int lParam);' -Name a -Passthru)::PostMessage(-1,0x0112,0xF170,2)";
+
     public const string EmptyAdbIpMessage = "ADB IP 주소를 입력해 주세요.";
     public const string InvalidAdbIpMessage = "IP는 숫자와 점(.)만 입력해 주세요. 예: 10.42.17.83";
     public const string EmptyAdbPortMessage = "포트를 입력해 주세요.";
     public const string InvalidAdbPortMessage = "포트는 1~65535 사이 숫자만 입력해 주세요.";
+
+    public static bool IsTurnOffDisplayCommand(string? command)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            return false;
+        }
+
+        return command.Contains("0xF170", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("user32", StringComparison.OrdinalIgnoreCase);
+    }
 
     public static bool IsAdbWirelessConnectCommand(string? command)
     {
@@ -146,10 +161,7 @@ public static partial class TerminalCommandParameterRules
         });
     }
 
-    public static string FormatParameterToken(string name)
-    {
-        return "{{" + name + "}}";
-    }
+    public static string FormatParameterToken(string name) => "{{" + name + "}}";
 
     public static bool TryNormalizeParameterName(
         string? name,
@@ -221,11 +233,8 @@ public static partial class TerminalCommandParameterRules
         return CollapseExtraWhitespace(removed);
     }
 
-    private static string CollapseExtraWhitespace(string value)
-    {
-        var collapsed = WhitespaceRegex().Replace(value, " ");
-        return collapsed.Trim();
-    }
+    private static string CollapseExtraWhitespace(string value) =>
+        WhitespaceRegex().Replace(value, " ").Trim();
 
     [GeneratedRegex(@"\{\{([^{}]+)\}\}", RegexOptions.CultureInvariant)]
     private static partial Regex PlaceholderRegex();

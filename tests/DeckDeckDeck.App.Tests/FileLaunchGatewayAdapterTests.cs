@@ -1,3 +1,4 @@
+// 역할: 외부 파일 및 프로그램 실행 요청이 윈도우 환경에서 올바르게 호출되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Composition;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;

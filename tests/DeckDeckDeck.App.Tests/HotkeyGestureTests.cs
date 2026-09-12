@@ -1,3 +1,4 @@
+// 역할: 단축키 키 조합(보조 키 + 일반 키)의 파싱과 동등성 비교가 정확한지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 

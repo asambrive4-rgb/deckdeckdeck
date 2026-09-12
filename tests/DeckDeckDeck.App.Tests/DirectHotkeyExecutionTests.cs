@@ -1,3 +1,4 @@
+// 역할: 매핑된 단축키를 눌렀을 때 지정된 실행 동작이 예외 없이 수행되는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;

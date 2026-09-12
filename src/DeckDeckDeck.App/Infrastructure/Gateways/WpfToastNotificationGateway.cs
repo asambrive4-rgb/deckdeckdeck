@@ -1,3 +1,4 @@
+// 역할: 윈도우 화면 모서리에 작업 완료나 알림 메시지를 담은 토스트 팝업을 표시합니다.
 using System.Media;
 using System.Windows;
 using System.Windows.Threading;
@@ -59,11 +60,11 @@ public sealed class WpfToastNotificationGateway : IToastNotificationPort
 
         var border = new System.Windows.Controls.Border
         {
-            Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom("#A77743")!,
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(12, 8, 12, 8),
+            Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom("#2B2523")!,
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(14, 10, 14, 10),
             BorderThickness = new Thickness(1.5),
-            BorderBrush = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom("#FFB15E")!
+            BorderBrush = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom("#D97448")!
         };
 
         var stack = new System.Windows.Controls.StackPanel();
@@ -77,9 +78,9 @@ public sealed class WpfToastNotificationGateway : IToastNotificationPort
         var msgBlock = new System.Windows.Controls.TextBlock
         {
             Text = message,
-            Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom("#FFF7D1")!,
+            Foreground = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFrom("#E5DFD5")!,
             FontSize = 11,
-            Margin = new Thickness(0, 2, 0, 0)
+            Margin = new Thickness(0, 3, 0, 0)
         };
 
         stack.Children.Add(titleBlock);

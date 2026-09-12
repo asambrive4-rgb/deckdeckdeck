@@ -1,3 +1,4 @@
+// 역할: 단축키 추가 및 편집 화면에서 키 조합 입력과 실행할 동작 선택 상태를 관리하는 화면 모델입니다.
 using System.Windows.Input;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -25,6 +26,7 @@ public sealed class HotkeyEditViewModel : ObservableObject
     private readonly Action<string> _showStatus;
     private string _errorMessage = string.Empty;
     private bool _isAdbPairingEnabled;
+    private bool _showAdvancedTerminalSettings;
     private HotkeyGesture? _gesture;
     private bool _isCapturingHotkey;
     private bool _isEnabled = true;
@@ -78,6 +80,10 @@ public sealed class HotkeyEditViewModel : ObservableObject
         ChooseLaunchFileCommand = new RelayCommand(ChooseLaunchFile);
         ChooseLaunchFolderCommand = new RelayCommand(ChooseLaunchFolder);
         ChooseTerminalWorkingDirectoryCommand = new RelayCommand(ChooseTerminalWorkingDirectory);
+        SelectTurnOffDisplayPresetCommand = new RelayCommand(SelectTurnOffDisplayPreset);
+        SelectAdbPairingPresetCommand = new RelayCommand(SelectAdbPairingPreset);
+        SelectCustomTerminalCommandPresetCommand = new RelayCommand(SelectCustomTerminalCommandPreset);
+        ToggleAdvancedTerminalSettingsCommand = new RelayCommand(ToggleAdvancedTerminalSettings);
         _isAdbPairingEnabled =
             TerminalCommandParameterRules.IsAdbWirelessConnectCommand(_draft.TerminalCommand);
     }
@@ -352,8 +358,42 @@ public sealed class HotkeyEditViewModel : ObservableObject
                 _isAdbPairingEnabled = isAdb;
                 OnPropertyChanged(nameof(IsAdbPairingEnabled));
             }
+
+            OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
+            OnPropertyChanged(nameof(IsAdbPairingPresetActive));
+            OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
+            OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
         }
     }
+
+    public bool ShowAdvancedTerminalSettings
+    {
+        get => _showAdvancedTerminalSettings || IsCustomTerminalCommandActive;
+        set
+        {
+            if (_showAdvancedTerminalSettings == value)
+            {
+                return;
+            }
+
+            _showAdvancedTerminalSettings = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsTurnOffDisplayPresetActive =>
+        TerminalCommandParameterRules.IsTurnOffDisplayCommand(TerminalCommand);
+
+    public bool IsAdbPairingPresetActive =>
+        TerminalCommandParameterRules.IsAdbWirelessConnectCommand(TerminalCommand);
+
+    public bool IsCustomTerminalCommandActive =>
+        !IsTurnOffDisplayPresetActive && !IsAdbPairingPresetActive;
+
+    public IRelayCommand SelectTurnOffDisplayPresetCommand { get; }
+    public IRelayCommand SelectAdbPairingPresetCommand { get; }
+    public IRelayCommand SelectCustomTerminalCommandPresetCommand { get; }
+    public IRelayCommand ToggleAdvancedTerminalSettingsCommand { get; }
 
     public SnippetTerminalShell SelectedTerminalShell
     {
@@ -673,10 +713,63 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     private void ApplyAdbPairingDefaults()
     {
-        TerminalCommand = TerminalCommandParameterRules.AdbWirelessPowerShellExample;
-        SelectedTerminalShell = SnippetTerminalShell.PowerShell;
-        OpenTerminalWindow = true;
-        RunAsAdministrator = false;
+        _draft.ApplyAdbPairingDefaults();
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void SelectTurnOffDisplayPreset()
+    {
+        _draft.ApplyTurnOffDisplayDefaults();
+        if (string.IsNullOrWhiteSpace(HotkeyTitle) || HotkeyTitle == "새 핫키")
+        {
+            HotkeyTitle = "화면 끄기";
+        }
+
+        if (string.IsNullOrWhiteSpace(Description))
+        {
+            Description = "모니터 화면을 끕니다. 핫스팟과 백그라운드 작업은 유지됩니다.";
+        }
+
+        _isAdbPairingEnabled = false;
+        _showAdvancedTerminalSettings = false;
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void SelectAdbPairingPreset()
+    {
+        IsAdbPairingEnabled = true;
+        _showAdvancedTerminalSettings = false;
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void SelectCustomTerminalCommandPreset()
+    {
+        if (IsTurnOffDisplayPresetActive)
+        {
+            TerminalCommand = string.Empty;
+        }
+
+        _isAdbPairingEnabled = false;
+        _showAdvancedTerminalSettings = true;
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void ToggleAdvancedTerminalSettings()
+    {
+        ShowAdvancedTerminalSettings = !_showAdvancedTerminalSettings;
+    }
+
+    private void NotifyTerminalPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(TerminalCommand));
+        OnPropertyChanged(nameof(SelectedTerminalShell));
+        OnPropertyChanged(nameof(OpenTerminalWindow));
+        OnPropertyChanged(nameof(RunAsAdministrator));
+        OnPropertyChanged(nameof(IsAdbPairingEnabled));
+        OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
+        OnPropertyChanged(nameof(IsAdbPairingPresetActive));
+        OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
+        OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
         ErrorMessage = string.Empty;
     }
 
