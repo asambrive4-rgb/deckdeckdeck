@@ -121,7 +121,7 @@ Bibata Warm Ivory 마우스 커서의 조형미(포근한 베이지 바디 + 선
 
 | 항목 | 권장값 |
 |---|---:|
-| Window frame radius | **`10px` (Windows 11 DWM 네이티브 모서리 1:1 밀착)** |
+| Window frame radius | **`7px` (Windows 11 DWM 네이티브 모서리 1:1 밀착 & 잔여 틈새 차단)** |
 | Card radius | `18px ~ 20px` (Bibata 조약돌 스쿼클) |
 | Control/Button radius | `18px` (알약/Pill형 둥글기) |
 | Card padding | `12px ~ 16px` |

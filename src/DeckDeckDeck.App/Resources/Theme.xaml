@@ -66,7 +66,7 @@
     <Geometry x:Key="Deck.Geometry.Bolt">M13 2L3 14H12L11 22L21 10H12L13 2Z</Geometry>
     <Geometry x:Key="Deck.Geometry.Terminal">M4 17L10 11L4 5M12 19H20</Geometry>
 
-    <CornerRadius x:Key="Deck.Radius.WindowFrame">10</CornerRadius>
+    <CornerRadius x:Key="Deck.Radius.WindowFrame">7</CornerRadius>
     <CornerRadius x:Key="Deck.Radius.Panel">24</CornerRadius>
     <CornerRadius x:Key="Deck.Radius.Card">20</CornerRadius>
     <CornerRadius x:Key="Deck.Radius.Control">18</CornerRadius>
@@ -101,7 +101,7 @@
     </Style>
 
     <Style x:Key="Deck.MainWindowStyle" TargetType="{x:Type Window}">
-        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.App}" />
+        <Setter Property="Background" Value="{StaticResource Deck.Brush.Line.Soft}" />
         <Setter Property="FontFamily" Value="{StaticResource Deck.Font.App}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
