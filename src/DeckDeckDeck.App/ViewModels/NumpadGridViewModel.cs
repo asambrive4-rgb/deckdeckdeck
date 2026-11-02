@@ -73,12 +73,7 @@ public sealed class NumpadGridViewModel
 
     public void SelectSlot(SlotKey slotKey)
     {
-        if (!_slotsByKey.TryGetValue(slotKey, out var slot) || !slot.IsEnabledSlot)
-        {
-            return;
-        }
-
-        if (slot.SelectCommand.CanExecute(null))
+        if (_slotsByKey.TryGetValue(slotKey, out var slot) && slot.IsEnabledSlot && slot.SelectCommand.CanExecute(null))
         {
             slot.SelectCommand.Execute(null);
         }
@@ -86,12 +81,7 @@ public sealed class NumpadGridViewModel
 
     public void RequestReorder(SlotKey sourceSlotKey, SlotKey targetSlotKey)
     {
-        if (sourceSlotKey == targetSlotKey)
-        {
-            return;
-        }
-
-        _onReorder?.Invoke(sourceSlotKey, targetSlotKey);
+        if (sourceSlotKey != targetSlotKey) _onReorder?.Invoke(sourceSlotKey, targetSlotKey);
     }
 
     private SlotViewModel GetRequiredSlot(SlotKey slotKey)
@@ -124,13 +114,7 @@ public sealed class HotkeyTileViewModel
 
     public ICommand SelectCommand { get; }
 
-    public static HotkeyTileViewModel Enabled(Action onSelected)
-    {
-        return new HotkeyTileViewModel(true, onSelected);
-    }
+    public static HotkeyTileViewModel Enabled(Action onSelected) => new(true, onSelected);
 
-    public static HotkeyTileViewModel Disabled()
-    {
-        return new HotkeyTileViewModel(false, null);
-    }
+    public static HotkeyTileViewModel Disabled() => new(false, null);
 }

@@ -1,4 +1,4 @@
-// 역할: 윈도우 운영체제에 전역 단축키를 등록하고 키 입력 이벤트를 감지하여 전달합니다.
+// 역할: 윈도우 운영체제에 전역 단축키를 등록하고 키 입력 이벤트를 효율적으로 감지하여 전달합니다.
 using System.Runtime.InteropServices;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
@@ -12,6 +12,7 @@ public sealed class DirectHotkeyRegistrar : IDirectHotkeyRegistrar
     private readonly Func<HotkeyGesture, bool> _shouldPassThrough;
     private readonly object _syncRoot = new();
     private Dictionary<HotkeyGesture, Guid> _hotkeysByGesture = new();
+    private HashSet<uint> _registeredVirtualKeys = [];
     private HashSet<HotkeyGesture> _pressedGestures = [];
     private User32.LowLevelKeyboardProc? _keyboardHookCallback;
     private IntPtr _keyboardHookHandle;
@@ -70,6 +71,10 @@ public sealed class DirectHotkeyRegistrar : IDirectHotkeyRegistrar
                 .Where(registration => registration.Gesture.IsComplete)
                 .GroupBy(registration => registration.Gesture)
                 .ToDictionary(group => group.Key, group => group.First().HotkeyActionId);
+            _registeredVirtualKeys = registrations
+                .Where(registration => registration.Gesture.IsComplete)
+                .Select(registration => registration.Gesture.VirtualKey)
+                .ToHashSet();
             _pressedGestures = [];
         }
     }
@@ -79,6 +84,7 @@ public sealed class DirectHotkeyRegistrar : IDirectHotkeyRegistrar
         lock (_syncRoot)
         {
             _hotkeysByGesture.Clear();
+            _registeredVirtualKeys.Clear();
             _pressedGestures.Clear();
         }
 
@@ -151,6 +157,14 @@ public sealed class DirectHotkeyRegistrar : IDirectHotkeyRegistrar
 
     private bool ProcessKeyDown(uint virtualKey)
     {
+        lock (_syncRoot)
+        {
+            if (!_registeredVirtualKeys.Contains(virtualKey))
+            {
+                return false;
+            }
+        }
+
         var gesture = new HotkeyGesture(virtualKey, GetCurrentModifiers());
         Guid hotkeyActionId;
         var shouldRaise = false;
@@ -200,21 +214,37 @@ public sealed class DirectHotkeyRegistrar : IDirectHotkeyRegistrar
 
     private bool ProcessKeyUp(uint virtualKey)
     {
-        var shouldBlock = false;
         lock (_syncRoot)
         {
-            var releasedGestures = _pressedGestures
-                .Where(gesture => gesture.VirtualKey == virtualKey)
-                .ToList();
-
-            foreach (var gesture in releasedGestures)
+            if (_pressedGestures.Count == 0)
             {
-                _pressedGestures.Remove(gesture);
+                return false;
+            }
+
+            var shouldBlock = false;
+            while (_pressedGestures.Count > 0)
+            {
+                HotkeyGesture? matched = null;
+                foreach (var gesture in _pressedGestures)
+                {
+                    if (gesture.VirtualKey == virtualKey)
+                    {
+                        matched = gesture;
+                        break;
+                    }
+                }
+
+                if (matched is null)
+                {
+                    break;
+                }
+
+                _pressedGestures.Remove(matched);
                 shouldBlock = true;
             }
-        }
 
-        return shouldBlock;
+            return shouldBlock;
+        }
     }
 
     private HotkeyModifiers GetCurrentModifiers()

@@ -107,7 +107,8 @@
                                                Visibility="Collapsed" />
                                 </Grid>
 
-                                <Grid Grid.Row="1"
+                                <Grid x:Name="SlotContentGrid"
+                                      Grid.Row="1"
                                       Margin="0,2,0,0"
                                       VerticalAlignment="Center">
                                     <!-- ImageBrush + CornerRadius avoids per-slot OpacityMask/VisualBrush cost. -->
@@ -118,13 +119,20 @@
                                                         Stretch="UniformToFill" />
                                         </Border.Background>
                                     </Border>
-                                    <TextBlock x:Name="DisplayTextBlock"
-                                               Style="{StaticResource Deck.SlotTitleTextStyle}"
-                                               LineHeight="20"
-                                               LineStackingStrategy="BlockLineHeight"
-                                               MaxHeight="40"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding DisplayText}" />
+                                    <Viewbox x:Name="DisplayTextContainer"
+                                             MaxHeight="64"
+                                             Stretch="Uniform"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center">
+                                        <TextBlock x:Name="DisplayTextBlock"
+                                                   Style="{StaticResource Deck.SlotTitleTextStyle}"
+                                                   Width="{Binding ActualWidth, ElementName=SlotContentGrid}"
+                                                   LineHeight="22"
+                                                   LineStackingStrategy="BlockLineHeight"
+                                                   MaxHeight="66"
+                                                   TextWrapping="Wrap"
+                                                   Text="{Binding DisplayText}" />
+                                    </Viewbox>
                                 </Grid>
                             </Grid>
                         </Button>
@@ -135,7 +143,7 @@
                     <DataTemplate.Triggers>
                         <DataTrigger Binding="{Binding HasThumbnail}" Value="True">
                             <Setter TargetName="ThumbnailFrame" Property="Visibility" Value="Visible" />
-                            <Setter TargetName="DisplayTextBlock" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="DisplayTextContainer" Property="Visibility" Value="Collapsed" />
                             <Setter TargetName="HeaderTitleTextBlock" Property="Visibility" Value="Visible" />
                         </DataTrigger>
                         <MultiDataTrigger>
@@ -144,7 +152,7 @@
                                 <Condition Binding="{Binding IsCategoryView}" Value="True" />
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="ThumbnailFrame" Property="Visibility" Value="Collapsed" />
-                            <Setter TargetName="DisplayTextBlock" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="DisplayTextContainer" Property="Visibility" Value="Visible" />
                         </MultiDataTrigger>
                     </DataTemplate.Triggers>
                 </DataTemplate>

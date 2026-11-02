@@ -1,4 +1,4 @@
-// 역할: 블루투스 오디오 기기의 연결 상태와 배터리, 볼륨 제어 가능 여부를 판단하는 규칙을 정의합니다.
+// 역할: 블루투스 기기의 연결 상태, 배터리, 카테고리 판별 및 기기 우선순위와 포맷팅 규칙을 정의합니다.
 using System.Text;
 
 namespace DeckDeckDeck.App.Domain;
@@ -13,17 +13,42 @@ public static class BluetoothAudioStatusRules
     public const string DisconnectedText = "연결 없음";
     public const string DisconnectedToolTip = "연결된 블루투스 기기가 없습니다.";
     public const string BatteryUnavailableToolTip = "배터리 정보를 확인할 수 없습니다.";
+    public const string DisconnectedTagText = "미연결";
+    public const string ConnectedTagText = "연결됨";
+    public const string AutoDetectTitle = "자동 감지 (오디오 우선)";
 
-    public static bool IsBatteryLow(int? batteryPercent)
+    public static int GetCategoryPriority(BluetoothDeviceCategory category) => category switch
     {
-        return batteryPercent is >= 0 and <= 20;
-    }
+        BluetoothDeviceCategory.Audio => 3,
+        BluetoothDeviceCategory.Input => 2,
+        BluetoothDeviceCategory.Other => 1,
+        _ => 0
+    };
 
-    public static string FormatBatteryText(int? batteryPercent)
-    {
-        return batteryPercent is >= 0 and <= 100
+    public static bool IsBatteryLow(int? batteryPercent) =>
+        batteryPercent is >= 0 and <= 20;
+
+    public static string FormatBatteryText(int? batteryPercent) =>
+        batteryPercent is >= 0 and <= 100
             ? $"{batteryPercent.Value}%"
             : string.Empty;
+
+    public static string FormatPinnedDeviceToolTip(string? deviceName, bool isConnected, int? batteryPercent)
+    {
+        var cleaned = CleanDeviceName(deviceName);
+        if (cleaned.Length == 0)
+        {
+            return DisconnectedToolTip;
+        }
+
+        if (!isConnected)
+        {
+            return $"{cleaned}\n{DisconnectedTagText}";
+        }
+
+        return batteryPercent is >= 0 and <= 100
+            ? $"{cleaned} · {batteryPercent.Value}%"
+            : $"{cleaned}\n{BatteryUnavailableToolTip}";
     }
 
     public static string FormatDisplayText(string? deviceName, int? batteryPercent)
@@ -271,6 +296,12 @@ public static class BluetoothAudioStatusRules
         }
     }
 
+    private static readonly string[] InputKeywords =
+        ["kbd", "keyboard", "keypad", "numpad", "키보드", "텐키", "mouse", "마우스"];
+
+    private static readonly string[] AudioKeywords =
+        ["buds", "headphone", "headset", "wh-", "wf-", "airpod", "speaker", "flip", "헤드폰", "헤드셋", "이어폰", "스피커"];
+
     public static BluetoothDeviceCategory DetermineDeviceCategory(string? deviceName)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
@@ -279,17 +310,12 @@ public static class BluetoothAudioStatusRules
         }
 
         var lower = deviceName.ToLowerInvariant();
-        if (lower.Contains("kbd") || lower.Contains("keyboard") || lower.Contains("keypad")
-            || lower.Contains("numpad") || lower.Contains("키보드") || lower.Contains("텐키")
-            || lower.Contains("mouse") || lower.Contains("마우스"))
+        if (InputKeywords.Any(lower.Contains))
         {
             return BluetoothDeviceCategory.Input;
         }
 
-        if (lower.Contains("buds") || lower.Contains("headphone") || lower.Contains("headset")
-            || lower.Contains("wh-") || lower.Contains("wf-") || lower.Contains("airpod")
-            || lower.Contains("speaker") || lower.Contains("flip") || lower.Contains("헤드폰")
-            || lower.Contains("헤드셋") || lower.Contains("이어폰") || lower.Contains("스피커"))
+        if (AudioKeywords.Any(lower.Contains))
         {
             return BluetoothDeviceCategory.Audio;
         }

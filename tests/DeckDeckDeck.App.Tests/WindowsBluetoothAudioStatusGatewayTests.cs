@@ -1,5 +1,6 @@
 // 역할: 윈도우 시스템 오디오 및 블루투스 상태 조회 게이트웨이가 장치 상태를 올바르게 감지하는지 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Infrastructure.Platform;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.Tests;
 
@@ -135,9 +136,21 @@ public sealed class WindowsBluetoothAudioStatusGatewayTests
 
         public IReadOnlyList<string> WatchedInstanceIds { get; private set; } = [];
 
+        public string? LastRequestedPreferredDeviceName { get; private set; }
+
+        public IReadOnlyList<BluetoothDeviceItem> PairedDevicesToReturn { get; set; } = [];
+
         public WindowsBluetoothResolution Resolve(WindowsAudioEndpoint endpoint) => resolution;
 
-        public WindowsBluetoothResolution ResolveBestConnectedDevice(WindowsAudioEndpoint? endpoint) => resolution;
+        public WindowsBluetoothResolution ResolveBestConnectedDevice(
+            WindowsAudioEndpoint? endpoint,
+            string? preferredDeviceName = null)
+        {
+            LastRequestedPreferredDeviceName = preferredDeviceName;
+            return resolution;
+        }
+
+        public IReadOnlyList<BluetoothDeviceItem> EnumerateAllPairedDevices() => PairedDevicesToReturn;
 
         public void WatchMatchedDevices(IReadOnlyList<WindowsBluetoothDevice> devices)
         {

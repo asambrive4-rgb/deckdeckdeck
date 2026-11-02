@@ -1,4 +1,5 @@
-// 역할: 파일이나 프로그램에서 추출한 아이콘의 캐시 정보를 담는 데이터 모델입니다.
+// 역할: 파일, 프로그램 또는 설치된 앱(shell:AppsFolder)에서 추출한 아이콘의 캐시 정보를 담는 데이터 모델입니다.
+using DeckDeckDeck.App.Domain;
 using System.IO;
 
 namespace DeckDeckDeck.App.Models;
@@ -45,13 +46,43 @@ public sealed record AutoIconCacheEntry(
             action.AutoIconSourceLength.Value);
     }
 
+    public bool Matches(string sourcePath, DateTime lastWriteTimeUtc, long sourceLength)
+    {
+        if (LaunchPathRules.IsShellAppsFolderPath(SourcePath) || LaunchPathRules.IsShellAppsFolderPath(sourcePath))
+        {
+            return LaunchPathRules.IsShellAppsFolderPath(SourcePath)
+                && LaunchPathRules.IsShellAppsFolderPath(sourcePath)
+                && string.Equals(
+                    LaunchPathRules.NormalizeShellAppsFolderPath(SourcePath),
+                    LaunchPathRules.NormalizeShellAppsFolderPath(sourcePath),
+                    StringComparison.OrdinalIgnoreCase)
+                && SourceLastWriteTimeUtc == lastWriteTimeUtc
+                && SourceLength == sourceLength;
+        }
+
+        return TryGetFullPath(SourcePath, out var fullCurrent)
+            && TryGetFullPath(sourcePath, out var fullTarget)
+            && string.Equals(fullCurrent, fullTarget, StringComparison.OrdinalIgnoreCase)
+            && SourceLastWriteTimeUtc == lastWriteTimeUtc
+            && SourceLength == sourceLength;
+    }
+
     public bool Matches(FileInfo fileInfo)
     {
-        return string.Equals(
-                Path.GetFullPath(SourcePath),
-                fileInfo.FullName,
-                StringComparison.OrdinalIgnoreCase)
-            && SourceLastWriteTimeUtc == fileInfo.LastWriteTimeUtc
-            && SourceLength == fileInfo.Length;
+        return Matches(fileInfo.FullName, fileInfo.LastWriteTimeUtc, fileInfo.Length);
+    }
+
+    private static bool TryGetFullPath(string path, out string fullPath)
+    {
+        try
+        {
+            fullPath = Path.GetFullPath(LaunchPathRules.ExpandPath(path));
+            return true;
+        }
+        catch
+        {
+            fullPath = string.Empty;
+            return false;
+        }
     }
 }

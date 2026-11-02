@@ -1,12 +1,6 @@
 // 역할: 프로그램의 개별 설정 키와 값을 데이터베이스에 저장하고 조회합니다.
 using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
-using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.Infrastructure.Persistence;
 
@@ -62,10 +56,20 @@ internal sealed class SettingEntryRepository
     public void UpsertMany(IEnumerable<KeyValuePair<string, string>> values)
     {
         using var dbContext = _dbContextFactory.Create();
+        var existingSettings = dbContext.Settings.ToDictionary(setting => setting.Key);
 
         foreach (var value in values)
         {
-            Upsert(dbContext, value.Key, value.Value);
+            if (existingSettings.TryGetValue(value.Key, out var setting))
+            {
+                setting.Value = value.Value;
+            }
+            else
+            {
+                var newSetting = new SettingEntry { Key = value.Key, Value = value.Value };
+                dbContext.Settings.Add(newSetting);
+                existingSettings[value.Key] = newSetting;
+            }
         }
 
         dbContext.SaveChanges();
@@ -73,14 +77,12 @@ internal sealed class SettingEntryRepository
 
     private static void Upsert(AppDbContext dbContext, string key, string value)
     {
-        var setting = dbContext.Settings.FirstOrDefault(item => item.Key == key);
-
-        if (setting is null)
+        if (dbContext.Settings.FirstOrDefault(item => item.Key == key) is { } setting)
         {
-            dbContext.Settings.Add(new SettingEntry { Key = key, Value = value });
+            setting.Value = value;
             return;
         }
 
-        setting.Value = value;
+        dbContext.Settings.Add(new SettingEntry { Key = key, Value = value });
     }
 }

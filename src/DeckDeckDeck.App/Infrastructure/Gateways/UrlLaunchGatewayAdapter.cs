@@ -1,11 +1,4 @@
 // 역할: 사용자가 지정한 인터넷 웹사이트 주소를 기본 웹 브라우저에서 열어줍니다.
-using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
-using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using System.Diagnostics;
 

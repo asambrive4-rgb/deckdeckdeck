@@ -105,11 +105,7 @@ public sealed class CachingContentControl : Grid
     {
         if (_cache.TryGetValue(content, out var existing))
         {
-            if (!Children.Contains(existing))
-            {
-                Children.Add(existing);
-            }
-
+            EnsureChild(existing);
             TouchLru(content);
             ShowReady(existing);
             return;
@@ -125,9 +121,14 @@ public sealed class CachingContentControl : Grid
         _cache[content] = view;
         TouchLru(content);
         EvictOverflow(content);
-        if (!Children.Contains(view))
+        EnsureChild(view);
+    }
+
+    private void EnsureChild(UIElement element)
+    {
+        if (!Children.Contains(element))
         {
-            Children.Add(view);
+            Children.Add(element);
         }
     }
 

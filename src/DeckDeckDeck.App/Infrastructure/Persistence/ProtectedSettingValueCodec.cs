@@ -1,12 +1,4 @@
 // 역할: 비밀번호나 API 인증 토큰처럼 민감한 설정값을 윈도우 암호화 기술로 안전하게 보호합니다.
-using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
-using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
-using DeckDeckDeck.App.UseCases.Ports;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -41,11 +33,7 @@ internal static class ProtectedSettingValueCodec
 
             return Encoding.UTF8.GetString(plainBytes);
         }
-        catch (CryptographicException)
-        {
-            return string.Empty;
-        }
-        catch (FormatException)
+        catch (Exception ex) when (ex is CryptographicException or FormatException)
         {
             return string.Empty;
         }

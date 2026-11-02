@@ -1,4 +1,4 @@
-// 역할: 프로그램의 진입점으로, 앱 시작 및 종료 흐름과 전역 예외 처리를 관리합니다.
+// 역할: 프로그램의 진입점으로, 앱 시작/종료 흐름, 트레이 아이콘 비동기 등록 및 전역 예외 처리를 관리합니다.
 using System.Windows;
 using System.Windows.Interop;
 using DeckDeckDeck.App.Composition;
@@ -22,6 +22,7 @@ public partial class App : Application
     private IAppInstanceCoordinator? _appInstanceCoordinator;
     private FormsNotifyIcon? _trayIcon;
     private AppIconProvider? _appIconProvider;
+    private StartupTimingLog? _startupTiming;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -93,6 +94,8 @@ public partial class App : Application
         _appInstanceCoordinator?.Dispose();
         _appInstanceCoordinator = null;
         _appIconProvider = null;
+        _startupTiming?.FlushAsync(new FileLogger(new AppStoragePaths()));
+        _startupTiming = null;
         base.OnExit(e);
     }
 
@@ -102,6 +105,7 @@ public partial class App : Application
     {
         _appInstanceCoordinator = appInstanceCoordinator;
         _appIconProvider = new AppIconProvider();
+        _startupTiming = startupTiming;
 
         // 1) Shell first: frame is visible while storage/DB work runs off the UI thread.
         MainWindow mainWindow;
@@ -193,16 +197,8 @@ public partial class App : Application
             // Prewarm as soon as home slots exist (no wait for ApplicationIdle).
             QueueThumbnailPrewarm(viewModel);
 
-            using (startupTiming.Measure("tray icon creation"))
-            {
-                if (_appIconProvider is not null)
-                {
-                    CreateTrayIcon(_appIconProvider);
-                }
-            }
-
             startupTiming.Mark("startup ready");
-            startupTiming.FlushAsync(services.FileLogger);
+            ScheduleTrayIconCreation(services.FileLogger, startupTiming);
         }
         catch (Exception ex)
         {
@@ -211,8 +207,42 @@ public partial class App : Application
         }
     }
 
+    private void ScheduleTrayIconCreation(FileLogger? logger, StartupTimingLog startupTiming)
+    {
+        _ = Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                if (Dispatcher.HasShutdownStarted || _appIconProvider is null)
+                {
+                    return;
+                }
+
+                using (startupTiming.Measure("tray icon creation"))
+                {
+                    CreateTrayIcon(_appIconProvider);
+                }
+            }
+            catch (Exception ex)
+            {
+                DisposeTrayIcon();
+                logger?.Log("Tray icon creation failed.", ex);
+            }
+            finally
+            {
+                startupTiming.FlushAsync(logger);
+                _startupTiming = null;
+            }
+        }, DispatcherPriority.ApplicationIdle);
+    }
+
     private void CreateTrayIcon(AppIconProvider iconProvider)
     {
+        if (_trayIcon is not null)
+        {
+            return;
+        }
+
         var menu = new FormsContextMenuStrip();
         menu.Items.Add(new FormsToolStripMenuItem("열기", null, (_, _) => ShowMainWindow()));
         menu.Items.Add(new FormsToolStripMenuItem("종료", null, (_, _) => ExitApplication()));
@@ -361,9 +391,20 @@ public partial class App : Application
             return;
         }
 
-        _trayIcon.Visible = false;
-        _trayIcon.Icon?.Dispose();
-        _trayIcon.Dispose();
-        _trayIcon = null;
+        try
+        {
+            _trayIcon.Visible = false;
+            _trayIcon.ContextMenuStrip?.Dispose();
+            _trayIcon.Icon?.Dispose();
+            _trayIcon.Dispose();
+        }
+        catch
+        {
+            // Tray icon disposal must not crash exit.
+        }
+        finally
+        {
+            _trayIcon = null;
+        }
     }
 }

@@ -1,7 +1,8 @@
-// 역할: 윈도우에 페어링된 블루투스 장치 목록을 검색하고 오디오 기기 정보를 수집합니다.
+// 역할: 윈도우에 페어링된 블루투스 장치 목록 검색, 연결 상태 판별 및 오디오 우선 기기 매칭을 수행합니다.
 using System.Runtime.InteropServices;
 using System.Text;
 using DeckDeckDeck.App.Domain;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.Infrastructure.Platform;
 
@@ -11,7 +12,11 @@ internal interface IWindowsBluetoothDeviceCatalog : IDisposable
 
     WindowsBluetoothResolution Resolve(WindowsAudioEndpoint endpoint);
 
-    WindowsBluetoothResolution ResolveBestConnectedDevice(WindowsAudioEndpoint? endpoint);
+    WindowsBluetoothResolution ResolveBestConnectedDevice(
+        WindowsAudioEndpoint? endpoint,
+        string? preferredDeviceName = null);
+
+    IReadOnlyList<BluetoothDeviceItem> EnumerateAllPairedDevices();
 
     void WatchMatchedDevices(IReadOnlyList<WindowsBluetoothDevice> devices);
 }
@@ -22,7 +27,8 @@ internal sealed record WindowsBluetoothDevice(
     Guid? ContainerId,
     IReadOnlySet<string> AddressTokens,
     int? BatteryPercent,
-    string? GattInterfacePath);
+    string? GattInterfacePath,
+    bool IsPresent = false);
 
 internal sealed record WindowsBluetoothResolution(
     bool IsBluetoothAudioConnected,
@@ -53,6 +59,8 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
         new Guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 14);
     private static readonly DEVPROPKEY DeviceNameKey = new(
         new Guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 2);
+    private static readonly DEVPROPKEY IsConnectedKey = new(
+        new Guid("83DA6326-97A6-4088-9453-A1923F573B29"), 15);
     private static readonly DEVPROPKEY ContainerIdKey = new(
         ContainerIdPropertyFormatId, ContainerIdPropertyId);
 
@@ -83,22 +91,64 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
         return ResolveCore(endpoint, devices);
     }
 
-    public WindowsBluetoothResolution ResolveBestConnectedDevice(WindowsAudioEndpoint? endpoint)
+    public WindowsBluetoothResolution ResolveBestConnectedDevice(
+        WindowsAudioEndpoint? endpoint,
+        string? preferredDeviceName = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        var devices = EnumerateBluetoothDevices();
+        var devices = EnumerateBluetoothDevices(presentOnly: true);
 
-        // 1. 오디오 엔드포인트가 제공되었고, 블루투스 기기로 매칭된다면 오디오 기기 우선 반환
-        if (endpoint is not null)
+        // 1. 수동 지정 기기가 있는 경우 (고정 모드)
+        if (!string.IsNullOrWhiteSpace(preferredDeviceName))
         {
-            var audioResolution = ResolveCore(endpoint, devices);
-            if (audioResolution.IsBluetoothAudioConnected)
+            var cleanedPreferred = BluetoothAudioStatusRules.CleanDeviceName(preferredDeviceName);
+            var normalizedPreferred = BluetoothAudioStatusRules.NormalizeDeviceName(preferredDeviceName);
+
+            // 1-1. 기본 오디오 엔드포인트가 일치하고 활성 블루투스인 경우
+            if (endpoint is not null)
             {
-                return audioResolution;
+                var cleanedEndpoint = BluetoothAudioStatusRules.CleanDeviceName(endpoint.DeviceName);
+                var normalizedEndpoint = BluetoothAudioStatusRules.NormalizeDeviceName(endpoint.DeviceName);
+                if (string.Equals(cleanedEndpoint, cleanedPreferred, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(normalizedEndpoint, normalizedPreferred, StringComparison.OrdinalIgnoreCase))
+                {
+                    var preferredAudioResolution = ResolveCore(endpoint, devices);
+                    if (preferredAudioResolution.IsBluetoothAudioConnected)
+                    {
+                        return preferredAudioResolution with { DeviceName = cleanedPreferred };
+                    }
+                }
             }
+
+            // 1-2. 현재 연결된 블루투스 주변 기기 중에서 일치하는 기기 탐색
+            var matchedPeripheral = devices
+                .Where(IsUserPeripheralDevice)
+                .FirstOrDefault(d =>
+                    string.Equals(BluetoothAudioStatusRules.CleanDeviceName(d.DeviceName), cleanedPreferred, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(BluetoothAudioStatusRules.NormalizeDeviceName(d.DeviceName), normalizedPreferred, StringComparison.OrdinalIgnoreCase));
+
+            if (matchedPeripheral is not null)
+            {
+                var matchedDevices = devices
+                    .Where(d => (matchedPeripheral.ContainerId is not null && d.ContainerId == matchedPeripheral.ContainerId)
+                        || string.Equals(d.InstanceId, matchedPeripheral.InstanceId, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                return new WindowsBluetoothResolution(true, cleanedPreferred, matchedDevices);
+            }
+
+            // 1-3. 연결되지 않은 경우에도 상단바에 기기명을 항상 유지
+            return new WindowsBluetoothResolution(false, cleanedPreferred, []);
         }
 
-        // 2. 오디오가 블루투스가 아닌 경우: 현재 시스템에 연결된 사용자 블루투스 기기 탐색
+        // 2. 자동 감지 모드
+        // 2-1. 오디오 엔드포인트가 제공되었고, 블루투스 기기로 매칭된다면 오디오 기기 우선 반환
+        if (endpoint is not null && ResolveCore(endpoint, devices) is { IsBluetoothAudioConnected: true } audioResolution)
+        {
+            return audioResolution;
+        }
+
+        // 2-2. 오디오가 블루투스가 아닌 경우: 현재 시스템에 연결된 사용자 블루투스 기기 탐색
         var candidates = devices.Where(IsUserPeripheralDevice).ToList();
         if (candidates.Count == 0)
         {
@@ -106,22 +156,75 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
         }
 
         // 우선순위:
-        // 1순위: 배터리가 유효한 기기 (0~100%)
-        // 2순위: 텐키/키보드 등 입력 기기
-        // 3순위: 오디오 기기
+        // 1순위: 오디오 기기 (BluetoothDeviceCategory.Audio)
+        // 2순위: 입력 기기 (BluetoothDeviceCategory.Input)
+        // 3순위: 기타 기기 (BluetoothDeviceCategory.Other)
+        // 카테고리 내에서 배터리가 유효한 기기(0~100%) 우선
         var best = candidates
-            .OrderByDescending(d => d.BatteryPercent is >= 0 and <= 100)
-            .ThenByDescending(d => BluetoothAudioStatusRules.DetermineDeviceCategory(d.DeviceName) == BluetoothDeviceCategory.Input)
-            .ThenByDescending(d => BluetoothAudioStatusRules.DetermineDeviceCategory(d.DeviceName) == BluetoothDeviceCategory.Audio)
+            .OrderByDescending(d => BluetoothAudioStatusRules.GetCategoryPriority(BluetoothAudioStatusRules.DetermineDeviceCategory(d.DeviceName)))
+            .ThenByDescending(d => d.BatteryPercent is >= 0 and <= 100)
             .First();
 
-        var matchedDevices = devices
+        var matchedList = devices
             .Where(d => (best.ContainerId is not null && d.ContainerId == best.ContainerId)
                 || string.Equals(d.InstanceId, best.InstanceId, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         var displayName = BluetoothAudioStatusRules.CleanDeviceName(best.DeviceName);
-        return new WindowsBluetoothResolution(true, displayName, matchedDevices);
+        return new WindowsBluetoothResolution(true, displayName, matchedList);
+    }
+
+    public IReadOnlyList<BluetoothDeviceItem> EnumerateAllPairedDevices()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        var allDevices = EnumerateBluetoothDevices(presentOnly: false);
+        var presentInstanceIds = allDevices
+            .Where(d => d.IsPresent)
+            .Select(d => d.InstanceId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var presentContainers = allDevices
+            .Where(d => d.IsPresent && d.ContainerId.HasValue && d.ContainerId != Guid.Empty)
+            .Select(d => d.ContainerId!.Value)
+            .ToHashSet();
+
+        var peripheralDevices = allDevices.Where(IsUserPeripheralDevice).ToList();
+
+        var grouped = peripheralDevices
+            .GroupBy(d =>
+            {
+                var clean = BluetoothAudioStatusRules.CleanDeviceName(d.DeviceName);
+                return string.IsNullOrWhiteSpace(clean) ? d.InstanceId : clean;
+            }, StringComparer.OrdinalIgnoreCase);
+
+        var result = new List<BluetoothDeviceItem>();
+        foreach (var group in grouped)
+        {
+            var deviceName = group.Key;
+            var isConnected = group.Any(d =>
+                presentInstanceIds.Contains(d.InstanceId)
+                || (d.ContainerId.HasValue && presentContainers.Contains(d.ContainerId.Value)));
+
+            var battery = group
+                .Where(d => isConnected && presentInstanceIds.Contains(d.InstanceId))
+                .Select(d => d.BatteryPercent)
+                .FirstOrDefault(b => b is >= 0 and <= 100)
+                ?? group.Select(d => d.BatteryPercent).FirstOrDefault(b => b is >= 0 and <= 100);
+
+            var category = BluetoothAudioStatusRules.DetermineDeviceCategory(deviceName);
+
+            result.Add(new BluetoothDeviceItem(
+                deviceName,
+                category,
+                isConnected,
+                battery));
+        }
+
+        return result
+            .OrderByDescending(d => d.IsConnected)
+            .ThenByDescending(d => BluetoothAudioStatusRules.GetCategoryPriority(d.Category))
+            .ThenBy(d => d.DeviceName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
 
     private static WindowsBluetoothResolution ResolveCore(
@@ -140,10 +243,14 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
         var matchedIds = matchedCandidates
             .Select(candidate => candidate.InstanceId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var validContainerIds = matchedCandidates
+            .Where(candidate => candidate.ContainerId.HasValue)
+            .Select(candidate => candidate.ContainerId!.Value)
+            .ToHashSet();
+
         var matchedDevices = devices
             .Where(device => matchedIds.Contains(device.InstanceId)
-                || (matchedCandidates.Any(candidate => candidate.ContainerId is not null)
-                    && matchedCandidates.Any(candidate => candidate.ContainerId == device.ContainerId)))
+                || (device.ContainerId.HasValue && validContainerIds.Contains(device.ContainerId.Value)))
             .ToList();
 
         var connected = endpointLooksBluetooth || matchedDevices.Count > 0;
@@ -165,7 +272,7 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
 
             foreach (var instanceId in devices
                 .Select(device => device.InstanceId)
-                .Where(instanceId => !string.IsNullOrWhiteSpace(instanceId))
+                .Where(instanceId => !string.IsNullOrWhiteSpace(instanceId) && instanceId.Length < MaxDeviceIdLength)
                 .Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 var filter = new CM_NOTIFY_FILTER
@@ -258,10 +365,7 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
                 if (TryGetDeviceId(current, out var currentId))
                 {
                     looksBluetooth |= BluetoothAudioStatusRules.LooksLikeBluetoothPeripheralId(currentId);
-                    foreach (var address in BluetoothAudioStatusRules.ExtractBluetoothAddressTokens(currentId))
-                    {
-                        addressTokens.Add(address);
-                    }
+                    addressTokens.UnionWith(BluetoothAudioStatusRules.ExtractBluetoothAddressTokens(currentId));
                 }
 
                 if (TryGetDevNodeGuidProperty(current, ContainerIdKey, out var containerId)
@@ -283,19 +387,16 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
         }
 
         looksBluetooth |= BluetoothAudioStatusRules.LooksLikeBluetoothPeripheralId(endpoint.PnpInstanceId);
-        foreach (var address in BluetoothAudioStatusRules.ExtractBluetoothAddressTokens(endpoint.PnpInstanceId))
-        {
-            addressTokens.Add(address);
-        }
+        addressTokens.UnionWith(BluetoothAudioStatusRules.ExtractBluetoothAddressTokens(endpoint.PnpInstanceId));
 
         return new BluetoothDeviceMatchContext(endpoint.DeviceName, containerIds, addressTokens);
     }
 
-    private static IReadOnlyList<WindowsBluetoothDevice> EnumerateBluetoothDevices()
+    private static IReadOnlyList<WindowsBluetoothDevice> EnumerateBluetoothDevices(bool presentOnly = true)
     {
         var devices = new Dictionary<string, WindowsBluetoothDevice>(StringComparer.OrdinalIgnoreCase);
-        EnumerateBluetoothClassDevices(devices);
-        EnumerateBluetoothLeInterfaces(devices);
+        EnumerateBluetoothClassDevices(devices, presentOnly);
+        EnumerateBluetoothLeInterfaces(devices, presentOnly);
 
         // 동일 ContainerId 간 배터리 레벨 전파 (자식 노드/GATT -> 부모 메인 기기 노드)
         var containerBatteryMap = devices.Values
@@ -365,10 +466,12 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
     }
 
     private static void EnumerateBluetoothClassDevices(
-        IDictionary<string, WindowsBluetoothDevice> devices)
+        IDictionary<string, WindowsBluetoothDevice> devices,
+        bool presentOnly = true)
     {
         var classGuid = BluetoothClassGuid;
-        var deviceInfoSet = SetupDiGetClassDevs(ref classGuid, null, IntPtr.Zero, DigcfPresent);
+        var flags = presentOnly ? DigcfPresent : 0;
+        var deviceInfoSet = SetupDiGetClassDevs(ref classGuid, null, IntPtr.Zero, flags);
         if (IsInvalidHandle(deviceInfoSet))
         {
             return;
@@ -384,7 +487,7 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
                     break;
                 }
 
-                AddOrMergeDevice(devices, ReadDevice(deviceInfoSet, ref deviceInfo, null));
+                AddOrMergeDevice(devices, ReadDevice(deviceInfoSet, ref deviceInfo, null, presentOnly));
             }
         }
         finally
@@ -394,14 +497,18 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
     }
 
     private static void EnumerateBluetoothLeInterfaces(
-        IDictionary<string, WindowsBluetoothDevice> devices)
+        IDictionary<string, WindowsBluetoothDevice> devices,
+        bool presentOnly = true)
     {
         var interfaceGuid = BluetoothLeDeviceInterfaceGuid;
+        var flags = presentOnly
+            ? (DigcfPresent | DigcfDeviceInterface)
+            : DigcfDeviceInterface;
         var deviceInfoSet = SetupDiGetClassDevs(
             ref interfaceGuid,
             null,
             IntPtr.Zero,
-            DigcfPresent | DigcfDeviceInterface);
+            flags);
         if (IsInvalidHandle(deviceInfoSet))
         {
             return;
@@ -454,7 +561,7 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
                     }
 
                     var path = Marshal.PtrToStringUni(IntPtr.Add(detailBuffer, 4));
-                    AddOrMergeDevice(devices, ReadDevice(deviceInfoSet, ref deviceInfo, path));
+                    AddOrMergeDevice(devices, ReadDevice(deviceInfoSet, ref deviceInfo, path, presentOnly));
                 }
                 finally
                 {
@@ -471,7 +578,8 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
     private static WindowsBluetoothDevice? ReadDevice(
         IntPtr deviceInfoSet,
         ref SP_DEVINFO_DATA deviceInfo,
-        string? gattInterfacePath)
+        string? gattInterfacePath,
+        bool presentOnly)
     {
         if (!TryGetDeviceId(deviceInfo.DeviceInstance, out var instanceId)
             || string.IsNullOrWhiteSpace(instanceId))
@@ -501,6 +609,10 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
             ? level
             : null;
 
+        // 페어링된 기기는 꺼져 있어도 장치 목록에 남아 있으므로, "존재"가 아니라 실제 연결 상태 속성으로 판단한다.
+        var isPresent = TryGetDeviceBoolProperty(deviceInfoSet, ref deviceInfo, IsConnectedKey, out var connected)
+            && connected;
+
         return new WindowsBluetoothDevice(
             instanceId,
             deviceName,
@@ -508,7 +620,8 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
             BluetoothAudioStatusRules.ExtractBluetoothAddressTokens(instanceId)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase),
             battery,
-            gattInterfacePath);
+            gattInterfacePath,
+            isPresent);
     }
 
     private static void AddOrMergeDevice(
@@ -533,7 +646,8 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
             BatteryPercent = existing.BatteryPercent ?? device.BatteryPercent,
             GattInterfacePath = existing.GattInterfacePath ?? device.GattInterfacePath,
             AddressTokens = existing.AddressTokens.Concat(device.AddressTokens)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase),
+            IsPresent = existing.IsPresent || device.IsPresent
         };
     }
 
@@ -655,6 +769,33 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
 
         value = new Guid(buffer);
         return value != Guid.Empty;
+    }
+
+    private static bool TryGetDeviceBoolProperty(
+        IntPtr deviceInfoSet,
+        ref SP_DEVINFO_DATA deviceInfo,
+        DEVPROPKEY key,
+        out bool value)
+    {
+        value = false;
+        var propertyKey = key;
+        var buffer = new byte[4];
+        if (!SetupDiGetDeviceProperty(
+                deviceInfoSet,
+                ref deviceInfo,
+                ref propertyKey,
+                out var propertyType,
+                buffer,
+                (uint)buffer.Length,
+                out _,
+                0)
+            || propertyType != 0x11)
+        {
+            return false;
+        }
+
+        value = buffer[0] != 0;
+        return true;
     }
 
     private static bool TryGetDeviceByteProperty(
@@ -835,6 +976,13 @@ internal sealed class WindowsBluetoothDeviceCatalog : IWindowsBluetoothDeviceCat
 
     [DllImport("cfgmgr32.dll", CharSet = CharSet.Unicode)]
     private static extern uint CM_Locate_DevNodeW(out uint deviceInstance, string deviceId, uint flags);
+
+    [DllImport("cfgmgr32.dll")]
+    private static extern uint CM_Get_DevNode_Status(
+        out uint status,
+        out uint problemNumber,
+        uint deviceInstance,
+        uint flags);
 
     [DllImport("cfgmgr32.dll")]
     private static extern uint CM_Get_Parent(out uint parentDeviceInstance, uint deviceInstance, uint flags);

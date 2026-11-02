@@ -5,16 +5,10 @@ using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.UseCases;
 
-public sealed class SlotTimerStateChangedEventArgs : EventArgs
+public sealed class SlotTimerStateChangedEventArgs(SlotKey slotKey, SlotTimerState state) : EventArgs
 {
-    public SlotKey SlotKey { get; }
-    public SlotTimerState State { get; }
-
-    public SlotTimerStateChangedEventArgs(SlotKey slotKey, SlotTimerState state)
-    {
-        SlotKey = slotKey;
-        State = state;
-    }
+    public SlotKey SlotKey { get; } = slotKey;
+    public SlotTimerState State { get; } = state;
 }
 
 public interface ISlotTimerUseCases
@@ -35,19 +29,7 @@ public sealed class SlotTimerUseCases : ISlotTimerUseCases, IDisposable
 
     public event EventHandler<SlotTimerStateChangedEventArgs>? TimerStateChanged;
 
-    private sealed class ActiveTimerInfo
-    {
-        public SlotKey SlotKey { get; }
-        public TimeSpan TotalDuration { get; }
-        public DateTimeOffset TargetEndTimeUtc { get; }
-
-        public ActiveTimerInfo(SlotKey slotKey, TimeSpan totalDuration, DateTimeOffset targetEndTimeUtc)
-        {
-            SlotKey = slotKey;
-            TotalDuration = totalDuration;
-            TargetEndTimeUtc = targetEndTimeUtc;
-        }
-    }
+    private sealed record ActiveTimerInfo(SlotKey SlotKey, TimeSpan TotalDuration, DateTimeOffset TargetEndTimeUtc);
 
     public SlotTimerUseCases(IToastNotificationPort toastPort)
     {

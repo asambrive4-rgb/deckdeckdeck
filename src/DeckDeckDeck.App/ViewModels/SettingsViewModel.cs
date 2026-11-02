@@ -1,17 +1,24 @@
-// 역할: 환경설정 화면의 옵션(테마, 자동 시작, 백업/복원, 스포티파이/블루투스 연동) 상태와 사용자 동작을 관리하는 화면 모델입니다.
+// 역할: 환경설정 화면의 옵션(자동 시작, 백업/복원, Spotify 연동 등) 상태와 사용자 동작을 관리하는 화면 모델입니다.
 using System.IO;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
 public sealed class SettingsViewModel : ObservableObject
 {
+    private enum SpotifyCopyTarget
+    {
+        AppName,
+        AppDescription,
+        RedirectUri
+    }
+
     private readonly Action _cancel;
     private readonly Action _afterSave;
     private readonly ICreateManualBackupUseCase _createManualBackupUseCase;
@@ -87,9 +94,9 @@ public sealed class SettingsViewModel : ObservableObject
         RestoreBackupCommand = new RelayCommand(RestoreBackup);
         ShowSpotifyConnectionFieldsCommand = new RelayCommand(RevealSpotifyConnectionFields);
         OpenSpotifyDeveloperDashboardCommand = new RelayCommand(OpenSpotifyDeveloperDashboard);
-        CopySpotifyAppNameExampleCommand = new RelayCommand(CopySpotifyAppNameExample);
-        CopySpotifyAppDescriptionExampleCommand = new RelayCommand(CopySpotifyAppDescriptionExample);
-        CopySpotifyRedirectUriCommand = new RelayCommand(CopySpotifyRedirectUri);
+        CopySpotifyAppNameExampleCommand = new RelayCommand(() => CopySpotifyProperty(SpotifyCopyTarget.AppName));
+        CopySpotifyAppDescriptionExampleCommand = new RelayCommand(() => CopySpotifyProperty(SpotifyCopyTarget.AppDescription));
+        CopySpotifyRedirectUriCommand = new RelayCommand(() => CopySpotifyProperty(SpotifyCopyTarget.RedirectUri));
         StartSpotifyConnectionCommand = new AsyncRelayCommand(StartSpotifyConnectionAsync);
         DisconnectSpotifyCommand = new RelayCommand(DisconnectSpotify);
     }
@@ -157,11 +164,9 @@ public sealed class SettingsViewModel : ObservableObject
     public bool RunAsAdministratorAtStartup
     {
         get => _runAsAdministratorAtStartup;
-        set
-        {
-            var normalized = StartupRegistrationRules.Normalize(LaunchAtStartup, value);
-            SetProperty(ref _runAsAdministratorAtStartup, normalized.RunAsAdministrator);
-        }
+        set => SetProperty(
+            ref _runAsAdministratorAtStartup,
+            StartupRegistrationRules.Normalize(LaunchAtStartup, value).RunAsAdministrator);
     }
 
     public bool CanRunAsAdministratorAtStartup =>
@@ -301,14 +306,17 @@ public sealed class SettingsViewModel : ObservableObject
                 new StartupRegistrationSettings(
                     LaunchAtStartup,
                     RunAsAdministratorAtStartup)));
+
+            if (result is { Succeeded: false, FailureKind: SaveAppPreferencesFailureKind.StartupRegistration })
+            {
+                ErrorMessage = result.ErrorMessage ?? string.Empty;
+                _showStatus(ErrorMessage);
+                return;
+            }
+
             if (!result.Succeeded)
             {
                 ErrorMessage = result.ErrorMessage ?? string.Empty;
-                if (result.FailureKind == SaveAppPreferencesFailureKind.StartupRegistration)
-                {
-                    _showStatus(ErrorMessage);
-                }
-
                 return;
             }
 
@@ -324,8 +332,7 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void ChooseBackupFolder()
     {
-        var selectedPath = _dialogService.SelectBackupFolder();
-        if (selectedPath is null)
+        if (_dialogService.SelectBackupFolder() is not { } selectedPath)
         {
             return;
         }
@@ -351,8 +358,7 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void RestoreBackup()
     {
-        var selectedPath = _dialogService.SelectBackupZipFile();
-        if (selectedPath is null)
+        if (_dialogService.SelectBackupZipFile() is not { } selectedPath)
         {
             return;
         }
@@ -372,10 +378,8 @@ public sealed class SettingsViewModel : ObservableObject
             return;
         }
 
-        var safetyBackupName = Path.GetFileName(result.SafetyBackupPath);
-        var statusMessage = $"백업 ZIP 복원이 완료되었습니다. 앱을 다시 시작해 주세요. 안전 백업: {safetyBackupName}";
         ErrorMessage = string.Empty;
-        _showStatus(statusMessage);
+        _showStatus($"백업 ZIP 복원이 완료되었습니다. 앱을 다시 시작해 주세요. 안전 백업: {Path.GetFileName(result.SafetyBackupPath)}");
         _dialogService.ShowInformation(
             "백업 ZIP 복원 완료",
             "백업 ZIP 복원이 완료되었습니다.\n앱을 닫았다가 다시 열면 복원된 설정과 키 슬롯이 표시됩니다.");
@@ -404,39 +408,27 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
-    private void CopySpotifyAppNameExample()
+    private void CopySpotifyProperty(SpotifyCopyTarget target)
     {
-        CopySpotifySetupValue(
-            SpotifyAppNameExample,
-            "Spotify App name 예시를 복사했습니다.",
-            "Spotify App name 예시를 복사하지 못했습니다. 예시를 직접 선택해서 복사해 주세요.",
-            "Spotify app name example copy failed.");
-    }
+        var (value, successMessage, failureMessage, logMessage) = target switch
+        {
+            SpotifyCopyTarget.AppName => (
+                SpotifyAppNameExample,
+                "Spotify App name 예시를 복사했습니다.",
+                "Spotify App name 예시를 복사하지 못했습니다. 예시를 직접 선택해서 복사해 주세요.",
+                "Spotify app name example copy failed."),
+            SpotifyCopyTarget.AppDescription => (
+                SpotifyAppDescriptionExample,
+                "Spotify App description 예시를 복사했습니다.",
+                "Spotify App description 예시를 복사하지 못했습니다. 예시를 직접 선택해서 복사해 주세요.",
+                "Spotify app description example copy failed."),
+            _ => (
+                SpotifyRedirectUri,
+                "Spotify Redirect URI를 복사했습니다.",
+                "Redirect URI를 복사하지 못했습니다. 주소를 직접 선택해서 복사해 주세요.",
+                "Spotify redirect URI copy failed.")
+        };
 
-    private void CopySpotifyAppDescriptionExample()
-    {
-        CopySpotifySetupValue(
-            SpotifyAppDescriptionExample,
-            "Spotify App description 예시를 복사했습니다.",
-            "Spotify App description 예시를 복사하지 못했습니다. 예시를 직접 선택해서 복사해 주세요.",
-            "Spotify app description example copy failed.");
-    }
-
-    private void CopySpotifyRedirectUri()
-    {
-        CopySpotifySetupValue(
-            SpotifyRedirectUri,
-            "Spotify Redirect URI를 복사했습니다.",
-            "Redirect URI를 복사하지 못했습니다. 주소를 직접 선택해서 복사해 주세요.",
-            "Spotify redirect URI copy failed.");
-    }
-
-    private void CopySpotifySetupValue(
-        string value,
-        string successMessage,
-        string failureMessage,
-        string logMessage)
-    {
         try
         {
             _clipboardService.SetText(value);
@@ -512,13 +504,15 @@ public sealed class SettingsViewModel : ObservableObject
     {
         var state = _spotifyConnectionUseCase.GetState();
         IsSpotifyConnected = state.IsConnected;
-        SpotifyConnectionStatusText = state.IsConnected
-            ? $"Spotify 연결되어 있음{FormatSpotifyDisplayName(state)}"
-            : "Spotify 연결되어 있지 않음";
+        SpotifyConnectionStatusText = state switch
+        {
+            { IsConnected: true, DisplayName: { } name } when !string.IsNullOrWhiteSpace(name) =>
+                $"Spotify 연결되어 있음 ({name})",
+            { IsConnected: true } =>
+                "Spotify 연결되어 있음",
+            _ =>
+                "Spotify 연결되어 있지 않음"
+        };
     }
-
-    private static string FormatSpotifyDisplayName(SpotifyConnectionState state) =>
-        string.IsNullOrWhiteSpace(state.DisplayName) ? string.Empty : $" ({state.DisplayName})";
-
 }
 

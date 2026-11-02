@@ -1,11 +1,6 @@
 // 역할: 프로그램 전체 환경설정 및 사용자 맞춤 옵션을 읽어오고 안전하게 저장합니다.
 using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.Infrastructure.Persistence;
@@ -88,58 +83,44 @@ public sealed class SettingsRepository : ISettingsRepository
         }
     }
 
+    public void SetPreferredBluetoothDeviceName(string? deviceName)
+    {
+        lock (_settingsLock)
+        {
+            EnsureDefaultsLocked();
+            _entryStore.Upsert(
+                SettingsKeys.PreferredBluetoothDeviceName,
+                deviceName ?? string.Empty);
+            if (_settingsCache is not null)
+            {
+                _settingsCache.PreferredBluetoothDeviceName = string.IsNullOrWhiteSpace(deviceName) ? null : deviceName;
+            }
+        }
+    }
+
     public void Save(AppSettings settings)
     {
-        var values = new[]
-        {
-            new KeyValuePair<string, string>(
-                SettingsKeys.BringWindowToFrontOnHotkey,
-                settings.BringWindowToFrontOnHotkey.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.AutoHideAfterPaste,
-                settings.AutoHideAfterPaste.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.RestoreClipboardAfterPaste,
-                settings.RestoreClipboardAfterPaste.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.AutoBackupEnabled,
-                settings.AutoBackupEnabled.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.BackupFolderPath,
-                settings.BackupFolderPath),
-            new KeyValuePair<string, string>(
-                SettingsKeys.AutoBackupRetentionCount,
-                settings.AutoBackupRetentionCount.ToString()),
-            new KeyValuePair<string, string>(
-                SettingsKeys.LastBackupCreatedAt,
-                SettingsValueParser.FormatNullableDateTimeOffset(settings.LastBackupCreatedAt)),
-            new KeyValuePair<string, string>(
-                SettingsKeys.SpotifyClientId,
-                settings.SpotifyClientId),
-            new KeyValuePair<string, string>(
-                SettingsKeys.SpotifyAccessToken,
-                ProtectedSettingValueCodec.Protect(settings.SpotifyAccessToken)),
-            new KeyValuePair<string, string>(
-                SettingsKeys.SpotifyRefreshToken,
-                ProtectedSettingValueCodec.Protect(settings.SpotifyRefreshToken)),
-            new KeyValuePair<string, string>(
-                SettingsKeys.SpotifyTokenExpiresAt,
-                SettingsValueParser.FormatNullableDateTimeOffset(settings.SpotifyTokenExpiresAt)),
-            new KeyValuePair<string, string>(
-                SettingsKeys.SpotifyConnectedUserDisplayName,
-                settings.SpotifyConnectedUserDisplayName),
-            new KeyValuePair<string, string>(SettingsKeys.HomeHotkey, settings.HomeHotkey),
-            new KeyValuePair<string, string>(SettingsKeys.DirectCategoryHotkeys, settings.DirectCategoryHotkeys),
-            new KeyValuePair<string, string>(
-                SettingsKeys.LastWindowLeft,
-                SettingsValueParser.FormatNullableDouble(settings.LastWindowLeft)),
-            new KeyValuePair<string, string>(
-                SettingsKeys.LastWindowTop,
-                SettingsValueParser.FormatNullableDouble(settings.LastWindowTop)),
-            new KeyValuePair<string, string>(
-                SettingsKeys.LastWindowScreenDeviceName,
-                settings.LastWindowScreenDeviceName ?? string.Empty)
-        };
+        KeyValuePair<string, string>[] values =
+        [
+            new(SettingsKeys.BringWindowToFrontOnHotkey, settings.BringWindowToFrontOnHotkey.ToString()),
+            new(SettingsKeys.AutoHideAfterPaste, settings.AutoHideAfterPaste.ToString()),
+            new(SettingsKeys.RestoreClipboardAfterPaste, settings.RestoreClipboardAfterPaste.ToString()),
+            new(SettingsKeys.AutoBackupEnabled, settings.AutoBackupEnabled.ToString()),
+            new(SettingsKeys.BackupFolderPath, settings.BackupFolderPath),
+            new(SettingsKeys.AutoBackupRetentionCount, settings.AutoBackupRetentionCount.ToString()),
+            new(SettingsKeys.LastBackupCreatedAt, SettingsValueParser.FormatNullableDateTimeOffset(settings.LastBackupCreatedAt)),
+            new(SettingsKeys.SpotifyClientId, settings.SpotifyClientId),
+            new(SettingsKeys.SpotifyAccessToken, ProtectedSettingValueCodec.Protect(settings.SpotifyAccessToken)),
+            new(SettingsKeys.SpotifyRefreshToken, ProtectedSettingValueCodec.Protect(settings.SpotifyRefreshToken)),
+            new(SettingsKeys.SpotifyTokenExpiresAt, SettingsValueParser.FormatNullableDateTimeOffset(settings.SpotifyTokenExpiresAt)),
+            new(SettingsKeys.SpotifyConnectedUserDisplayName, settings.SpotifyConnectedUserDisplayName),
+            new(SettingsKeys.HomeHotkey, settings.HomeHotkey),
+            new(SettingsKeys.DirectCategoryHotkeys, settings.DirectCategoryHotkeys),
+            new(SettingsKeys.LastWindowLeft, SettingsValueParser.FormatNullableDouble(settings.LastWindowLeft)),
+            new(SettingsKeys.LastWindowTop, SettingsValueParser.FormatNullableDouble(settings.LastWindowTop)),
+            new(SettingsKeys.LastWindowScreenDeviceName, settings.LastWindowScreenDeviceName ?? string.Empty),
+            new(SettingsKeys.PreferredBluetoothDeviceName, settings.PreferredBluetoothDeviceName ?? string.Empty)
+        ];
 
         lock (_settingsLock)
         {
@@ -258,6 +239,9 @@ public sealed class SettingsRepository : ISettingsRepository
             LastWindowScreenDeviceName = SettingsValueParser.ReadNullableString(
                 entries,
                 SettingsKeys.LastWindowScreenDeviceName),
+            PreferredBluetoothDeviceName = SettingsValueParser.ReadNullableString(
+                entries,
+                SettingsKeys.PreferredBluetoothDeviceName),
             EnabledCategorySlotKeys = _slotSettingsRepository.ReadCategorySlotStates(entries),
             EnabledSnippetSlotKeys = _slotSettingsRepository.ReadSnippetSlotStates(entries)
         };
@@ -285,7 +269,8 @@ public sealed class SettingsRepository : ISettingsRepository
             DirectCategoryHotkeys = settings.DirectCategoryHotkeys,
             LastWindowLeft = settings.LastWindowLeft,
             LastWindowTop = settings.LastWindowTop,
-            LastWindowScreenDeviceName = settings.LastWindowScreenDeviceName
+            LastWindowScreenDeviceName = settings.LastWindowScreenDeviceName,
+            PreferredBluetoothDeviceName = settings.PreferredBluetoothDeviceName
         };
     }
 }

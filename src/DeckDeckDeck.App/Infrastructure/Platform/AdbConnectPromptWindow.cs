@@ -1,4 +1,4 @@
-﻿// 역할: 안드로이드 무선 디버깅(ADB) 연결을 위한 IP 주소와 포트 입력을 받는 창을 띄웁니다.
+// 역할: 안드로이드 무선 디버깅(ADB) 연결을 위한 IP 주소와 포트 입력을 받는 창을 띄웁니다.
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -103,7 +103,7 @@ internal sealed class AdbConnectPromptWindow : Window
         {
             Content = "취소",
             MinWidth = 88,
-            Height = 36,
+            MinHeight = 36,
             Margin = new Thickness(0, 0, 8, 0),
             IsCancel = true,
             Padding = new Thickness(12, 6, 12, 6)
@@ -118,7 +118,7 @@ internal sealed class AdbConnectPromptWindow : Window
         {
             Content = "연결",
             MinWidth = 88,
-            Height = 36,
+            MinHeight = 36,
             IsDefault = true,
             Padding = new Thickness(12, 6, 12, 6)
         };
@@ -171,7 +171,7 @@ internal sealed class AdbConnectPromptWindow : Window
     {
         return new TextBox
         {
-            Height = 36,
+            MinHeight = 36,
             Margin = new Thickness(0, 0, 0, 12),
             Padding = new Thickness(8, 6, 8, 6),
             FontSize = 14,

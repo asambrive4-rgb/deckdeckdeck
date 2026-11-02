@@ -1,4 +1,4 @@
-// 역할: 단축키 추가 및 편집 화면에서 키 조합 입력과 실행할 동작 선택 상태를 관리하는 화면 모델입니다.
+// 역할: 단축키 추가 및 편집 화면에서 키 조합 입력과 실행할 동작(앱, 미디어, 블루투스 등) 선택 상태를 관리하는 화면 모델입니다.
 using System.Windows.Input;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -27,6 +27,9 @@ public sealed class HotkeyEditViewModel : ObservableObject
     private string _errorMessage = string.Empty;
     private bool _isAdbPairingEnabled;
     private bool _showAdvancedTerminalSettings;
+    private BluetoothAudioActionKind _bluetoothControlAction = BluetoothAudioActionKind.Connect;
+    private string _bluetoothTarget = string.Empty;
+    private bool _isBluetoothPresetSelected;
     private HotkeyGesture? _gesture;
     private bool _isCapturingHotkey;
     private bool _isEnabled = true;
@@ -79,13 +82,22 @@ public sealed class HotkeyEditViewModel : ObservableObject
         RemoveImageCommand = new RelayCommand(RemoveImage);
         ChooseLaunchFileCommand = new RelayCommand(ChooseLaunchFile);
         ChooseLaunchFolderCommand = new RelayCommand(ChooseLaunchFolder);
+        ChooseInstalledAppCommand = new RelayCommand(ChooseInstalledApp);
         ChooseTerminalWorkingDirectoryCommand = new RelayCommand(ChooseTerminalWorkingDirectory);
         SelectTurnOffDisplayPresetCommand = new RelayCommand(SelectTurnOffDisplayPreset);
         SelectAdbPairingPresetCommand = new RelayCommand(SelectAdbPairingPreset);
         SelectCustomTerminalCommandPresetCommand = new RelayCommand(SelectCustomTerminalCommandPreset);
+        SelectBluetoothPresetCommand = new RelayCommand(SelectBluetoothPreset);
+        ChooseBluetoothDeviceCommand = new RelayCommand(ChooseBluetoothDevice);
         ToggleAdvancedTerminalSettingsCommand = new RelayCommand(ToggleAdvancedTerminalSettings);
         _isAdbPairingEnabled =
             TerminalCommandParameterRules.IsAdbWirelessConnectCommand(_draft.TerminalCommand);
+        if (TerminalCommandParameterRules.TryParseBluetoothAudioCommand(_draft.TerminalCommand, out var parsedBt, allowEmptyTarget: true))
+        {
+            _isBluetoothPresetSelected = true;
+            _bluetoothControlAction = parsedBt.Action;
+            _bluetoothTarget = parsedBt.Target;
+        }
     }
 
     public string Title => IsExisting ? "핫키 편집" : "새 핫키";
@@ -359,8 +371,23 @@ public sealed class HotkeyEditViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsAdbPairingEnabled));
             }
 
+            if (TerminalCommandParameterRules.TryParseBluetoothAudioCommand(value, out var btCmd, allowEmptyTarget: true))
+            {
+                _isBluetoothPresetSelected = true;
+                _bluetoothControlAction = btCmd.Action;
+                _bluetoothTarget = btCmd.Target;
+                OnPropertyChanged(nameof(IsBluetoothConnectAction));
+                OnPropertyChanged(nameof(IsBluetoothDisconnectAction));
+                OnPropertyChanged(nameof(BluetoothTarget));
+            }
+            else
+            {
+                _isBluetoothPresetSelected = false;
+            }
+
             OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
             OnPropertyChanged(nameof(IsAdbPairingPresetActive));
+            OnPropertyChanged(nameof(IsBluetoothPresetActive));
             OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
             OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
         }
@@ -387,12 +414,55 @@ public sealed class HotkeyEditViewModel : ObservableObject
     public bool IsAdbPairingPresetActive =>
         TerminalCommandParameterRules.IsAdbWirelessConnectCommand(TerminalCommand);
 
+    public bool IsBluetoothPresetActive =>
+        _isBluetoothPresetSelected || TerminalCommandParameterRules.TryParseBluetoothAudioCommand(TerminalCommand, out _, allowEmptyTarget: true);
+
     public bool IsCustomTerminalCommandActive =>
-        !IsTurnOffDisplayPresetActive && !IsAdbPairingPresetActive;
+        !IsTurnOffDisplayPresetActive && !IsAdbPairingPresetActive && !IsBluetoothPresetActive;
+
+    public BluetoothAudioActionKind BluetoothControlAction
+    {
+        get => _bluetoothControlAction;
+        set
+        {
+            if (_bluetoothControlAction == value) return;
+            _bluetoothControlAction = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsBluetoothConnectAction));
+            OnPropertyChanged(nameof(IsBluetoothDisconnectAction));
+            if (IsBluetoothPresetActive) SyncBluetoothTerminalCommand();
+        }
+    }
+
+    public bool IsBluetoothConnectAction
+    {
+        get => BluetoothControlAction == BluetoothAudioActionKind.Connect;
+        set { if (value) BluetoothControlAction = BluetoothAudioActionKind.Connect; }
+    }
+
+    public bool IsBluetoothDisconnectAction
+    {
+        get => BluetoothControlAction == BluetoothAudioActionKind.Disconnect;
+        set { if (value) BluetoothControlAction = BluetoothAudioActionKind.Disconnect; }
+    }
+
+    public string BluetoothTarget
+    {
+        get => _bluetoothTarget;
+        set
+        {
+            if (_bluetoothTarget == value) return;
+            _bluetoothTarget = value;
+            OnPropertyChanged();
+            if (IsBluetoothPresetActive) SyncBluetoothTerminalCommand();
+        }
+    }
 
     public IRelayCommand SelectTurnOffDisplayPresetCommand { get; }
     public IRelayCommand SelectAdbPairingPresetCommand { get; }
     public IRelayCommand SelectCustomTerminalCommandPresetCommand { get; }
+    public IRelayCommand SelectBluetoothPresetCommand { get; }
+    public IRelayCommand ChooseBluetoothDeviceCommand { get; }
     public IRelayCommand ToggleAdvancedTerminalSettingsCommand { get; }
 
     public SnippetTerminalShell SelectedTerminalShell
@@ -506,6 +576,8 @@ public sealed class HotkeyEditViewModel : ObservableObject
     public ICommand ChooseLaunchFileCommand { get; }
 
     public ICommand ChooseLaunchFolderCommand { get; }
+
+    public ICommand ChooseInstalledAppCommand { get; }
 
     public ICommand ChooseTerminalWorkingDirectoryCommand { get; }
 
@@ -685,6 +757,23 @@ public sealed class HotkeyEditViewModel : ObservableObject
         ErrorMessage = string.Empty;
     }
 
+    private void ChooseInstalledApp()
+    {
+        var selected = _dialogService.SelectInstalledApp();
+        if (selected is null)
+        {
+            return;
+        }
+
+        LaunchPath = selected.LaunchPath;
+        if (string.IsNullOrWhiteSpace(HotkeyTitle) || HotkeyTitle == "새 핫키")
+        {
+            HotkeyTitle = selected.DisplayName;
+        }
+
+        ErrorMessage = string.Empty;
+    }
+
     private void ChooseLaunchFolder()
     {
         var selectedPath = _dialogService.SelectLaunchFolder();
@@ -731,12 +820,14 @@ public sealed class HotkeyEditViewModel : ObservableObject
         }
 
         _isAdbPairingEnabled = false;
+        _isBluetoothPresetSelected = false;
         _showAdvancedTerminalSettings = false;
         NotifyTerminalPropertiesChanged();
     }
 
     private void SelectAdbPairingPreset()
     {
+        _isBluetoothPresetSelected = false;
         IsAdbPairingEnabled = true;
         _showAdvancedTerminalSettings = false;
         NotifyTerminalPropertiesChanged();
@@ -744,14 +835,48 @@ public sealed class HotkeyEditViewModel : ObservableObject
 
     private void SelectCustomTerminalCommandPreset()
     {
-        if (IsTurnOffDisplayPresetActive)
+        if (IsTurnOffDisplayPresetActive || TerminalCommandParameterRules.TryParseBluetoothAudioCommand(TerminalCommand, out _, allowEmptyTarget: true))
         {
             TerminalCommand = string.Empty;
         }
 
+        _isBluetoothPresetSelected = false;
         _isAdbPairingEnabled = false;
         _showAdvancedTerminalSettings = true;
         NotifyTerminalPropertiesChanged();
+    }
+
+    private void SelectBluetoothPreset()
+    {
+        _isBluetoothPresetSelected = true;
+        _isAdbPairingEnabled = false;
+        _showAdvancedTerminalSettings = false;
+        _draft.ApplyBluetoothControlDefaults(_bluetoothControlAction, _bluetoothTarget);
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void SyncBluetoothTerminalCommand()
+    {
+        _draft.ApplyBluetoothControlDefaults(_bluetoothControlAction, _bluetoothTarget);
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void ChooseBluetoothDevice()
+    {
+        var selected = _dialogService.SelectPairedBluetoothDevice();
+        if (selected is null)
+        {
+            return;
+        }
+
+        BluetoothTarget = selected.MacAddress;
+        if (string.IsNullOrWhiteSpace(HotkeyTitle) || HotkeyTitle == "새 핫키")
+        {
+            var suffix = IsBluetoothDisconnectAction ? "off" : "on";
+            HotkeyTitle = $"{selected.DisplayName} {suffix}";
+        }
+
+        ErrorMessage = string.Empty;
     }
 
     private void ToggleAdvancedTerminalSettings()
@@ -768,6 +893,10 @@ public sealed class HotkeyEditViewModel : ObservableObject
         OnPropertyChanged(nameof(IsAdbPairingEnabled));
         OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
         OnPropertyChanged(nameof(IsAdbPairingPresetActive));
+        OnPropertyChanged(nameof(IsBluetoothPresetActive));
+        OnPropertyChanged(nameof(IsBluetoothConnectAction));
+        OnPropertyChanged(nameof(IsBluetoothDisconnectAction));
+        OnPropertyChanged(nameof(BluetoothTarget));
         OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
         OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
         ErrorMessage = string.Empty;

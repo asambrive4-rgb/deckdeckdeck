@@ -1,4 +1,5 @@
-// 역할: 파일 열기, 저장 확인, 알림 메시지 등 윈도우 표준 대화상자를 화면에 띄웁니다.
+// 역할: 파일 열기, 앱 선택, 블루투스 기기 선택, 저장 확인, 알림 메시지 등 윈도우 대화상자를 화면에 띄웁니다.
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.UseCases.Ports;
 using System.Windows;
 using Microsoft.Win32;
@@ -143,7 +144,9 @@ public class DialogAdapter : IDialogAdapter
             Multiselect = false
         };
 
-        return dialog.ShowDialog() == true ? dialog.FileName : null;
+        return dialog.ShowDialog() == true
+            ? LaunchPathRules.ToPortablePath(dialog.FileName)
+            : null;
     }
 
     public virtual string? SelectPasteFile()
@@ -197,5 +200,74 @@ public class DialogAdapter : IDialogAdapter
 
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
-}
 
+    public virtual InstalledAppSelection? SelectInstalledApp()
+    {
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            InstalledAppSelection? result = null;
+            dispatcher.Invoke(() =>
+            {
+                result = SelectInstalledApp();
+            });
+            return result;
+        }
+
+        var window = new InstalledAppPickerWindow();
+        var owner = Application.Current?.MainWindow;
+        if (owner is { IsLoaded: true, IsVisible: true })
+        {
+            window.Owner = owner;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        if (window.ShowDialog() == true && window.SelectedApp is { } app)
+        {
+            return new InstalledAppSelection(app.DisplayName, app.LaunchPath);
+        }
+
+        return null;
+    }
+
+    public virtual BluetoothDeviceSelection? SelectPairedBluetoothDevice()
+    {
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            BluetoothDeviceSelection? result = null;
+            dispatcher.Invoke(() =>
+            {
+                result = SelectPairedBluetoothDevice();
+            });
+            return result;
+        }
+
+        var devices = WindowsBluetoothDeviceControlGateway.GetPairedDevices();
+        var entries = devices
+            .Select(d => new InstalledAppEntry(
+                d.DisplayName,
+                d.MacAddress,
+                d.IsConnected ? $"{d.MacAddress} · 현재 연결됨" : d.MacAddress))
+            .ToList();
+
+        var window = new InstalledAppPickerWindow(
+            entries,
+            "블루투스 기기 선택",
+            "페어링된 블루투스 오디오 기기를 선택하세요.",
+            "기기 이름 또는 MAC 주소 검색...",
+            "페어링된 블루투스 기기를 찾을 수 없습니다.");
+
+        var owner = Application.Current?.MainWindow;
+        if (owner is { IsLoaded: true, IsVisible: true })
+        {
+            window.Owner = owner;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+
+        if (window.ShowDialog() == true && window.SelectedApp is { } app)
+        {
+            return new BluetoothDeviceSelection(app.DisplayName, app.LaunchPath);
+        }
+
+        return null;
+    }
+}

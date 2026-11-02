@@ -109,3 +109,11 @@ public sealed record SpotifyConnectionGatewayResult(
     string? RefreshToken = null,
     DateTimeOffset? ExpiresAt = null,
     string? DisplayName = null);
+
+public sealed record InstalledAppSelection(
+    string DisplayName,
+    string LaunchPath);
+
+public sealed record BluetoothDeviceSelection(
+    string DisplayName,
+    string MacAddress);

@@ -7,8 +7,6 @@ namespace DeckDeckDeck.App.UseCases;
 
 public sealed class SaveCategoryUseCase
 {
-    private const string SlotSettingSaveFailedMessage = "슬롯 설정을 저장하지 못했습니다.";
-
     private readonly IAutoBackupRequester? _autoBackupRequester;
     private readonly ICategoryRepository _categoryRepository;
     private readonly ISettingsRepository? _settingsStore;
@@ -42,9 +40,9 @@ public sealed class SaveCategoryUseCase
             return SaveCategoryResult.Failure(slotSaveResult.ErrorMessage!);
         }
 
-        var category = request.CategoryId.HasValue
+        var category = request.CategoryId is { } id
             ? _categoryRepository.Update(
-                request.CategoryId.Value,
+                id,
                 request.Name,
                 request.Description,
                 request.ImagePath,
@@ -87,23 +85,13 @@ public sealed class SaveCategoryUseCase
         return SaveCategoryResult.SlotOnly();
     }
 
-    private SlotSettingSaveResult SaveSlotEnabled(SaveCategoryRequest request)
-    {
-        if (_settingsStore is null || request.IsSlotEnabled == request.OriginalIsSlotEnabled)
-        {
-            return SlotSettingSaveResult.Success();
-        }
-
-        try
-        {
-            _settingsStore.SetCategorySlotEnabled(request.SlotKey, request.IsSlotEnabled);
-            return SlotSettingSaveResult.Success();
-        }
-        catch
-        {
-            return SlotSettingSaveResult.Failure(SlotSettingSaveFailedMessage);
-        }
-    }
+    private SlotSettingSaveResult SaveSlotEnabled(SaveCategoryRequest request) =>
+        SlotSettingSaveResult.TrySave(
+            _settingsStore,
+            request.SlotKey,
+            request.IsSlotEnabled,
+            request.OriginalIsSlotEnabled,
+            (store, slotKey, enabled) => store.SetCategorySlotEnabled(slotKey, enabled));
 }
 
 public sealed class DeleteCategoryUseCase
@@ -314,7 +302,32 @@ public sealed record TransferCategoryResult(
 
 internal sealed record SlotSettingSaveResult(bool Succeeded, string? ErrorMessage = null)
 {
+    private const string SlotSettingSaveFailedMessage = "슬롯 설정을 저장하지 못했습니다.";
+
     public static SlotSettingSaveResult Success() => new(true);
     public static SlotSettingSaveResult Failure(string errorMessage) => new(false, errorMessage);
+
+    public static SlotSettingSaveResult TrySave(
+        ISettingsRepository? settingsStore,
+        SlotKey slotKey,
+        bool isEnabled,
+        bool originalIsEnabled,
+        Action<ISettingsRepository, SlotKey, bool> saveAction)
+    {
+        if (settingsStore is null || isEnabled == originalIsEnabled)
+        {
+            return Success();
+        }
+
+        try
+        {
+            saveAction(settingsStore, slotKey, isEnabled);
+            return Success();
+        }
+        catch
+        {
+            return Failure(SlotSettingSaveFailedMessage);
+        }
+    }
 }
 

@@ -29,7 +29,7 @@ public sealed class CategoryRepository : ICategoryRepository
 
         return dbContext.Categories
             .AsNoTracking()
-            .ToList()
+            .AsEnumerable()
             .OrderBy(category => category.SlotKey.GetSortOrder())
             .ToList();
     }

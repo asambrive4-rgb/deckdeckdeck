@@ -1,12 +1,4 @@
 // 역할: 프로그램의 데이터베이스 파일, 로그, 이미지 등이 저장되는 컴퓨터 내 폴더 경로들을 관리합니다.
-using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
-using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
-using DeckDeckDeck.App.UseCases.Ports;
 using System.IO;
 
 namespace DeckDeckDeck.App.Infrastructure.Storage;
@@ -92,12 +84,8 @@ public sealed class AppStoragePaths
         {
             var fullPath = Path.GetFullPath(trimmedPath);
             var appDataRelative = Path.GetRelativePath(AppDataPath, fullPath);
-            if (TryNormalizeManagedRelativePath(appDataRelative, out relativePath))
-            {
-                return true;
-            }
-
-            return TryGetLegacyManagedRelativePath(fullPath, out relativePath);
+            return TryNormalizeManagedRelativePath(appDataRelative, out relativePath)
+                || TryGetLegacyManagedRelativePath(fullPath, out relativePath);
         }
         catch
         {

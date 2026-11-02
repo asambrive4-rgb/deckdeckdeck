@@ -18,12 +18,10 @@ public sealed class DisplayPowerGatewayAdapter : IDisplayPowerGateway
         _postMessage = postMessage;
     }
 
-    public bool TryTurnOffDisplay()
-    {
-        return _postMessage(
+    public bool TryTurnOffDisplay() =>
+        _postMessage(
             Win32Constants.HwndBroadcast,
             Win32Constants.WmSyscommand,
             Win32Constants.ScMonitorpower,
             Win32Constants.MonitorPowerOff);
-    }
 }

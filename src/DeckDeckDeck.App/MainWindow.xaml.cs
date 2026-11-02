@@ -1,4 +1,4 @@
-// 역할: 프로그램의 메인 창 UI 라이프사이클과 키보드 단축키 입력 이벤트를 처리합니다.
+﻿// 역할: 프로그램의 메인 창 라이프사이클을 제어하고 사용자 및 단축키 입력을 화면 모델로 전달합니다.
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
@@ -70,14 +70,16 @@ public partial class MainWindow : Window
         // Shell-first: SourceInitialized already placed default bottom-right (no settings yet).
         // Re-apply only when settings carry a real saved position — not empty / (0,0) /
         // near-top-left corruption — so the window does not jump after home load.
-        if (_windowHandle != IntPtr.Zero)
+        if (_windowHandle == IntPtr.Zero)
         {
-            StartDirectHotkeys(viewModel);
-            var settings = viewModel.LoadSettings();
-            if (WindowPlacementRules.HasUsableSavedWindowPlacement(settings))
-            {
-                ApplyWindowPlacement(IntPtr.Zero, settings);
-            }
+            return;
+        }
+
+        StartDirectHotkeys(viewModel);
+        var settings = viewModel.LoadSettings();
+        if (WindowPlacementRules.HasUsableSavedWindowPlacement(settings))
+        {
+            ApplyWindowPlacement(IntPtr.Zero, settings);
         }
     }
 
@@ -95,15 +97,10 @@ public partial class MainWindow : Window
         }
     }
 
-    internal IntPtr GetPasteTargetWindowHandle()
-    {
-        return _lastPasteTargetWindowHandle;
-    }
+    internal IntPtr GetPasteTargetWindowHandle() => _lastPasteTargetWindowHandle;
 
-    internal Action CreatePasteSelectionCompletion()
-    {
-        return _pasteSelectionSession.CreateCompletion(EndPasteSelection);
-    }
+    internal Action CreatePasteSelectionCompletion() =>
+        _pasteSelectionSession.CreateCompletion(EndPasteSelection);
 
     private void UseApplicationIcon()
     {
@@ -119,10 +116,7 @@ public partial class MainWindow : Window
         }
     }
 
-    internal void AllowCloseForExit()
-    {
-        _allowClose = true;
-    }
+    internal void AllowCloseForExit() => _allowClose = true;
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
@@ -194,24 +188,23 @@ public partial class MainWindow : Window
     {
         try
         {
-            // Windows 11 (build 22000) 이상인 경우에만 설정
-            if (Environment.OSVersion.Version.Major >= 10 && Environment.OSVersion.Version.Build >= 22000)
-            {
-                var preference = (int)Native.DwmApi.DWM_WINDOW_CORNER_PREFERENCE.Round;
-                Native.DwmApi.DwmSetWindowAttribute(
-                    _windowHandle,
-                    Native.DwmApi.DWMWA_WINDOW_CORNER_PREFERENCE,
-                    ref preference,
-                    sizeof(int));
+            var os = Environment.OSVersion.Version;
+            if (os.Major < 10 || os.Build < 22000) return;
 
-                // OS 기본 창 외곽선(1px)을 완전히 비활성화하여 WPF 둥근 테두리와의 이중선(2줄) 간섭 제거
-                var borderColor = Native.DwmApi.DWMWA_COLOR_NONE;
-                Native.DwmApi.DwmSetWindowAttribute(
-                    _windowHandle,
-                    Native.DwmApi.DWMWA_BORDER_COLOR,
-                    ref borderColor,
-                    sizeof(int));
-            }
+            var preference = (int)Native.DwmApi.DWM_WINDOW_CORNER_PREFERENCE.Round;
+            Native.DwmApi.DwmSetWindowAttribute(
+                _windowHandle,
+                Native.DwmApi.DWMWA_WINDOW_CORNER_PREFERENCE,
+                ref preference,
+                sizeof(int));
+
+            // OS 기본 창 외곽선(1px)을 완전히 비활성화하여 WPF 둥근 테두리와의 이중선(2줄) 간섭 제거
+            var borderColor = Native.DwmApi.DWMWA_COLOR_NONE;
+            Native.DwmApi.DwmSetWindowAttribute(
+                _windowHandle,
+                Native.DwmApi.DWMWA_BORDER_COLOR,
+                ref borderColor,
+                sizeof(int));
         }
         catch
         {
@@ -261,16 +254,13 @@ public partial class MainWindow : Window
 
     private void OnStateChanged(object? sender, EventArgs e)
     {
-        if (WindowState == WindowState.Minimized)
+        if (WindowState != WindowState.Minimized || _isHidingToTrayFromClose)
         {
-            if (_isHidingToTrayFromClose)
-            {
-                return;
-            }
-
-            SaveWindowPlacement();
-            Hide();
+            return;
         }
+
+        SaveWindowPlacement();
+        Hide();
     }
 
     private void OnActivated(object? sender, EventArgs e)
@@ -365,7 +355,7 @@ public partial class MainWindow : Window
         }
 
         _lastPasteTargetWindowHandle = targetWindowHandle;
-        _ = ExecuteDirectHotkeySafely(viewModel, hotkeyActionId);
+        _ = viewModel.ExecuteDirectHotkeyAsync(hotkeyActionId);
     }
 
     private void HandleHotkeyLongPress(SlotKey slotKey)
@@ -394,18 +384,6 @@ public partial class MainWindow : Window
         _numpadCapture.Start(_windowHandle);
     }
 
-    private async Task ExecuteDirectHotkeySafely(MainViewModel viewModel, Guid hotkeyActionId)
-    {
-        try
-        {
-            await viewModel.ExecuteDirectHotkeyAsync(hotkeyActionId);
-        }
-        catch
-        {
-            viewModel.ReportBackgroundStatus("핫키 실행 중 오류가 발생했습니다.");
-        }
-    }
-
     private void EndPasteSelection()
     {
         _numpadCapture.Stop();
@@ -422,7 +400,7 @@ public partial class MainWindow : Window
     {
         EndPasteSelection();
         SaveWindowPlacement();
-        Hide();
+        _paletteWindowController.HideAndRepaintBehind(Hide);
     }
 
     private void ShowPastePalette()
@@ -445,6 +423,11 @@ public partial class MainWindow : Window
         var presentation = new PreparePastePalettePresentationUseCase().Execute(
             new PreparePastePalettePresentationRequest(settings));
 
+        ApplyPastePalettePresentation(presentation);
+    }
+
+    private void ApplyPastePalettePresentation(PreparePastePalettePresentationResult presentation)
+    {
         switch (presentation.ZOrderMode)
         {
             case PastePaletteZOrderMode.BringToFrontTemporarily:
@@ -506,25 +489,14 @@ public partial class MainWindow : Window
             ? new Rect(Left, Top, GetWindowWidthForPlacement(), GetWindowHeightForPlacement())
             : RestoreBounds;
 
-        if (!WindowPlacementRules.CanSavePlacement(bounds.Left, bounds.Top))
-        {
-            return;
-        }
-
         viewModel.SaveWindowPlacement(
             bounds.Left,
             bounds.Top,
             _windowPlacementResolver.GetScreenDeviceName(this));
     }
 
-    private double GetWindowWidthForPlacement()
-    {
-        return ActualWidth > 0 ? ActualWidth : Width;
-    }
+    private double GetWindowWidthForPlacement() => ActualWidth > 0 ? ActualWidth : Width;
 
-    private double GetWindowHeightForPlacement()
-    {
-        return ActualHeight > 0 ? ActualHeight : Height;
-    }
+    private double GetWindowHeightForPlacement() => ActualHeight > 0 ? ActualHeight : Height;
 }
 

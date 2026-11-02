@@ -15,10 +15,7 @@ public sealed class ShouldPassThroughDirectHotkeyUseCase
 
     public bool Execute(HotkeyGesture gesture)
     {
-        if (!gesture.IsUnmodifiedArrowKey)
-        {
-            return false;
-        }
+        if (!gesture.IsUnmodifiedArrowKey) return false;
 
         try
         {

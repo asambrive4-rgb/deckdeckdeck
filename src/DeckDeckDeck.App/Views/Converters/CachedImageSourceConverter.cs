@@ -7,23 +7,14 @@ namespace DeckDeckDeck.App.Views.Converters;
 
 public sealed class CachedImageSourceConverter : IValueConverter
 {
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        if (value is not string path || string.IsNullOrWhiteSpace(path))
-        {
-            return null;
-        }
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is string path && !string.IsNullOrWhiteSpace(path)
+            ? FrozenImageCache.GetOrLoad(path, FrozenImageCache.ParseDecodePixelWidth(parameter))
+            : null;
 
-        return FrozenImageCache.GetOrLoad(path, FrozenImageCache.ParseDecodePixelWidth(parameter));
-    }
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        Binding.DoNothing;
 
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        return Binding.DoNothing;
-    }
-
-    public static void PrewarmFiles(IEnumerable<string?> paths, int decodePixelWidth)
-    {
+    public static void PrewarmFiles(IEnumerable<string?> paths, int decodePixelWidth) =>
         FrozenImageCache.PrewarmFiles(paths, decodePixelWidth);
-    }
 }

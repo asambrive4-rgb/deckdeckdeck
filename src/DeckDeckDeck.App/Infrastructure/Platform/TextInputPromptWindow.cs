@@ -61,7 +61,7 @@ internal sealed class TextInputPromptWindow : Window
 
             var box = new TextBox
             {
-                Height = 36,
+                MinHeight = 36,
                 Margin = new Thickness(0, 0, 0, 12),
                 Padding = new Thickness(8, 6, 8, 6),
                 FontSize = 14,
@@ -134,7 +134,7 @@ internal sealed class TextInputPromptWindow : Window
         {
             Content = "취소",
             MinWidth = 88,
-            Height = 36,
+            MinHeight = 36,
             Margin = new Thickness(0, 0, 8, 0),
             IsCancel = true,
             Padding = new Thickness(12, 6, 12, 6)
@@ -149,7 +149,7 @@ internal sealed class TextInputPromptWindow : Window
         {
             Content = "실행",
             MinWidth = 88,
-            Height = 36,
+            MinHeight = 36,
             IsDefault = true,
             Padding = new Thickness(12, 6, 12, 6)
         };

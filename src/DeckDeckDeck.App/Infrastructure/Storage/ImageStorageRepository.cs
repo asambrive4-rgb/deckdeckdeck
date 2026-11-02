@@ -1,26 +1,14 @@
 // 역할: 이미지 파일의 실제 저장 경로를 추적하고 불필요해진 이전 이미지를 정리합니다.
-using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
-using DeckDeckDeck.App.UseCases.Ports;
 using System.IO;
 
 namespace DeckDeckDeck.App.Infrastructure.Storage;
 
 internal sealed class ImageStorageRepository
 {
-    private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".bmp",
-        ".gif"
-    };
+    private static readonly HashSet<string> SupportedExtensions = new(
+        [".png", ".jpg", ".jpeg", ".bmp", ".gif"],
+        StringComparer.OrdinalIgnoreCase);
 
     private readonly AppStoragePaths _fileStorageService;
 
@@ -54,15 +42,11 @@ internal sealed class ImageStorageRepository
         return new StoredImage(originalPath, thumbnailPath);
     }
 
-    public void CopyOriginal(string sourcePath, string originalPath)
-    {
+    public void CopyOriginal(string sourcePath, string originalPath) =>
         File.Copy(sourcePath, originalPath);
-    }
 
-    public void DeleteImageFiles(ImageFileSet imageFiles)
-    {
+    public void DeleteImageFiles(ImageFileSet imageFiles) =>
         DeleteImageFiles(imageFiles.ImagePath, imageFiles.ThumbnailPath);
-    }
 
     public void DeleteImageFiles(string? imagePath, string? thumbnailPath)
     {
@@ -72,16 +56,10 @@ internal sealed class ImageStorageRepository
 
     private void DeleteImageFile(string? path)
     {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(path)) return;
 
         var absolutePath = _fileStorageService.ToAbsolutePath(path);
-        if (!IsAppImagePath(absolutePath))
-        {
-            return;
-        }
+        if (!IsAppImagePath(absolutePath)) return;
 
         try
         {

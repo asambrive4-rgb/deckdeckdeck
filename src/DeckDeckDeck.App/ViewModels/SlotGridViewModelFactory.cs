@@ -1,4 +1,6 @@
-// 역할: 홈 화면과 카테고리 화면에 표시될 9개 슬롯 타일 뷰모델들을 생성합니다.
+// 역할: 홈 화면과 카테고리 화면에 표시될 슬롯 타일 뷰모델들을 생성하고 타이머 상태를 약한 이벤트로 바인딩합니다.
+using System.Runtime.CompilerServices;
+using System.Windows;
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
@@ -8,6 +10,8 @@ namespace DeckDeckDeck.App.ViewModels;
 
 public sealed class SlotGridViewModelFactory
 {
+    private static readonly ConditionalWeakTable<SlotViewModel, SlotTimerObserver> TimerObservers = new();
+
     private readonly IStoredImagePathResolver? _storedImagePathResolver;
     private readonly ISnippetImageResolver? _snippetImageResolver;
     private readonly ISlotTimerUseCases? _timerUseCases;
@@ -31,25 +35,21 @@ public sealed class SlotGridViewModelFactory
         Action<SlotKey, SlotKey>? onReorder = null)
     {
         var categoriesBySlot = categories.ToDictionary(category => category.SlotKey);
-
-        return new NumpadGridViewModel(
-            SlotKeyCatalog.All.Select(slotKey =>
+        SlotViewModel[] slots = [.. SlotKeyCatalog.All.Select(slotKey =>
         {
-            categoriesBySlot.TryGetValue(slotKey, out var category);
-            var vm = new SlotViewModel(
+            var category = categoriesBySlot.GetValueOrDefault(slotKey);
+            return BindTimerState(new SlotViewModel(
                 slotKey,
                 category?.Name,
                 ResolveDisplayPath(category?.ThumbnailPath),
                 SlotRules.IsEnabled(slotKey, settings.EnabledCategorySlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, category),
-                selectedSlotKey => onEdit(selectedSlotKey, category));
+                selectedSlotKey => onEdit(selectedSlotKey, category)), isCategoryView: false);
+        })];
 
-            BindTimerState(vm, isCategoryView: false);
-            return vm;
-        }),
-            onHotkeySelected is null
-                ? HotkeyTileViewModel.Disabled()
-                : HotkeyTileViewModel.Enabled(onHotkeySelected),
+        return new NumpadGridViewModel(
+            slots,
+            onHotkeySelected is not null ? HotkeyTileViewModel.Enabled(onHotkeySelected) : HotkeyTileViewModel.Disabled(),
             onReorder);
     }
 
@@ -61,99 +61,99 @@ public sealed class SlotGridViewModelFactory
         Action<SlotKey, SlotKey>? onReorder = null)
     {
         var snippetsBySlot = snippets.ToDictionary(snippet => snippet.SlotKey);
-
-        return new NumpadGridViewModel(
-            SlotKeyCatalog.All.Select(slotKey =>
+        SlotViewModel[] slots = [.. SlotKeyCatalog.All.Select(slotKey =>
         {
-            snippetsBySlot.TryGetValue(slotKey, out var snippet);
-            var thumbnailPath = ResolveSnippetDisplayPath(snippet);
-            var vm = new SlotViewModel(
+            var snippet = snippetsBySlot.GetValueOrDefault(slotKey);
+            return BindTimerState(new SlotViewModel(
                 slotKey,
                 snippet?.Title,
-                thumbnailPath,
+                ResolveSnippetDisplayPath(snippet),
                 SlotRules.IsEnabled(slotKey, settings.EnabledSnippetSlotKeys),
                 selectedSlotKey => onSelected(selectedSlotKey, snippet),
-                selectedSlotKey => onEdit(selectedSlotKey, snippet));
-
-            if (snippet?.ActionType == SnippetActionType.Timer)
+                selectedSlotKey => onEdit(selectedSlotKey, snippet))
             {
-                vm.IsTimerSlot = true;
-            }
+                IsTimerSlot = snippet?.ActionType == SnippetActionType.Timer
+            }, isCategoryView: true);
+        })];
 
-            BindTimerState(vm, isCategoryView: true);
-            return vm;
-        }),
-            HotkeyTileViewModel.Disabled(),
-            onReorder);
+        return new NumpadGridViewModel(slots, HotkeyTileViewModel.Disabled(), onReorder);
     }
 
-    private void BindTimerState(SlotViewModel vm, bool isCategoryView)
+    private SlotViewModel BindTimerState(SlotViewModel vm, bool isCategoryView)
     {
-        if (_timerUseCases is null) return;
+        if (_timerUseCases is null)
+        {
+            return vm;
+        }
 
         vm.IsCategoryView = isCategoryView;
         var initialState = _timerUseCases.GetTimerState(vm.SlotKey);
         vm.IsTimerRunning = initialState.IsRunning;
         vm.FormattedTimerRemaining = initialState.FormattedRemainingTime;
 
-        _timerUseCases.TimerStateChanged += (sender, args) =>
+        var observer = new SlotTimerObserver(vm);
+        TimerObservers.AddOrUpdate(vm, observer);
+        WeakEventManager<ISlotTimerUseCases, SlotTimerStateChangedEventArgs>.AddHandler(
+            _timerUseCases,
+            nameof(ISlotTimerUseCases.TimerStateChanged),
+            observer.OnTimerStateChanged);
+
+        return vm;
+    }
+
+    private sealed class SlotTimerObserver
+    {
+        private readonly WeakReference<SlotViewModel> _targetRef;
+        private readonly SlotKey _slotKey;
+
+        public SlotTimerObserver(SlotViewModel target)
         {
-            if (args.SlotKey == vm.SlotKey)
+            _targetRef = new WeakReference<SlotViewModel>(target);
+            _slotKey = target.SlotKey;
+        }
+
+        public void OnTimerStateChanged(object? sender, SlotTimerStateChangedEventArgs args)
+        {
+            if (args.SlotKey == _slotKey && _targetRef.TryGetTarget(out var vm))
             {
                 UpdateSlotVmOnDispatcher(vm, args.State);
             }
-        };
+        }
     }
 
     private static void UpdateSlotVmOnDispatcher(SlotViewModel slotVm, SlotTimerState state)
     {
-        var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher != null && !dispatcher.CheckAccess())
-        {
-            dispatcher.BeginInvoke(() =>
-            {
-                slotVm.IsTimerRunning = state.IsRunning;
-                slotVm.FormattedTimerRemaining = state.FormattedRemainingTime;
-            });
-        }
-        else
+        void Apply()
         {
             slotVm.IsTimerRunning = state.IsRunning;
             slotVm.FormattedTimerRemaining = state.FormattedRemainingTime;
         }
-    }
 
-    private string? ResolveDisplayPath(string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || _storedImagePathResolver is null)
+        if (System.Windows.Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
         {
-            return path;
+            dispatcher.BeginInvoke(Apply);
+            return;
         }
 
-        return _storedImagePathResolver.ResolveDisplayPath(path);
+        Apply();
     }
 
-    private string? ResolveSnippetDisplayPath(Snippet? snippet)
-    {
-        if (_snippetImageResolver is not null)
-        {
-            return _snippetImageResolver.GetDisplayImagePath(snippet);
-        }
+    private string? ResolveDisplayPath(string? path) =>
+        string.IsNullOrWhiteSpace(path) || _storedImagePathResolver is null
+            ? path
+            : _storedImagePathResolver.ResolveDisplayPath(path);
 
-        if (snippet is null)
-        {
-            return null;
-        }
-
-        return snippet.SlotImageMode switch
-        {
-            SlotImageMode.Custom => ResolveDisplayPath(snippet.ThumbnailPath),
-            SlotImageMode.Auto when snippet.ActionType == SnippetActionType.LaunchFile
-                && !string.IsNullOrWhiteSpace(snippet.AutoIconPath)
-                => ResolveDisplayPath(snippet.AutoIconPath),
-            SlotImageMode.Auto when snippet.ActionType == SnippetActionType.MediaAction
-                => MediaIconResourcePaths.GetIconResourcePath(snippet.MediaCommand),
-            _ => null
-        };
-    }
+    private string? ResolveSnippetDisplayPath(Snippet? snippet) =>
+        _snippetImageResolver is not null
+            ? _snippetImageResolver.GetDisplayImagePath(snippet)
+            : snippet switch
+            {
+                { SlotImageMode: SlotImageMode.Custom } => ResolveDisplayPath(snippet.ThumbnailPath),
+                { SlotImageMode: SlotImageMode.Auto, ActionType: SnippetActionType.LaunchFile }
+                    when !string.IsNullOrWhiteSpace(snippet.AutoIconPath)
+                    => ResolveDisplayPath(snippet.AutoIconPath),
+                { SlotImageMode: SlotImageMode.Auto, ActionType: SnippetActionType.MediaAction }
+                    => MediaIconResourcePaths.GetIconResourcePath(snippet.MediaCommand),
+                _ => null
+            };
 }

@@ -29,6 +29,7 @@ internal static class SettingsKeys
     public const string LastWindowLeft = "lastWindowLeft";
     public const string LastWindowTop = "lastWindowTop";
     public const string LastWindowScreenDeviceName = "lastWindowScreenDeviceName";
+    public const string PreferredBluetoothDeviceName = "preferredBluetoothDeviceName";
 
     private const string CategorySlotEnabledPrefix = "enabledCategorySlotKeys.";
     private const string SnippetSlotEnabledPrefix = "enabledSnippetSlotKeys.";
@@ -51,7 +52,8 @@ internal static class SettingsKeys
         new(DirectCategoryHotkeys, "Ctrl + Numpad1~9, /, *, -, +, ."),
         new(LastWindowLeft, string.Empty),
         new(LastWindowTop, string.Empty),
-        new(LastWindowScreenDeviceName, string.Empty)
+        new(LastWindowScreenDeviceName, string.Empty),
+        new(PreferredBluetoothDeviceName, string.Empty)
     ];
 
     public static string GetCategorySlotEnabledKey(SlotKey slotKey)

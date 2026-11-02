@@ -206,6 +206,10 @@ public sealed class ViewModelBoundaryTests
         public void SetSnippetSlotEnabled(SlotKey slotKey, bool enabled)
         {
         }
+
+        public void SetPreferredBluetoothDeviceName(string? deviceName)
+        {
+        }
     }
 
     private sealed class RecordingLogger : IAppLogger

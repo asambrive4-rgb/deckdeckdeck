@@ -1,4 +1,4 @@
-// 역할: 슬롯이 눌렸을 때 설정된 동작(텍스트 붙여넣기, 웹페이지 열기, 미디어 제어 등)을 실제로 실행합니다.
+// 역할: 슬롯 실행 요청을 받아 텍스트·파일 붙여넣기, 앱 실행, URL 열기, 미디어 제어, 터미널 명령 및 블루투스 기기 제어 등 대상 동작을 조율하고 실행합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -9,43 +9,19 @@ namespace DeckDeckDeck.App.UseCases;
 /// Runs one executable action. When adding <see cref="SnippetActionType"/>,
 /// update <see cref="Domain.ExecutableActionTypeCatalog"/> first, then add a case here.
 /// </summary>
-public sealed class ExecuteSnippetActionUseCase
+public sealed class ExecuteSnippetActionUseCase(
+    IClipboardPasteGateway clipboardPasteGateway,
+    IFileLaunchGateway fileLaunchGateway,
+    IUrlLaunchGateway urlLaunchGateway,
+    IMediaActionGateway mediaActionGateway,
+    ISpotifyMediaActionGateway spotifyMediaActionGateway,
+    ITerminalCommandGateway terminalCommandGateway,
+    IFilePasteGateway filePasteGateway,
+    IDialogAdapter dialogAdapter,
+    ITimerActionGateway? timerActionGateway = null,
+    IDisplayPowerGateway? displayPowerGateway = null,
+    IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null)
 {
-    private readonly IClipboardPasteGateway _clipboardPasteGateway;
-    private readonly IDialogAdapter _dialogAdapter;
-    private readonly IFileLaunchGateway _fileLaunchGateway;
-    private readonly IFilePasteGateway _filePasteGateway;
-    private readonly IMediaActionGateway _mediaActionGateway;
-    private readonly ISpotifyMediaActionGateway _spotifyMediaActionGateway;
-    private readonly ITerminalCommandGateway _terminalCommandGateway;
-    private readonly IUrlLaunchGateway _urlLaunchGateway;
-    private readonly ITimerActionGateway? _timerActionGateway;
-    private readonly IDisplayPowerGateway? _displayPowerGateway;
-
-    public ExecuteSnippetActionUseCase(
-        IClipboardPasteGateway clipboardPasteGateway,
-        IFileLaunchGateway fileLaunchGateway,
-        IUrlLaunchGateway urlLaunchGateway,
-        IMediaActionGateway mediaActionGateway,
-        ISpotifyMediaActionGateway spotifyMediaActionGateway,
-        ITerminalCommandGateway terminalCommandGateway,
-        IFilePasteGateway filePasteGateway,
-        IDialogAdapter dialogAdapter,
-        ITimerActionGateway? timerActionGateway = null,
-        IDisplayPowerGateway? displayPowerGateway = null)
-    {
-        _clipboardPasteGateway = clipboardPasteGateway;
-        _fileLaunchGateway = fileLaunchGateway;
-        _urlLaunchGateway = urlLaunchGateway;
-        _mediaActionGateway = mediaActionGateway;
-        _spotifyMediaActionGateway = spotifyMediaActionGateway;
-        _terminalCommandGateway = terminalCommandGateway;
-        _filePasteGateway = filePasteGateway;
-        _dialogAdapter = dialogAdapter;
-        _timerActionGateway = timerActionGateway;
-        _displayPowerGateway = displayPowerGateway;
-    }
-
     public async Task<ExecuteSnippetActionResult> ExecuteAsync(
         ExecuteSnippetActionRequest request,
         CancellationToken cancellationToken = default)
@@ -54,17 +30,12 @@ public sealed class ExecuteSnippetActionUseCase
         {
             return request.Action.ActionType switch
             {
-                SnippetActionType.LaunchFile => request.Action.FileActionMode == FileActionMode.Paste
-                    ? await PasteFileSnippetAsync(request, cancellationToken)
-                    : LaunchSnippet(request.Action, request.Settings),
+                SnippetActionType.LaunchFile when request.Action.FileActionMode == FileActionMode.Paste =>
+                    await PasteFileSnippetAsync(request, cancellationToken),
+                SnippetActionType.LaunchFile => LaunchSnippet(request.Action, request.Settings),
                 SnippetActionType.LaunchUrl => LaunchUrlSnippet(request.Action, request.Settings),
-                SnippetActionType.MediaAction => await ExecuteMediaSnippetAsync(
-                    request.Action,
-                    request.Settings,
-                    cancellationToken),
-                SnippetActionType.TerminalCommand => ExecuteTerminalCommandSnippet(
-                    request.Action,
-                    request.Settings),
+                SnippetActionType.MediaAction => await ExecuteMediaSnippetAsync(request.Action, request.Settings, cancellationToken),
+                SnippetActionType.TerminalCommand => await ExecuteTerminalCommandSnippetAsync(request.Action, request.Settings, cancellationToken),
                 SnippetActionType.Timer => ExecuteTimerSnippet(request.Action),
                 _ => await PasteTextSnippetAsync(request)
             };
@@ -79,9 +50,9 @@ public sealed class ExecuteSnippetActionUseCase
 
     private ExecuteSnippetActionResult ExecuteTimerSnippet(ExecutableAction action)
     {
-        if (action.TargetSlotKey.HasValue)
+        if (action.TargetSlotKey is { } slotKey)
         {
-            _timerActionGateway?.ExecuteTimerAction(action.TargetSlotKey.Value);
+            timerActionGateway?.ExecuteTimerAction(slotKey);
         }
 
         return ExecuteSnippetActionResult.Success(shouldHideWindow: false, statusMessage: "타이머 실행");
@@ -92,22 +63,14 @@ public sealed class ExecuteSnippetActionUseCase
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Action.LaunchPath))
-        {
-            return ReportFilePasteFailure(
-                request.Action,
-                "붙여넣을 파일 경로가 없습니다.");
-        }
+            return ReportFilePasteFailure(request.Action, "붙여넣을 파일 경로가 없습니다.");
 
         if (request.TargetWindowHandle == IntPtr.Zero)
-        {
-            return ReportFilePasteFailure(
-                request.Action,
-                "붙여넣을 대상 창을 찾지 못했습니다.");
-        }
+            return ReportFilePasteFailure(request.Action, "붙여넣을 대상 창을 찾지 못했습니다.");
 
         try
         {
-            var gatewayResult = await _filePasteGateway.PasteFileAsync(
+            var gatewayResult = await filePasteGateway.PasteFileAsync(
                 request.Action.LaunchPath,
                 request.TargetWindowHandle,
                 request.Settings);
@@ -128,28 +91,13 @@ public sealed class ExecuteSnippetActionUseCase
         }
         catch (Exception ex)
         {
-            return ReportFilePasteFailure(
-                request.Action,
-                "파일 붙여넣기를 요청하지 못했습니다.",
-                ex);
+            return ReportFilePasteFailure(request.Action, "파일 붙여넣기를 요청하지 못했습니다.", ex);
         }
     }
 
-    private static ExecuteSnippetActionResult ReportFilePasteFailure(
-        ExecutableAction action,
-        string message,
-        Exception? exception = null)
+    private async Task<ExecuteSnippetActionResult> PasteTextSnippetAsync(ExecuteSnippetActionRequest request)
     {
-        return ExecuteSnippetActionResult.Failure(
-            statusMessage: $"{action.Title} 파일 붙여넣기 실패: {message}",
-            logMessage: $"File paste failed for action {action.Id}: {message}",
-            exception: exception);
-    }
-
-    private async Task<ExecuteSnippetActionResult> PasteTextSnippetAsync(
-        ExecuteSnippetActionRequest request)
-    {
-        var pasted = await _clipboardPasteGateway.PasteActionAsync(
+        var pasted = await clipboardPasteGateway.PasteActionAsync(
             request.Action,
             request.TargetWindowHandle,
             request.Settings);
@@ -162,25 +110,13 @@ public sealed class ExecuteSnippetActionUseCase
     private ExecuteSnippetActionResult LaunchSnippet(ExecutableAction action, AppSettings settings)
     {
         if (string.IsNullOrWhiteSpace(action.LaunchPath))
-        {
-            return ReportLaunchFailure(
-                action,
-                "실행할 파일, 폴더 또는 바로 가기 경로가 없습니다.");
-        }
+            return ReportLaunchFailure(action, "실행할 파일, 폴더 또는 바로 가기 경로가 없습니다.");
 
         try
         {
-            var launched = _fileLaunchGateway.TryLaunch(action.LaunchPath);
-            if (!launched)
-            {
-                return ReportLaunchFailure(
-                    action,
-                    "실행할 파일, 폴더 또는 바로 가기를 찾지 못했습니다.");
-            }
-
-            return ExecuteSnippetActionResult.Success(
-                shouldHideWindow: settings.AutoHideAfterPaste,
-                statusMessage: $"{action.Title} 실행됨");
+            return fileLaunchGateway.TryLaunch(action.LaunchPath)
+                ? ExecuteSnippetActionResult.Success(settings.AutoHideAfterPaste, $"{action.Title} 실행됨")
+                : ReportLaunchFailure(action, "실행할 파일, 폴더 또는 바로 가기를 찾지 못했습니다.");
         }
         catch (Exception ex)
         {
@@ -188,37 +124,16 @@ public sealed class ExecuteSnippetActionUseCase
         }
     }
 
-    private static ExecuteSnippetActionResult ReportLaunchFailure(
-        ExecutableAction action,
-        string message,
-        Exception? exception = null)
-    {
-        return ExecuteSnippetActionResult.Failure(
-            statusMessage: $"{action.Title} 실행 실패: {message}",
-            logMessage: $"Launch failed for action {action.Id}: {message}",
-            exception: exception);
-    }
-
     private ExecuteSnippetActionResult LaunchUrlSnippet(ExecutableAction action, AppSettings settings)
     {
         if (string.IsNullOrWhiteSpace(action.LaunchUrl))
-        {
             return ReportUrlLaunchFailure(action, "웹페이지 주소가 없습니다.");
-        }
 
         try
         {
-            var launched = _urlLaunchGateway.TryLaunch(action.LaunchUrl);
-            if (!launched)
-            {
-                return ReportUrlLaunchFailure(
-                    action,
-                    "웹페이지 주소 형식이 올바르지 않습니다.");
-            }
-
-            return ExecuteSnippetActionResult.Success(
-                shouldHideWindow: settings.AutoHideAfterPaste,
-                statusMessage: $"{action.Title} 웹페이지를 열었습니다.");
+            return urlLaunchGateway.TryLaunch(action.LaunchUrl)
+                ? ExecuteSnippetActionResult.Success(settings.AutoHideAfterPaste, $"{action.Title} 웹페이지를 열었습니다.")
+                : ReportUrlLaunchFailure(action, "웹페이지 주소 형식이 올바르지 않습니다.");
         }
         catch (Exception ex)
         {
@@ -226,55 +141,28 @@ public sealed class ExecuteSnippetActionUseCase
         }
     }
 
-    private static ExecuteSnippetActionResult ReportUrlLaunchFailure(
-        ExecutableAction action,
-        string message,
-        Exception? exception = null)
-    {
-        return ExecuteSnippetActionResult.Failure(
-            statusMessage: $"{action.Title} 웹 주소 열기 실패: {message}",
-            logMessage: $"Launch URL failed for action {action.Id}: {message}",
-            exception: exception);
-    }
-
-    private async Task<ExecuteSnippetActionResult> ExecuteMediaSnippetAsync(
+    private Task<ExecuteSnippetActionResult> ExecuteMediaSnippetAsync(
         ExecutableAction action,
         AppSettings settings,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) =>
+        (action.MediaProvider ?? SnippetMediaProvider.System) switch
+        {
+            SnippetMediaProvider.Spotify => ExecuteSpotifyMediaSnippetAsync(action, settings, cancellationToken),
+            SnippetMediaProvider.System => Task.FromResult(ExecuteSystemMediaSnippet(action, settings)),
+            _ => Task.FromResult(ReportMediaActionFailure(action, "지원하지 않는 미디어 제공자입니다."))
+        };
+
+    private ExecuteSnippetActionResult ExecuteSystemMediaSnippet(ExecutableAction action, AppSettings settings)
     {
-        var provider = action.MediaProvider ?? SnippetMediaProvider.System;
-        if (provider is SnippetMediaProvider.Spotify)
-        {
-            return await ExecuteSpotifyMediaSnippetAsync(action, settings, cancellationToken);
-        }
-
-        if (provider is not SnippetMediaProvider.System)
-        {
-            return ReportMediaActionFailure(action, "지원하지 않는 미디어 제공자입니다.");
-        }
-
-        var command = action.MediaCommand ?? SnippetMediaCommand.PlayPause;
-
         try
         {
-            var executed = _mediaActionGateway.TryExecute(command);
-            if (!executed)
-            {
-                return ReportMediaActionFailure(
-                    action,
-                    "Windows 미디어 키 입력을 보내지 못했습니다.");
-            }
-
-            return ExecuteSnippetActionResult.Success(
-                shouldHideWindow: settings.AutoHideAfterPaste,
-                statusMessage: $"{action.Title} 미디어 명령 실행됨");
+            return mediaActionGateway.TryExecute(action.MediaCommand ?? SnippetMediaCommand.PlayPause)
+                ? ExecuteSnippetActionResult.Success(settings.AutoHideAfterPaste, $"{action.Title} 미디어 명령 실행됨")
+                : ReportMediaActionFailure(action, "Windows 미디어 키 입력을 보내지 못했습니다.");
         }
         catch (Exception ex)
         {
-            return ReportMediaActionFailure(
-                action,
-                "미디어 명령을 실행하지 못했습니다.",
-                ex);
+            return ReportMediaActionFailure(action, "미디어 명령을 실행하지 못했습니다.", ex);
         }
     }
 
@@ -284,115 +172,95 @@ public sealed class ExecuteSnippetActionUseCase
         CancellationToken cancellationToken)
     {
         var command = action.MediaCommand ?? SnippetMediaCommand.PlayPause;
-
         try
         {
-            var executed = await _spotifyMediaActionGateway.TryExecuteAsync(command, cancellationToken);
-            if (!executed.Succeeded)
-            {
-                return ReportMediaActionFailure(
-                    action,
-                    executed.ErrorMessage ?? "Spotify 명령을 실행하지 못했습니다.");
-            }
-
-            return ExecuteSnippetActionResult.Success(
-                shouldHideWindow: settings.AutoHideAfterPaste,
-                statusMessage: $"{action.Title} Spotify 명령 실행됨");
+            var executed = await spotifyMediaActionGateway.TryExecuteAsync(command, cancellationToken);
+            return executed.Succeeded
+                ? ExecuteSnippetActionResult.Success(settings.AutoHideAfterPaste, $"{action.Title} Spotify 명령 실행됨")
+                : ReportMediaActionFailure(action, executed.ErrorMessage ?? "Spotify 명령을 실행하지 못했습니다.");
         }
         catch (Exception ex)
         {
-            return ReportMediaActionFailure(
-                action,
-                "Spotify 명령을 실행하지 못했습니다.",
-                ex);
+            return ReportMediaActionFailure(action, "Spotify 명령을 실행하지 못했습니다.", ex);
         }
     }
 
-    private static ExecuteSnippetActionResult ReportMediaActionFailure(
+    private async Task<ExecuteSnippetActionResult> ExecuteTerminalCommandSnippetAsync(
         ExecutableAction action,
-        string message,
-        Exception? exception = null)
-    {
-        return ExecuteSnippetActionResult.Failure(
-            statusMessage: $"{action.Title} 미디어 제어 실패: {message}",
-            logMessage: $"Media action failed for action {action.Id}: {message}",
-            exception: exception);
-    }
-
-    private ExecuteSnippetActionResult ExecuteTerminalCommandSnippet(
-        ExecutableAction action,
-        AppSettings settings)
+        AppSettings settings,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(action.TerminalCommand) && !action.OpenTerminalWindow)
-        {
             return ReportTerminalCommandFailure(action, "실행할 터미널 명령이 없습니다.");
-        }
 
         var commandTemplate = action.TerminalCommand ?? string.Empty;
         var isTurnOffDisplay = TerminalCommandParameterRules.IsTurnOffDisplayCommand(commandTemplate);
-        if (isTurnOffDisplay && _displayPowerGateway is not null)
-        {
-            try
-            {
-                var executed = _displayPowerGateway.TryTurnOffDisplay();
-                if (!executed)
-                {
-                    return ReportTerminalCommandFailure(action, "화면을 끄지 못했습니다.");
-                }
+        if (isTurnOffDisplay && displayPowerGateway is not null)
+            return ExecuteTurnOffDisplay(action);
 
-                return ExecuteSnippetActionResult.Success(
-                    shouldHideWindow: true,
-                    statusMessage: string.IsNullOrWhiteSpace(action.Title) ? "화면 끄기 실행됨" : $"{action.Title} 실행됨");
-            }
-            catch (Exception ex)
-            {
-                return ReportTerminalCommandFailure(action, "화면 끄기를 실행하지 못했습니다.", ex);
-            }
+        if (TerminalCommandParameterRules.TryParseBluetoothAudioCommand(commandTemplate, out var bluetoothCommand)
+            && bluetoothDeviceControlGateway is not null)
+        {
+            var controlled = await bluetoothDeviceControlGateway.TryControlAsync(bluetoothCommand, cancellationToken);
+            return controlled
+                ? ExecuteSnippetActionResult.Success(
+                    shouldHideWindow: settings.AutoHideAfterPaste,
+                    statusMessage: string.IsNullOrWhiteSpace(action.Title)
+                        ? (bluetoothCommand.Action == BluetoothAudioActionKind.Connect ? "블루투스 연결 실행됨" : "블루투스 연결 해제 실행됨")
+                        : (bluetoothCommand.Action == BluetoothAudioActionKind.Connect ? $"{action.Title} 블루투스 연결 실행됨" : $"{action.Title} 블루투스 연결 해제 실행됨"))
+                : ReportTerminalCommandFailure(action, "블루투스 기기 연결/해제에 실패했습니다. 기기 전원과 페어링 상태를 확인해 주세요.");
         }
 
-        var isAdbConnect = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(commandTemplate);
-        if (!TryResolveTerminalCommand(
-                action,
-                commandTemplate,
-                out var command,
-                out var resolveFailure))
-        {
+        if (!TryResolveTerminalCommand(action, commandTemplate, out var command, out var resolveFailure))
             return resolveFailure!;
-        }
 
         var shell = action.TerminalShell ?? SnippetTerminalShell.Cmd;
+        var isAdbConnect = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(commandTemplate);
 
         try
         {
-            var executed = _terminalCommandGateway.TryExecute(
-                command,
-                shell,
-                action.RunAsAdministrator,
-                action.OpenTerminalWindow,
-                action.TerminalWorkingDirectory);
-            if (!executed)
+            if (!terminalCommandGateway.TryExecute(
+                    command,
+                    shell,
+                    action.RunAsAdministrator,
+                    action.OpenTerminalWindow,
+                    action.TerminalWorkingDirectory))
             {
                 return ReportTerminalCommandFailure(
                     action,
-                    isAdbConnect
-                        ? "ADB 연결 명령을 시작하지 못했습니다."
-                        : "터미널 명령을 시작하지 못했습니다.");
+                    isAdbConnect ? "ADB 연결 명령을 시작하지 못했습니다." : "터미널 명령을 시작하지 못했습니다.");
             }
+
+            var statusMessage = (isAdbConnect, isTurnOffDisplay) switch
+            {
+                (true, _) => $"{action.Title} ADB 연결 실행됨",
+                (_, true) => $"{action.Title} 실행됨",
+                _ => $"{action.Title} 터미널 명령 실행됨"
+            };
 
             return ExecuteSnippetActionResult.Success(
                 shouldHideWindow: isTurnOffDisplay || settings.AutoHideAfterPaste,
-                statusMessage: isAdbConnect
-                    ? $"{action.Title} ADB 연결 실행됨"
-                    : isTurnOffDisplay
-                        ? $"{action.Title} 실행됨"
-                        : $"{action.Title} 터미널 명령 실행됨");
+                statusMessage: statusMessage);
         }
         catch (Exception ex)
         {
-            return ReportTerminalCommandFailure(
-                action,
-                "터미널 명령을 실행하지 못했습니다.",
-                ex);
+            return ReportTerminalCommandFailure(action, "터미널 명령을 실행하지 못했습니다.", ex);
+        }
+    }
+
+    private ExecuteSnippetActionResult ExecuteTurnOffDisplay(ExecutableAction action)
+    {
+        try
+        {
+            return displayPowerGateway?.TryTurnOffDisplay() == true
+                ? ExecuteSnippetActionResult.Success(
+                    shouldHideWindow: true,
+                    statusMessage: string.IsNullOrWhiteSpace(action.Title) ? "화면 끄기 실행됨" : $"{action.Title} 실행됨")
+                : ReportTerminalCommandFailure(action, "화면을 끄지 못했습니다.");
+        }
+        catch (Exception ex)
+        {
+            return ReportTerminalCommandFailure(action, "화면 끄기를 실행하지 못했습니다.", ex);
         }
     }
 
@@ -403,13 +271,7 @@ public sealed class ExecuteSnippetActionUseCase
         out ExecuteSnippetActionResult? failure)
     {
         if (TerminalCommandParameterRules.IsAdbWirelessConnectCommand(commandTemplate))
-        {
-            return TryResolveAdbConnectCommand(
-                action,
-                commandTemplate,
-                out command,
-                out failure);
-        }
+            return TryResolveAdbConnectCommand(action, commandTemplate, out command, out failure);
 
         var parameterNames = TerminalCommandParameterRules.ExtractParameterNames(commandTemplate);
         if (parameterNames.Count == 0)
@@ -419,17 +281,14 @@ public sealed class ExecuteSnippetActionUseCase
             return true;
         }
 
-        var confirmed = _dialogAdapter.TryPromptTextInputs(
-            title: action.Title,
-            message: "명령에 넣을 값을 입력하세요.",
-            fieldNames: parameterNames,
-            out var values);
-
-        if (!confirmed)
+        if (!dialogAdapter.TryPromptTextInputs(
+                title: action.Title,
+                message: "명령에 넣을 값을 입력하세요.",
+                fieldNames: parameterNames,
+                out var values))
         {
             command = string.Empty;
-            failure = ExecuteSnippetActionResult.Failure(
-                statusMessage: $"{action.Title} 입력이 취소되었습니다.");
+            failure = ExecuteSnippetActionResult.Failure(statusMessage: $"{action.Title} 입력이 취소되었습니다.");
             return false;
         }
 
@@ -444,35 +303,23 @@ public sealed class ExecuteSnippetActionUseCase
         out string command,
         out ExecuteSnippetActionResult? failure)
     {
-        if (!TerminalCommandParameterRules.TryNormalizeAdbIp(
-                action.AdbDeviceIp,
-                out var normalizedIp,
-                out var ipError))
+        command = string.Empty;
+
+        if (!TerminalCommandParameterRules.TryNormalizeAdbIp(action.AdbDeviceIp, out var normalizedIp, out var ipError))
         {
-            command = string.Empty;
-            failure = ReportTerminalCommandFailure(
-                action,
-                ipError ?? TerminalCommandParameterRules.EmptyAdbIpMessage);
+            failure = ReportTerminalCommandFailure(action, ipError ?? TerminalCommandParameterRules.EmptyAdbIpMessage);
             return false;
         }
 
-        if (!_dialogAdapter.TryPromptAdbPort(action.Title, normalizedIp, out var port))
+        if (!dialogAdapter.TryPromptAdbPort(action.Title, normalizedIp, out var port))
         {
-            command = string.Empty;
-            failure = ExecuteSnippetActionResult.Failure(
-                statusMessage: $"{action.Title} 입력이 취소되었습니다.");
+            failure = ExecuteSnippetActionResult.Failure(statusMessage: $"{action.Title} 입력이 취소되었습니다.");
             return false;
         }
 
-        if (!TerminalCommandParameterRules.TryNormalizeAdbPort(
-                port,
-                out var normalizedPort,
-                out var portError))
+        if (!TerminalCommandParameterRules.TryNormalizeAdbPort(port, out var normalizedPort, out var portError))
         {
-            command = string.Empty;
-            failure = ReportTerminalCommandFailure(
-                action,
-                portError ?? TerminalCommandParameterRules.InvalidAdbPortMessage);
+            failure = ReportTerminalCommandFailure(action, portError ?? TerminalCommandParameterRules.InvalidAdbPortMessage);
             return false;
         }
 
@@ -487,16 +334,40 @@ public sealed class ExecuteSnippetActionUseCase
         return true;
     }
 
+    private static ExecuteSnippetActionResult ReportFilePasteFailure(
+        ExecutableAction action, string message, Exception? exception = null) =>
+        ExecuteSnippetActionResult.Failure(
+            statusMessage: $"{action.Title} 파일 붙여넣기 실패: {message}",
+            logMessage: $"File paste failed for action {action.Id}: {message}",
+            exception: exception);
+
+    private static ExecuteSnippetActionResult ReportLaunchFailure(
+        ExecutableAction action, string message, Exception? exception = null) =>
+        ExecuteSnippetActionResult.Failure(
+            statusMessage: $"{action.Title} 실행 실패: {message}",
+            logMessage: $"Launch failed for action {action.Id}: {message}",
+            exception: exception);
+
+    private static ExecuteSnippetActionResult ReportUrlLaunchFailure(
+        ExecutableAction action, string message, Exception? exception = null) =>
+        ExecuteSnippetActionResult.Failure(
+            statusMessage: $"{action.Title} 웹 주소 열기 실패: {message}",
+            logMessage: $"Launch URL failed for action {action.Id}: {message}",
+            exception: exception);
+
+    private static ExecuteSnippetActionResult ReportMediaActionFailure(
+        ExecutableAction action, string message, Exception? exception = null) =>
+        ExecuteSnippetActionResult.Failure(
+            statusMessage: $"{action.Title} 미디어 제어 실패: {message}",
+            logMessage: $"Media action failed for action {action.Id}: {message}",
+            exception: exception);
+
     private static ExecuteSnippetActionResult ReportTerminalCommandFailure(
-        ExecutableAction action,
-        string message,
-        Exception? exception = null)
-    {
-        return ExecuteSnippetActionResult.Failure(
+        ExecutableAction action, string message, Exception? exception = null) =>
+        ExecuteSnippetActionResult.Failure(
             statusMessage: $"{action.Title} 터미널 명령 실행 실패: {message}",
             logMessage: $"Terminal command failed for action {action.Id}: {message}",
             exception: exception);
-    }
 }
 
 public sealed record ExecuteSnippetActionRequest(
@@ -520,29 +391,14 @@ public sealed record ExecuteSnippetActionResult(
     string? LogMessage = null,
     Exception? Exception = null)
 {
-    public static ExecuteSnippetActionResult Noop()
-    {
-        return new ExecuteSnippetActionResult(true, ShouldHideWindow: false);
-    }
+    public static ExecuteSnippetActionResult Noop() => new(true, ShouldHideWindow: false);
 
-    public static ExecuteSnippetActionResult Success(
-        bool shouldHideWindow,
-        string statusMessage)
-    {
-        return new ExecuteSnippetActionResult(true, shouldHideWindow, statusMessage);
-    }
+    public static ExecuteSnippetActionResult Success(bool shouldHideWindow, string statusMessage) =>
+        new(true, shouldHideWindow, statusMessage);
 
     public static ExecuteSnippetActionResult Failure(
         string? logMessage = null,
         string? statusMessage = null,
-        Exception? exception = null)
-    {
-        return new ExecuteSnippetActionResult(
-            false,
-            ShouldHideWindow: false,
-            StatusMessage: statusMessage,
-            LogMessage: logMessage,
-            Exception: exception);
-    }
+        Exception? exception = null) =>
+        new(false, ShouldHideWindow: false, StatusMessage: statusMessage, LogMessage: logMessage, Exception: exception);
 }
-

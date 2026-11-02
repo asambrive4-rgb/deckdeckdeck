@@ -697,6 +697,51 @@ public sealed class SnippetEditViewModelTests
         return path;
     }
 
+    [Fact]
+    public void ChooseInstalledAppPopulatesLaunchPathAndEmptyTitle()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Apps", null);
+        var stubDialog = new StubDialogAdapter
+        {
+            InstalledApp = new InstalledAppSelection("ChatGPT", @"shell:AppsFolder\OpenAI.Codex_2p2nqsd0c76g0!App")
+        };
+        var viewModel = CreateViewModel(services, category, _ => { }, dialogService: stubDialog);
+
+        viewModel.SnippetTitle = string.Empty;
+        viewModel.IsLaunchFileAction = true;
+        viewModel.ChooseInstalledAppCommand.Execute(null);
+
+        Assert.Equal(@"shell:AppsFolder\OpenAI.Codex_2p2nqsd0c76g0!App", viewModel.LaunchPath);
+        Assert.Equal("ChatGPT", viewModel.SnippetTitle);
+    }
+
+    [Fact]
+    public void BluetoothPresetConfiguresFastNonAdminCommand()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Bluetooth", null);
+        var stubDialog = new StubDialogAdapter
+        {
+            PairedBluetoothDevice = new BluetoothDeviceSelection("WH-1000XM5", "E4:92:82:82:D5:9B")
+        };
+        Snippet? savedSnippet = null;
+        var viewModel = CreateViewModel(services, category, s => savedSnippet = s, dialogService: stubDialog);
+
+        viewModel.SnippetTitle = string.Empty;
+        viewModel.IsTerminalCommandAction = true;
+        viewModel.SelectBluetoothPresetCommand.Execute(null);
+        viewModel.IsBluetoothDisconnectAction = true;
+        viewModel.ChooseBluetoothDeviceCommand.Execute(null);
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedSnippet);
+        Assert.False(savedSnippet.RunAsAdministrator);
+        Assert.False(savedSnippet.OpenTerminalWindow);
+        Assert.Equal("bt-audio disconnect E4:92:82:82:D5:9B", savedSnippet.TerminalCommand);
+        Assert.Equal("WH-1000XM5 off", savedSnippet.Title);
+    }
+
     private sealed class StubDialogAdapter : DialogAdapter
     {
         public bool ConfirmResult { get; init; } = true;
@@ -706,6 +751,10 @@ public sealed class SnippetEditViewModelTests
         public string? PasteFile { get; init; }
 
         public string? LaunchFolder { get; init; }
+
+        public InstalledAppSelection? InstalledApp { get; init; }
+
+        public BluetoothDeviceSelection? PairedBluetoothDevice { get; init; }
 
         public override string? SelectLaunchFile()
         {
@@ -720,6 +769,16 @@ public sealed class SnippetEditViewModelTests
         public override string? SelectLaunchFolder()
         {
             return LaunchFolder;
+        }
+
+        public override InstalledAppSelection? SelectInstalledApp()
+        {
+            return InstalledApp;
+        }
+
+        public override BluetoothDeviceSelection? SelectPairedBluetoothDevice()
+        {
+            return PairedBluetoothDevice;
         }
 
         public override bool Confirm(string title, string message)

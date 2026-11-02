@@ -15,7 +15,7 @@ internal sealed record MainViewModelDependencies(
     Func<ExecutableAction, Task> ExecuteActionAsync,
     IAppLogger? Logger,
     IAutoBackupCoordinator? AutoBackupCoordinator,
-    IBluetoothAudioStatusGateway BluetoothAudioStatusGateway);
+    IBluetoothAudioStatusUseCase BluetoothAudioStatusUseCase);
 
 internal sealed record MainViewModelCallbacks(
     Func<IntPtr> GetPasteTargetWindowHandle,

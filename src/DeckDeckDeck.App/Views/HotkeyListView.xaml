@@ -47,7 +47,8 @@
 
                                     <StackPanel>
                                         <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                                   Text="{Binding Title}" />
+                                                   Text="{Binding Title}"
+                                                   TextTrimming="CharacterEllipsis" />
                                         <TextBlock Style="{StaticResource Deck.StatusTextStyle}"
                                                    Text="{Binding HotkeyText}" />
                                         <TextBlock Margin="0,6,0,0"
@@ -75,6 +76,7 @@
                                         <Button Margin="0,8,0,0"
                                                 Command="{Binding DeleteCommand}"
                                                 Style="{StaticResource Deck.DangerButtonStyle}"
+                                                MinWidth="96"
                                                 Content="삭제" />
                                     </StackPanel>
                                 </Grid>

@@ -257,10 +257,9 @@ internal sealed class MainViewModelNavigator
 
             if (result.NeedsOverwriteConfirmation)
             {
-                var confirmed = _dependencies.DialogAdapter.Confirm(
+                if (!_dependencies.DialogAdapter.Confirm(
                     "카테고리 이동",
-                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetName}' 카테고리가 있습니다.\n기존 카테고리와 안의 실행 항목을 덮어쓸까요?");
-                if (!confirmed)
+                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetName}' 카테고리가 있습니다.\n기존 카테고리와 안의 실행 항목을 덮어쓸까요?"))
                 {
                     return;
                 }
@@ -304,10 +303,9 @@ internal sealed class MainViewModelNavigator
 
             if (result.NeedsOverwriteConfirmation)
             {
-                var confirmed = _dependencies.DialogAdapter.Confirm(
+                if (!_dependencies.DialogAdapter.Confirm(
                     "실행 항목 이동",
-                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetName}' 실행 항목이 있습니다.\n기존 실행 항목을 덮어쓸까요?");
-                if (!confirmed)
+                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetName}' 실행 항목이 있습니다.\n기존 실행 항목을 덮어쓸까요?"))
                 {
                     return;
                 }

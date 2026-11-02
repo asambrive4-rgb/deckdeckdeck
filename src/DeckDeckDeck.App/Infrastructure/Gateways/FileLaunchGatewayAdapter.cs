@@ -1,11 +1,5 @@
-// 역할: 사용자가 지정한 파일이나 실행 프로그램을 윈도우에서 직접 실행합니다.
-using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
-using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
+// 역할: 윈도우 셸을 통해 지정된 파일, 폴더, 환경변수 경로 또는 설치된 앱(shell:AppsFolder)을 실행하는 외부 게이트웨이 어댑터입니다.
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.UseCases.Ports;
 using System.Diagnostics;
 using System.IO;
@@ -28,15 +22,21 @@ public sealed class FileLaunchGatewayAdapter : IFileLaunchGateway
 
     public bool TryLaunch(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || (!File.Exists(path) && !Directory.Exists(path)))
+        if (string.IsNullOrWhiteSpace(path))
         {
             return false;
         }
 
-        // LaunchFile is intentionally limited to file/folder paths, not shell commands or arguments.
+        var expandedPath = LaunchPathRules.ExpandPath(path);
+        if (!LaunchPathRules.IsShellAppsFolderPath(expandedPath) && !File.Exists(expandedPath) && !Directory.Exists(expandedPath))
+        {
+            return false;
+        }
+
+        // LaunchFile is intentionally limited to file/folder/app paths, not shell commands or arguments.
         _startProcess(new ProcessStartInfo
         {
-            FileName = path,
+            FileName = expandedPath,
             UseShellExecute = true
         });
 

@@ -194,6 +194,14 @@ public sealed class ExecutableActionEditDraft
         RunAsAdministrator = false;
     }
 
+    public void ApplyBluetoothControlDefaults(BluetoothAudioActionKind action, string? target)
+    {
+        TerminalCommand = TerminalCommandParameterRules.BuildBluetoothAudioCommand(action, target);
+        TerminalShell = SnippetTerminalShell.Cmd;
+        OpenTerminalWindow = false;
+        RunAsAdministrator = false;
+    }
+
     public void ReplaceImageFromPath(string sourcePath)
     {
         _imageDraft.ReplaceWithStoredImage(sourcePath);

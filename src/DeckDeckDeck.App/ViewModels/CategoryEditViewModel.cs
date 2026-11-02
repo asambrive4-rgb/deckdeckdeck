@@ -1,10 +1,10 @@
-// 역할: 카테고리 추가 및 수정 팝업 화면의 입력 데이터와 저장/취소 동작을 관리하는 화면 모델입니다.
+// 역할: 카테고리 추가·수정·이동·삭제 팝업 화면의 입력 데이터와 상태 변경 동작을 관리하는 화면 모델입니다.
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -63,31 +63,28 @@ public sealed class CategoryEditViewModel : ObservableObject
 
         _name = category?.Name ?? string.Empty;
         _description = category?.Description ?? string.Empty;
-        TransferTargetSlots = BuildTransferTargetSlots(editorState.TransferTargets);
+        TransferTargetSlots = SlotEditCommon.BuildTransferTargetSlots(editorState.TransferTargets)
+            .Select(t => new CategoryTransferTargetSlot(t.SlotKey, t.Label))
+            .ToList();
         _selectedTransferTarget = TransferTargetSlots.FirstOrDefault();
         _originalIsSlotEnabled = editorState.IsSlotEnabled;
         _isSlotEnabled = _originalIsSlotEnabled;
+
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
         DeleteCommand = new RelayCommand(Delete);
-        CopyCategoryCommand = new RelayCommand(CopyCategory);
-        MoveCategoryCommand = new RelayCommand(MoveCategory);
+        CopyCategoryCommand = new RelayCommand(() => TransferCategory(CategoryTransferOperation.Copy));
+        MoveCategoryCommand = new RelayCommand(() => TransferCategory(CategoryTransferOperation.Move));
         ChooseImageCommand = new RelayCommand(ChooseImage);
         RemoveImageCommand = new RelayCommand(RemoveImage);
     }
 
     public string Title => IsExisting ? "카테고리 편집" : "새 카테고리";
-
     public SlotKey SlotKey { get; }
-
     public string KeyText { get; }
-
     public bool IsExisting => _categoryId.HasValue;
-
     public bool CanDelete => IsExisting;
-
     public bool CanTransfer => IsExisting;
-
     public IReadOnlyList<CategoryTransferTargetSlot> TransferTargetSlots { get; }
 
     public CategoryTransferTargetSlot? SelectedTransferTarget
@@ -121,53 +118,30 @@ public sealed class CategoryEditViewModel : ObservableObject
     }
 
     public string? ThumbnailPath => _draft.PreviewThumbnailPath;
-
     public bool HasImage => _draft.HasImage;
 
     public ICommand SaveCommand { get; }
-
     public ICommand CancelCommand { get; }
-
     public ICommand DeleteCommand { get; }
-
     public ICommand CopyCategoryCommand { get; }
-
     public ICommand MoveCategoryCommand { get; }
-
     public ICommand ChooseImageCommand { get; }
-
     public ICommand RemoveImageCommand { get; }
 
     public void DropImageFiles(IReadOnlyList<string> sourcePaths)
     {
-        if (sourcePaths.Count != 1)
-        {
-            ErrorMessage = "이미지는 하나만 드롭해 주세요.";
-            return;
-        }
+        if (SlotEditCommon.TryDropSingleImage(sourcePaths, ReplaceImageFromPath, out var error)) return;
 
-        ReplaceImageFromPath(sourcePaths[0]);
+        ErrorMessage = error ?? string.Empty;
     }
 
     private void Save()
-    {
-        var category = SaveCategory();
-        if (category is null)
-        {
-            return;
-        }
-
-        _showStatus($"{category.Name} 저장됨.");
-        _afterSave(category);
-    }
-
-    private Category? SaveCategory()
     {
         var result = _saveCategoryUseCase.Execute(BuildSaveRequest());
         if (!result.Succeeded)
         {
             ErrorMessage = "카테고리 이름을 입력해 주세요.";
-            return null;
+            return;
         }
 
         if (result.SavedSlotOnly)
@@ -175,23 +149,20 @@ public sealed class CategoryEditViewModel : ObservableObject
             _originalIsSlotEnabled = IsSlotEnabled;
             _draft.DeleteCurrentUnsavedImage();
             _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
-            // afterDelete navigates back with cache invalidation (slot enablement changed).
             _afterDelete();
-            return null;
+            return;
         }
 
         var category = result.Category!;
-
         _draft.MarkSaved();
         _originalIsSlotEnabled = IsSlotEnabled;
         ErrorMessage = string.Empty;
-
-        return category;
+        _showStatus($"{category.Name} 저장됨.");
+        _afterSave(category);
     }
 
-    private SaveCategoryRequest BuildSaveRequest()
-    {
-        return new SaveCategoryRequest(
+    private SaveCategoryRequest BuildSaveRequest() =>
+        new(
             SlotKey,
             _categoryId,
             Name,
@@ -200,7 +171,6 @@ public sealed class CategoryEditViewModel : ObservableObject
             _draft.ThumbnailPath,
             IsSlotEnabled,
             _originalIsSlotEnabled);
-    }
 
     private void Cancel()
     {
@@ -210,47 +180,16 @@ public sealed class CategoryEditViewModel : ObservableObject
 
     private void Delete()
     {
-        if (!_categoryId.HasValue)
-        {
-            return;
-        }
-
-        var confirmed = _dialogService.Confirm(
-            "카테고리 삭제",
-            "이 카테고리와 안에 있는 모든 실행 항목을 삭제할까요?");
-
-        if (!confirmed)
-        {
-            return;
-        }
+        if (!_categoryId.HasValue) return;
+        if (!_dialogService.Confirm("카테고리 삭제", "이 카테고리와 안에 있는 모든 실행 항목을 삭제할까요?")) return;
 
         _draft.DeleteCurrentUnsavedImage();
         _deleteCategoryUseCase.Execute(_categoryId.Value);
-
         _showStatus("카테고리를 삭제했습니다.");
         _afterDelete();
     }
 
-    private void CopyCategory()
-    {
-        TransferCategory(
-            "복사",
-            CategoryTransferOperation.Copy,
-            targetSlotKey => $"슬롯 {targetSlotKey.GetDisplayText()}에 카테고리를 복사했습니다.");
-    }
-
-    private void MoveCategory()
-    {
-        TransferCategory(
-            "이동",
-            CategoryTransferOperation.Move,
-            targetSlotKey => $"슬롯 {targetSlotKey.GetDisplayText()}로 카테고리를 이동했습니다.");
-    }
-
-    private void TransferCategory(
-        string actionText,
-        CategoryTransferOperation operation,
-        Func<SlotKey, string> getStatusMessage)
+    private void TransferCategory(CategoryTransferOperation operation)
     {
         if (!_categoryId.HasValue)
         {
@@ -264,48 +203,34 @@ public sealed class CategoryEditViewModel : ObservableObject
             return;
         }
 
+        var isCopy = operation == CategoryTransferOperation.Copy;
+        var (actionText, particle) = SlotEditCommon.GetTransferText(isCopy);
         var targetSlotKey = SelectedTransferTarget.SlotKey;
-        try
-        {
-            var result = ExecuteTransferCategory(operation, targetSlotKey, overwriteConfirmed: false);
-            if (result.NeedsOverwriteConfirmation)
+
+        SlotEditCommon.ExecuteTransferWithConfirmation(
+            _dialogService,
+            _loggingService,
+            SlotKey,
+            "카테고리",
+            isCopy,
+            overwriteConfirmed => ExecuteTransferCategory(operation, targetSlotKey, overwriteConfirmed),
+            r => (r.NeedsOverwriteConfirmation, r.ExistingTargetName, r.Succeeded, r.ErrorMessage),
+            existing => $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{existing}' 카테고리가 있습니다.\n기존 카테고리와 안의 실행 항목을 덮어쓸까요?",
+            result =>
             {
-                var confirmed = _dialogService.Confirm(
-                    $"카테고리 {actionText}",
-                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetName}' 카테고리가 있습니다.\n기존 카테고리와 안의 실행 항목을 덮어쓸까요?");
-                if (!confirmed)
-                {
-                    return;
-                }
-
-                result = ExecuteTransferCategory(operation, targetSlotKey, overwriteConfirmed: true);
-            }
-
-            if (!result.Succeeded)
-            {
-                ErrorMessage = result.ErrorMessage ?? string.Empty;
-                return;
-            }
-
-            var transferredCategory = result.Category!;
-            _draft.MarkSaved();
-            _originalIsSlotEnabled = IsSlotEnabled;
-            _afterSave(transferredCategory);
-            _showStatus(getStatusMessage(targetSlotKey));
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"카테고리 {actionText}에 실패했습니다.";
-            _loggingService?.Log($"Category {actionText} failed for slot {SlotKey}.", ex);
-        }
+                _draft.MarkSaved();
+                _originalIsSlotEnabled = IsSlotEnabled;
+                _afterSave(result.Category!);
+                _showStatus($"슬롯 {targetSlotKey.GetDisplayText()}{particle} 카테고리를 {actionText}했습니다.");
+            },
+            msg => ErrorMessage = msg);
     }
 
     private TransferCategoryResult ExecuteTransferCategory(
         CategoryTransferOperation operation,
         SlotKey targetSlotKey,
-        bool overwriteConfirmed)
-    {
-        return _transferCategoryUseCase.Execute(new TransferCategoryRequest(
+        bool overwriteConfirmed) =>
+        _transferCategoryUseCase.Execute(new TransferCategoryRequest(
             _categoryId,
             SlotKey,
             targetSlotKey,
@@ -313,23 +238,11 @@ public sealed class CategoryEditViewModel : ObservableObject
             operation,
             BuildSaveRequest(),
             overwriteConfirmed));
-    }
 
     private void ChooseImage()
     {
-        if (!_draft.CanStoreImages)
-        {
-            ErrorMessage = "이미지 저장소가 준비되지 않았습니다.";
-            return;
-        }
-
-        var selectedPath = _dialogService.SelectImageFile();
-        if (selectedPath is null)
-        {
-            return;
-        }
-
-        ReplaceImageFromPath(selectedPath);
+        if (SlotEditCommon.TryChooseImage(_draft.CanStoreImages, _dialogService, ReplaceImageFromPath, out var error)) return;
+        if (error is not null) ErrorMessage = error;
     }
 
     private void ReplaceImageFromPath(string sourcePath)
@@ -358,26 +271,6 @@ public sealed class CategoryEditViewModel : ObservableObject
         OnPropertyChanged(nameof(ThumbnailPath));
         OnPropertyChanged(nameof(HasImage));
     }
-
-    private static IReadOnlyList<CategoryTransferTargetSlot> BuildTransferTargetSlots(
-        IReadOnlyList<TransferTargetState> transferTargets)
-    {
-        return transferTargets
-            .Select(target => new CategoryTransferTargetSlot(
-                target.SlotKey,
-                FormatTransferTargetLabel(target)))
-            .ToList();
-    }
-
-    private static string FormatTransferTargetLabel(TransferTargetState target)
-    {
-        var prefix = $"슬롯 {target.SlotKey.GetDisplayText()}";
-
-        return string.IsNullOrWhiteSpace(target.ExistingTitle)
-            ? $"{prefix} - 비어 있음"
-            : $"{prefix} - {target.ExistingTitle}";
-    }
 }
 
 public sealed record CategoryTransferTargetSlot(SlotKey SlotKey, string Label);
-

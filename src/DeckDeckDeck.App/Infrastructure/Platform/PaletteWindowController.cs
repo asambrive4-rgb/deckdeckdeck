@@ -91,6 +91,28 @@ public sealed class PaletteWindowController : IDisposable
                 | Win32Constants.SwpShowwindow);
     }
 
+    /// <summary>
+    /// 창을 숨긴 뒤 창이 있던 화면 영역을 강제로 다시 그리게 해서 검은 잔상이 남지 않게 합니다.
+    /// </summary>
+    public void HideAndRepaintBehind(Action hide)
+    {
+        if (_windowHandle == IntPtr.Zero || !User32.GetWindowRect(_windowHandle, out var bounds))
+        {
+            hide();
+            return;
+        }
+
+        hide();
+        User32.RedrawWindow(
+            IntPtr.Zero,
+            ref bounds,
+            IntPtr.Zero,
+            Win32Constants.RdwInvalidate
+                | Win32Constants.RdwErase
+                | Win32Constants.RdwAllchildren
+                | Win32Constants.RdwUpdatenow);
+    }
+
     public void Dispose()
     {
         _windowHandle = IntPtr.Zero;

@@ -45,10 +45,7 @@ public static class FrozenImageCache
 
     public static void PrewarmFiles(IEnumerable<string?> paths, int decodePixelWidth)
     {
-        if (paths is null)
-        {
-            return;
-        }
+        if (paths is null) return;
 
         foreach (var path in paths)
         {
@@ -199,14 +196,8 @@ public static class FrozenImageCache
             return null;
         }
 
-        if (image is null)
-        {
-            // Failed decode: drop so a later attempt can retry after file appears/repairs.
-            if (Cache.TryRemove(key, out _))
-            {
-                Interlocked.Decrement(ref _approximateCacheCount);
-            }
-        }
+        // Failed decode: drop so a later attempt can retry after file appears/repairs.
+        if (image is null && Cache.TryRemove(key, out _)) Interlocked.Decrement(ref _approximateCacheCount);
 
         return image;
     }

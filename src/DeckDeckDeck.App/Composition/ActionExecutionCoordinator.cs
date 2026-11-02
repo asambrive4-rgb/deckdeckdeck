@@ -1,9 +1,8 @@
-// 역할: 슬롯에 등록된 실행 동작을 받아 적절한 처리 기능으로 연결하고 실행 흐름을 조율합니다.
+// 역할: 슬롯 동작 및 다이렉트 핫키 실행을 단일 진입점에서 조율하고 세션, 중복 실행 방지, 오류 처리 및 로깅을 통합 관리합니다.
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.ViewModels;
-using System.Threading;
 
 namespace DeckDeckDeck.App.Composition;
 
@@ -18,6 +17,7 @@ internal sealed class ActionExecutionCoordinator
     private readonly IAppLogger? _logger;
     private readonly PrepareSnippetActionUseCase _prepareSnippetActionUseCase;
     private readonly Action<string> _showStatus;
+    private readonly ResolveExecutableHotkeyActionUseCase? _resolveExecutableHotkeyActionUseCase;
     private int _isExecuting;
 
     public ActionExecutionCoordinator(
@@ -26,7 +26,8 @@ internal sealed class ActionExecutionCoordinator
         ExecuteSnippetActionUseCase executeSnippetActionUseCase,
         MainViewModelCallbacks callbacks,
         Action<string> showStatus,
-        IAppLogger? logger)
+        IAppLogger? logger,
+        ResolveExecutableHotkeyActionUseCase? resolveExecutableHotkeyActionUseCase = null)
     {
         _loadSettingsUseCase = loadSettingsUseCase;
         _prepareSnippetActionUseCase = prepareSnippetActionUseCase;
@@ -34,6 +35,15 @@ internal sealed class ActionExecutionCoordinator
         _callbacks = callbacks;
         _showStatus = showStatus;
         _logger = logger;
+        _resolveExecutableHotkeyActionUseCase = resolveExecutableHotkeyActionUseCase;
+    }
+
+    public async Task ExecuteDirectHotkeyAsync(Guid hotkeyActionId)
+    {
+        var action = _resolveExecutableHotkeyActionUseCase?.Execute(hotkeyActionId);
+        if (action is null) return;
+
+        await ExecuteAsync(action);
     }
 
     public async Task ExecuteAsync(ExecutableAction action)
@@ -84,6 +94,11 @@ internal sealed class ActionExecutionCoordinator
 
             LogSnippetActionResult(result);
         }
+        catch (Exception ex)
+        {
+            _showStatus("핫키 실행 중 오류가 발생했습니다.");
+            _logger?.Log("핫키 실행 중 오류가 발생했습니다.", ex);
+        }
         finally
         {
             try
@@ -102,12 +117,8 @@ internal sealed class ActionExecutionCoordinator
         if (string.IsNullOrWhiteSpace(result.LogMessage)) return;
 
         if (result.Exception is null)
-        {
             _logger?.Log(result.LogMessage);
-        }
         else
-        {
             _logger?.Log(result.LogMessage, result.Exception);
-        }
     }
 }

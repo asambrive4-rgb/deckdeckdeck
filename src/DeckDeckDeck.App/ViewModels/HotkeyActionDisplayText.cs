@@ -6,12 +6,10 @@ namespace DeckDeckDeck.App.ViewModels;
 
 internal static class HotkeyActionDisplayText
 {
-    public static string GetActionTypeLabel(HotkeyAction action)
-    {
-        return ExecutableActionTypeCatalog.GetDisplayLabel(
+    public static string GetActionTypeLabel(HotkeyAction action) =>
+        ExecutableActionTypeCatalog.GetDisplayLabel(
             action.ActionType,
             action.FileActionMode);
-    }
 
     public static string GetSummary(HotkeyAction action)
     {
@@ -39,9 +37,7 @@ internal static class HotkeyActionDisplayText
         }
 
         var normalized = action.Content.ReplaceLineEndings(" ");
-        return normalized.Length <= 42
-            ? normalized
-            : normalized[..42] + "...";
+        return normalized.Length <= 42 ? normalized : normalized[..42] + "...";
     }
 
     private static string GetMediaSummary(HotkeyAction action)

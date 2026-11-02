@@ -197,7 +197,9 @@ internal sealed record AppComposition(
                 terminalCommandGatewayAdapter,
                 clipboardPasteGateway,
                 dialogAdapter,
-                slotTimerCoordinator);
+                slotTimerCoordinator,
+                displayPowerGateway: new DisplayPowerGatewayAdapter(),
+                bluetoothDeviceControlGateway: new WindowsBluetoothDeviceControlGateway(fileLogger));
         }
 
         return new AppComposition(
@@ -252,7 +254,9 @@ internal sealed record AppComposition(
         IClipboardAdapter? clipboardAdapter,
         IFilePasteGateway? filePasteGateway = null,
         ISlotTimerUseCases? slotTimerUseCases = null,
-        ISlotTimerCoordinator? slotTimerCoordinator = null)
+        ISlotTimerCoordinator? slotTimerCoordinator = null,
+        IDisplayPowerGateway? displayPowerGateway = null,
+        IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null)
     {
         var effectiveClipboardPasteGateway = clipboardPasteGateway ?? new ClipboardPasteGateway();
         var effectiveFileLaunchGatewayAdapter = fileLaunchGateway ?? new FileLaunchGatewayAdapter();
@@ -310,7 +314,9 @@ internal sealed record AppComposition(
                 effectiveTerminalCommandGatewayAdapter,
                 effectiveFilePasteGateway,
                 dialogAdapter,
-                effectiveSlotTimerCoordinator),
+                effectiveSlotTimerCoordinator,
+                displayPowerGateway: displayPowerGateway ?? new DisplayPowerGatewayAdapter(),
+                bluetoothDeviceControlGateway: bluetoothDeviceControlGateway ?? new WindowsBluetoothDeviceControlGateway(fileLogger)),
             new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
             new SpotifyConnectionUseCase(
                 settingsRepository,
@@ -324,7 +330,8 @@ internal sealed record AppComposition(
     public MainViewModelDependencies CreateMainViewModelDependencies(
         IAutoBackupCoordinator? autoBackupCoordinator,
         Func<ExecutableAction, Task> executeActionAsync,
-        IBluetoothAudioStatusGateway? bluetoothAudioStatusGateway = null)
+        IBluetoothAudioStatusGateway? bluetoothAudioStatusGateway = null,
+        IBluetoothAudioStatusUseCase? bluetoothAudioStatusUseCase = null)
     {
         var loadSettingsUseCase = new LoadSettingsUseCase(SettingsRepository);
         var saveCategoryUseCase = new SaveCategoryUseCase(
@@ -407,6 +414,12 @@ internal sealed record AppComposition(
             ClipboardAdapter,
             SlotTimerCoordinator);
 
+        var effectiveBluetoothUseCase = bluetoothAudioStatusUseCase
+            ?? new BluetoothAudioStatusUseCase(
+                bluetoothAudioStatusGateway ?? new WindowsBluetoothAudioStatusGateway(FileLogger),
+                SettingsRepository,
+                FileLogger);
+
         return new MainViewModelDependencies(
             navigatorDependencies,
             loadSettingsUseCase,
@@ -417,7 +430,7 @@ internal sealed record AppComposition(
             executeActionAsync,
             FileLogger,
             autoBackupCoordinator,
-            bluetoothAudioStatusGateway ?? new WindowsBluetoothAudioStatusGateway(FileLogger));
+            effectiveBluetoothUseCase);
     }
 
     private static ExecuteSnippetActionUseCase CreateExecuteSnippetActionUseCase(
@@ -429,7 +442,9 @@ internal sealed record AppComposition(
         ITerminalCommandGateway terminalCommandGateway,
         IFilePasteGateway filePasteGateway,
         IDialogAdapter dialogAdapter,
-        ITimerActionGateway? timerActionGateway = null)
+        ITimerActionGateway? timerActionGateway = null,
+        IDisplayPowerGateway? displayPowerGateway = null,
+        IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null)
     {
         return new ExecuteSnippetActionUseCase(
             clipboardPasteGateway,
@@ -440,7 +455,9 @@ internal sealed record AppComposition(
             terminalCommandGateway,
             filePasteGateway,
             dialogAdapter,
-            timerActionGateway);
+            timerActionGateway,
+            displayPowerGateway: displayPowerGateway ?? new DisplayPowerGatewayAdapter(),
+            bluetoothDeviceControlGateway: bluetoothDeviceControlGateway ?? new WindowsBluetoothDeviceControlGateway());
     }
 
     private static TimeSpan? PromptTimerDuration()

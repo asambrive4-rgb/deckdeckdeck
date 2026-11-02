@@ -199,6 +199,67 @@ public sealed class DirectHotkeyRegistrarTests
         Assert.Equal([actionId], pressed);
     }
 
+    [Fact]
+    public void UnregisteredVirtualKeyDoesNotQueryModifiersAndDoesNotBlock()
+    {
+        var modifierQueryCount = 0;
+        var registrar = new DirectHotkeyRegistrar(_ =>
+        {
+            modifierQueryCount++;
+            return false;
+        });
+
+        registrar.Refresh([
+            new DirectHotkeyRegistration(
+                Guid.NewGuid(),
+                new HotkeyGesture(0x67, HotkeyModifiers.Control))
+        ]);
+
+        var blocked = registrar.HandleKeyboardEventForTest(Win32Constants.WmKeydown, 0x41);
+
+        Assert.False(blocked);
+        Assert.Equal(0, modifierQueryCount);
+    }
+
+    [Fact]
+    public void KeyUpWhenNoGesturesPressedReturnsFalse()
+    {
+        var registrar = new DirectHotkeyRegistrar(_ => false);
+        registrar.Refresh([
+            new DirectHotkeyRegistration(
+                Guid.NewGuid(),
+                new HotkeyGesture(0x67, HotkeyModifiers.None))
+        ]);
+
+        var blocked = registrar.HandleKeyboardEventForTest(Win32Constants.WmKeyup, 0x67);
+
+        Assert.False(blocked);
+    }
+
+    [Fact]
+    public void DisposeClearsRegisteredKeysAndPreventsModifierQueries()
+    {
+        var modifierQueryCount = 0;
+        var registrar = new DirectHotkeyRegistrar(_ =>
+        {
+            modifierQueryCount++;
+            return false;
+        });
+
+        registrar.Refresh([
+            new DirectHotkeyRegistration(
+                Guid.NewGuid(),
+                new HotkeyGesture(0x67, HotkeyModifiers.None))
+        ]);
+
+        registrar.Dispose();
+
+        var blocked = registrar.HandleKeyboardEventForTest(Win32Constants.WmKeydown, 0x67);
+
+        Assert.False(blocked);
+        Assert.Equal(0, modifierQueryCount);
+    }
+
     private sealed class StubTextInputFocusDetector : ITextInputFocusDetector
     {
         private readonly bool _isTextInputFocused;

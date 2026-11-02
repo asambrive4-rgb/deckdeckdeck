@@ -6,27 +6,46 @@ namespace DeckDeckDeck.App.Data;
 public sealed class AppDbContextFactory
 {
     private readonly string _databasePath;
+    private readonly DbContextOptions<AppDbContext> _options;
 
     public AppDbContextFactory(string databasePath)
     {
         _databasePath = databasePath;
+        _options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite($"Data Source={_databasePath};Mode=ReadWriteCreate;Cache=Shared;")
+            .Options;
     }
 
     public AppDbContext Create()
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite($"Data Source={_databasePath}")
-            .Options;
-
-        return new AppDbContext(options);
+        return new AppDbContext(_options);
     }
 
     public void EnsureCreated()
     {
         using var dbContext = Create();
         dbContext.Database.EnsureCreated();
+        ConfigureDatabasePragmas(dbContext);
         EnsureSnippetColumns(dbContext);
         EnsureHotkeyActionsTable(dbContext);
+    }
+
+    private static void ConfigureDatabasePragmas(AppDbContext dbContext)
+    {
+        dbContext.Database.OpenConnection();
+
+        try
+        {
+            using var command = dbContext.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "PRAGMA journal_mode = WAL;";
+            command.ExecuteNonQuery();
+            command.CommandText = "PRAGMA synchronous = NORMAL;";
+            command.ExecuteNonQuery();
+        }
+        finally
+        {
+            dbContext.Database.CloseConnection();
+        }
     }
 
     private static void EnsureSnippetColumns(AppDbContext dbContext)

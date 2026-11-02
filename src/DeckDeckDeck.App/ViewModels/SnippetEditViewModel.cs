@@ -1,12 +1,12 @@
-// 역할: 텍스트 스니펫 및 동작(URL, 파일, 미디어 등) 편집 화면의 모든 입력 필드와 저장 동작을 관리하는 화면 모델입니다.
-using System.Windows.Input;
+// 역할: 텍스트 스니펫 및 동작(URL, 파일, 앱, 미디어, 블루투스 등) 편집 화면의 모든 입력 필드와 저장 동작을 관리하는 화면 모델입니다.
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases.Ports;
 using DeckDeckDeck.App.UseCases;
+using DeckDeckDeck.App.UseCases.Ports;
 
 namespace DeckDeckDeck.App.ViewModels;
 
@@ -28,8 +28,11 @@ public sealed class SnippetEditViewModel : ObservableObject
     private string _errorMessage = string.Empty;
     private bool _isAdbPairingEnabled;
     private bool _showAdvancedTerminalSettings;
+    private BluetoothAudioActionKind _bluetoothControlAction = BluetoothAudioActionKind.Connect;
+    private string _bluetoothTarget = string.Empty;
+    private bool _isBluetoothPresetSelected;
     private bool _isSlotEnabled;
-    private IReadOnlyList<SnippetMediaCommandOption> _mediaCommandOptions = SnippetMediaCommandOption.SystemCommands;
+    private IReadOnlyList<SnippetMediaCommandOption> _mediaCommandOptions;
     private SnippetTransferTargetSlot? _selectedTransferTarget;
 
     public SnippetEditViewModel(
@@ -72,10 +75,13 @@ public sealed class SnippetEditViewModel : ObservableObject
         _isSpotifyConnected = editorState.SpotifyConnection.IsConnected;
 
         _mediaCommandOptions = SnippetMediaCommandOption.ForProvider(_draft.MediaProvider);
-        TransferTargetSlots = BuildTransferTargetSlots(editorState.TransferTargets);
+        TransferTargetSlots = SlotEditCommon.BuildTransferTargetSlots(editorState.TransferTargets)
+            .Select(t => new SnippetTransferTargetSlot(t.SlotKey, t.Label))
+            .ToList();
         _selectedTransferTarget = TransferTargetSlots.FirstOrDefault();
         _originalIsSlotEnabled = editorState.IsSlotEnabled;
         _isSlotEnabled = _originalIsSlotEnabled;
+
         SaveCommand = new RelayCommand(Save);
         CancelCommand = new RelayCommand(Cancel);
         DeleteCommand = new RelayCommand(Delete);
@@ -85,44 +91,37 @@ public sealed class SnippetEditViewModel : ObservableObject
         RemoveImageCommand = new RelayCommand(RemoveImage);
         ChooseLaunchFileCommand = new RelayCommand(ChooseLaunchFile);
         ChooseLaunchFolderCommand = new RelayCommand(ChooseLaunchFolder);
+        ChooseInstalledAppCommand = new RelayCommand(ChooseInstalledApp);
         ChooseTerminalWorkingDirectoryCommand = new RelayCommand(ChooseTerminalWorkingDirectory);
         SelectTurnOffDisplayPresetCommand = new RelayCommand(SelectTurnOffDisplayPreset);
         SelectAdbPairingPresetCommand = new RelayCommand(SelectAdbPairingPreset);
         SelectCustomTerminalCommandPresetCommand = new RelayCommand(SelectCustomTerminalCommandPreset);
+        SelectBluetoothPresetCommand = new RelayCommand(SelectBluetoothPreset);
+        ChooseBluetoothDeviceCommand = new RelayCommand(ChooseBluetoothDevice);
         ToggleAdvancedTerminalSettingsCommand = new RelayCommand(ToggleAdvancedTerminalSettings);
-        _isAdbPairingEnabled =
-            TerminalCommandParameterRules.IsAdbWirelessConnectCommand(_draft.TerminalCommand);
+        _isAdbPairingEnabled = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(_draft.TerminalCommand);
+        if (TerminalCommandParameterRules.TryParseBluetoothAudioCommand(_draft.TerminalCommand, out var parsedBt, allowEmptyTarget: true))
+        {
+            _isBluetoothPresetSelected = true;
+            _bluetoothControlAction = parsedBt.Action;
+            _bluetoothTarget = parsedBt.Target;
+        }
     }
 
     public string Title => IsExisting ? "실행 항목 편집" : "새 실행 항목";
-
     public Guid CategoryId { get; }
-
     public string CategoryName { get; }
-
     public SlotKey SlotKey { get; }
-
     public string KeyText { get; }
-
     public bool IsExisting => _snippetId.HasValue;
-
     public bool CanDelete => IsExisting;
-
     public bool CanTransfer => IsExisting;
 
     public IReadOnlyList<SnippetTransferTargetSlot> TransferTargetSlots { get; }
-
-    public IReadOnlyList<SnippetMediaProviderOption> MediaProviderOptions { get; } =
-        SnippetMediaProviderOption.All;
-
-    public IReadOnlyList<PasteShortcutModeOption> PasteShortcutModeOptions { get; } =
-        PasteShortcutModeOption.All;
-
-    public IReadOnlyList<FileActionModeOption> FileActionModeOptions { get; } =
-        FileActionModeOption.All;
-
-    public IReadOnlyList<TerminalShellOption> TerminalShellOptions { get; } =
-        TerminalShellOption.All;
+    public IReadOnlyList<SnippetMediaProviderOption> MediaProviderOptions => SnippetMediaProviderOption.All;
+    public IReadOnlyList<PasteShortcutModeOption> PasteShortcutModeOptions => PasteShortcutModeOption.All;
+    public IReadOnlyList<FileActionModeOption> FileActionModeOptions => FileActionModeOption.All;
+    public IReadOnlyList<TerminalShellOption> TerminalShellOptions => TerminalShellOption.All;
 
     public IReadOnlyList<SnippetMediaCommandOption> MediaCommandOptions
     {
@@ -139,22 +138,19 @@ public sealed class SnippetEditViewModel : ObservableObject
     public string SnippetTitle
     {
         get => _draft.Title;
-        set => SetDraftValue(_draft.Title, value, static (draft, newValue) => draft.Title = newValue);
+        set => SetDraftValue(_draft.Title, value, static (draft, v) => draft.Title = v);
     }
 
     public string Content
     {
         get => _draft.Content;
-        set => SetDraftValue(_draft.Content, value, static (draft, newValue) => draft.Content = newValue);
+        set => SetDraftValue(_draft.Content, value, static (draft, v) => draft.Content = v);
     }
 
     public PasteShortcutMode PasteShortcutMode
     {
         get => _draft.PasteShortcutMode;
-        set => SetDraftValue(
-            _draft.PasteShortcutMode,
-            value,
-            static (draft, newValue) => draft.PasteShortcutMode = newValue);
+        set => SetDraftValue(_draft.PasteShortcutMode, value, static (draft, v) => draft.PasteShortcutMode = v);
     }
 
     public SnippetActionType ActionType
@@ -162,10 +158,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         get => _draft.ActionType;
         private set
         {
-            if (_draft.ActionType == value)
-            {
-                return;
-            }
+            if (_draft.ActionType == value) return;
 
             _draft.SetActionType(value);
             OnPropertyChanged();
@@ -176,83 +169,42 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
     }
 
-    public ActionEditorPanel EditorPanel =>
-        ExecutableActionTypeCatalog.GetEditorPanel(ActionType);
+    public ActionEditorPanel EditorPanel => ExecutableActionTypeCatalog.GetEditorPanel(ActionType);
 
     public bool IsPasteTextAction
     {
         get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.PasteText);
-        set
-        {
-            if (value)
-            {
-                ActionType = SnippetActionType.PasteText;
-            }
-        }
+        set { if (value) ActionType = SnippetActionType.PasteText; }
     }
 
     public bool IsLaunchFileAction
     {
         get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.LaunchFile);
-        set
-        {
-            if (value)
-            {
-                ActionType = SnippetActionType.LaunchFile;
-            }
-        }
+        set { if (value) ActionType = SnippetActionType.LaunchFile; }
     }
 
     public bool IsLaunchUrlAction
     {
         get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.LaunchUrl);
-        set
-        {
-            if (value)
-            {
-                ActionType = SnippetActionType.LaunchUrl;
-            }
-        }
+        set { if (value) ActionType = SnippetActionType.LaunchUrl; }
     }
 
     public bool IsMediaAction
     {
         get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.Media);
-        set
-        {
-            if (value)
-            {
-                ActionType = SnippetActionType.MediaAction;
-            }
-        }
+        set { if (value) ActionType = SnippetActionType.MediaAction; }
     }
 
     public bool IsTerminalCommandAction
     {
-        get => ExecutableActionTypeCatalog.IsEditorPanel(
-            ActionType,
-            ActionEditorPanel.TerminalCommand);
-        set
-        {
-            if (value)
-            {
-                ActionType = SnippetActionType.TerminalCommand;
-            }
-        }
+        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.TerminalCommand);
+        set { if (value) ActionType = SnippetActionType.TerminalCommand; }
     }
 
     public bool IsTimerAction
     {
-        get => ExecutableActionTypeCatalog.IsEditorPanel(
-            ActionType,
-            ActionEditorPanel.Timer);
-        set
-        {
-            if (value)
-            {
-                ActionType = SnippetActionType.Timer;
-            }
-        }
+        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.Timer);
+        set { if (value) ActionType = SnippetActionType.Timer; }
     }
 
     public string LaunchPath
@@ -260,11 +212,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         get => _draft.LaunchPath;
         set
         {
-            if (_draft.LaunchPath == value)
-            {
-                return;
-            }
-
+            if (_draft.LaunchPath == value) return;
             _draft.SetLaunchPath(value);
             OnPropertyChanged();
             NotifyImageChanged();
@@ -276,11 +224,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         get => _draft.FileActionMode;
         set
         {
-            if (_draft.FileActionMode == value)
-            {
-                return;
-            }
-
+            if (_draft.FileActionMode == value) return;
             _draft.SetFileActionMode(value);
             OnPropertyChanged();
             NotifyFileActionModeChanged();
@@ -288,24 +232,16 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
     }
 
-    public bool IsFileLaunchMode =>
-        IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Launch;
+    public bool IsFileLaunchMode => IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Launch;
+    public bool IsFilePasteMode => IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Paste;
 
-    public bool IsFilePasteMode =>
-        IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Paste;
-
-    public string FilePathLabel => IsFilePasteMode
-        ? "붙여넣을 파일"
-        : "실행할 파일, 폴더 또는 바로 가기";
-
-    public string FilePickerButtonText => IsFilePasteMode
-        ? "파일 선택"
-        : "파일/바로 가기 선택";
+    public string FilePathLabel => IsFilePasteMode ? "붙여넣을 파일" : "실행할 파일, 폴더 또는 바로 가기";
+    public string FilePickerButtonText => IsFilePasteMode ? "파일 선택" : "파일/바로 가기 선택";
 
     public string LaunchUrl
     {
         get => _draft.LaunchUrl;
-        set => SetDraftValue(_draft.LaunchUrl, value, static (draft, newValue) => draft.SetLaunchUrl(newValue));
+        set => SetDraftValue(_draft.LaunchUrl, value, static (draft, v) => draft.SetLaunchUrl(v));
     }
 
     public SnippetMediaProvider SelectedMediaProvider
@@ -313,11 +249,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         get => _draft.MediaProvider;
         set
         {
-            if (_draft.MediaProvider == value)
-            {
-                return;
-            }
-
+            if (_draft.MediaProvider == value) return;
             _draft.SetMediaProvider(value);
             OnPropertyChanged();
             MediaCommandOptions = SnippetMediaCommandOption.ForProvider(value);
@@ -333,11 +265,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         get => _draft.MediaCommand;
         set
         {
-            if (_draft.MediaCommand == value)
-            {
-                return;
-            }
-
+            if (_draft.MediaCommand == value) return;
             _draft.SetMediaCommand(value);
             OnPropertyChanged();
             NotifyImageChanged();
@@ -345,24 +273,15 @@ public sealed class SnippetEditViewModel : ObservableObject
     }
 
     public bool IsSpotifyMediaProvider => SelectedMediaProvider == SnippetMediaProvider.Spotify;
-
-    public bool ShowSpotifyMediaConnectionNotice =>
-        IsMediaAction
-        && IsSpotifyMediaProvider
-        && !_isSpotifyConnected;
-
-    public string SpotifyMediaConnectionNotice =>
-        "Spotify 연결 전에도 저장할 수 있습니다. 실행하려면 설정에서 Spotify를 연결해 주세요.";
+    public bool ShowSpotifyMediaConnectionNotice => IsMediaAction && IsSpotifyMediaProvider && !_isSpotifyConnected;
+    public string SpotifyMediaConnectionNotice => "Spotify 연결 전에도 저장할 수 있습니다. 실행하려면 설정에서 Spotify를 연결해 주세요.";
 
     public string TerminalCommand
     {
         get => _draft.TerminalCommand;
         set
         {
-            if (!SetDraftValue(
-                    _draft.TerminalCommand,
-                    value,
-                    static (draft, newValue) => draft.TerminalCommand = newValue))
+            if (!SetDraftValue(_draft.TerminalCommand, value, static (draft, v) => draft.TerminalCommand = v))
             {
                 return;
             }
@@ -374,8 +293,23 @@ public sealed class SnippetEditViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsAdbPairingEnabled));
             }
 
+            if (TerminalCommandParameterRules.TryParseBluetoothAudioCommand(value, out var btCmd, allowEmptyTarget: true))
+            {
+                _isBluetoothPresetSelected = true;
+                _bluetoothControlAction = btCmd.Action;
+                _bluetoothTarget = btCmd.Target;
+                OnPropertyChanged(nameof(IsBluetoothConnectAction));
+                OnPropertyChanged(nameof(IsBluetoothDisconnectAction));
+                OnPropertyChanged(nameof(BluetoothTarget));
+            }
+            else
+            {
+                _isBluetoothPresetSelected = false;
+            }
+
             OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
             OnPropertyChanged(nameof(IsAdbPairingPresetActive));
+            OnPropertyChanged(nameof(IsBluetoothPresetActive));
             OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
             OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
         }
@@ -386,55 +320,78 @@ public sealed class SnippetEditViewModel : ObservableObject
         get => _showAdvancedTerminalSettings || IsCustomTerminalCommandActive;
         set
         {
-            if (_showAdvancedTerminalSettings == value)
-            {
-                return;
-            }
-
+            if (_showAdvancedTerminalSettings == value) return;
             _showAdvancedTerminalSettings = value;
             OnPropertyChanged();
         }
     }
 
-    public bool IsTurnOffDisplayPresetActive =>
-        TerminalCommandParameterRules.IsTurnOffDisplayCommand(TerminalCommand);
+    public bool IsTurnOffDisplayPresetActive => TerminalCommandParameterRules.IsTurnOffDisplayCommand(TerminalCommand);
+    public bool IsAdbPairingPresetActive => TerminalCommandParameterRules.IsAdbWirelessConnectCommand(TerminalCommand);
+    public bool IsBluetoothPresetActive => _isBluetoothPresetSelected || TerminalCommandParameterRules.TryParseBluetoothAudioCommand(TerminalCommand, out _, allowEmptyTarget: true);
+    public bool IsCustomTerminalCommandActive => !IsTurnOffDisplayPresetActive && !IsAdbPairingPresetActive && !IsBluetoothPresetActive;
 
-    public bool IsAdbPairingPresetActive =>
-        TerminalCommandParameterRules.IsAdbWirelessConnectCommand(TerminalCommand);
+    public BluetoothAudioActionKind BluetoothControlAction
+    {
+        get => _bluetoothControlAction;
+        set
+        {
+            if (_bluetoothControlAction == value) return;
+            _bluetoothControlAction = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsBluetoothConnectAction));
+            OnPropertyChanged(nameof(IsBluetoothDisconnectAction));
+            if (IsBluetoothPresetActive) SyncBluetoothTerminalCommand();
+        }
+    }
 
-    public bool IsCustomTerminalCommandActive =>
-        !IsTurnOffDisplayPresetActive && !IsAdbPairingPresetActive;
+    public bool IsBluetoothConnectAction
+    {
+        get => BluetoothControlAction == BluetoothAudioActionKind.Connect;
+        set { if (value) BluetoothControlAction = BluetoothAudioActionKind.Connect; }
+    }
+
+    public bool IsBluetoothDisconnectAction
+    {
+        get => BluetoothControlAction == BluetoothAudioActionKind.Disconnect;
+        set { if (value) BluetoothControlAction = BluetoothAudioActionKind.Disconnect; }
+    }
+
+    public string BluetoothTarget
+    {
+        get => _bluetoothTarget;
+        set
+        {
+            if (_bluetoothTarget == value) return;
+            _bluetoothTarget = value;
+            OnPropertyChanged();
+            if (IsBluetoothPresetActive) SyncBluetoothTerminalCommand();
+        }
+    }
 
     public IRelayCommand SelectTurnOffDisplayPresetCommand { get; }
     public IRelayCommand SelectAdbPairingPresetCommand { get; }
     public IRelayCommand SelectCustomTerminalCommandPresetCommand { get; }
+    public IRelayCommand SelectBluetoothPresetCommand { get; }
+    public IRelayCommand ChooseBluetoothDeviceCommand { get; }
     public IRelayCommand ToggleAdvancedTerminalSettingsCommand { get; }
 
     public SnippetTerminalShell SelectedTerminalShell
     {
         get => _draft.TerminalShell;
-        set => SetDraftValue(
-            _draft.TerminalShell,
-            value,
-            static (draft, newValue) => draft.TerminalShell = newValue);
+        set => SetDraftValue(_draft.TerminalShell, value, static (draft, v) => draft.TerminalShell = v);
     }
 
     public bool RunAsAdministrator
     {
         get => _draft.RunAsAdministrator;
-        set => SetDraftValue(
-            _draft.RunAsAdministrator,
-            value,
-            static (draft, newValue) => draft.RunAsAdministrator = newValue);
+        set => SetDraftValue(_draft.RunAsAdministrator, value, static (draft, v) => draft.RunAsAdministrator = v);
     }
 
     public bool OpenTerminalWindow
     {
         get => _draft.OpenTerminalWindow;
-        set => SetDraftValue(
-            _draft.OpenTerminalWindow,
-            value,
-            static (draft, newValue) => draft.OpenTerminalWindow = newValue);
+        set => SetDraftValue(_draft.OpenTerminalWindow, value, static (draft, v) => draft.OpenTerminalWindow = v);
     }
 
     public bool IsAdbPairingEnabled
@@ -442,42 +399,29 @@ public sealed class SnippetEditViewModel : ObservableObject
         get => _isAdbPairingEnabled;
         set
         {
-            if (_isAdbPairingEnabled == value)
-            {
-                return;
-            }
-
+            if (_isAdbPairingEnabled == value) return;
             _isAdbPairingEnabled = value;
             OnPropertyChanged();
-            if (value)
-            {
-                ApplyAdbPairingDefaults();
-            }
+            if (value) ApplyAdbPairingDefaults();
         }
     }
 
     public string TerminalWorkingDirectory
     {
         get => _draft.TerminalWorkingDirectory;
-        set => SetDraftValue(
-            _draft.TerminalWorkingDirectory,
-            value,
-            static (draft, newValue) => draft.TerminalWorkingDirectory = newValue);
+        set => SetDraftValue(_draft.TerminalWorkingDirectory, value, static (draft, v) => draft.TerminalWorkingDirectory = v);
     }
 
     public string AdbDeviceIp
     {
         get => _draft.AdbDeviceIp;
-        set => SetDraftValue(
-            _draft.AdbDeviceIp,
-            value,
-            static (draft, newValue) => draft.AdbDeviceIp = newValue);
+        set => SetDraftValue(_draft.AdbDeviceIp, value, static (draft, v) => draft.AdbDeviceIp = v);
     }
 
     public string Description
     {
         get => _draft.Description;
-        set => SetDraftValue(_draft.Description, value, static (draft, newValue) => draft.Description = newValue);
+        set => SetDraftValue(_draft.Description, value, static (draft, v) => draft.Description = v);
     }
 
     public bool IsSlotEnabled
@@ -493,63 +437,38 @@ public sealed class SnippetEditViewModel : ObservableObject
     }
 
     public string? ThumbnailPath => _draft.GetPreviewThumbnailPath();
-
     public bool HasImage => _draft.HasImage;
-
     public SlotImageMode SlotImageMode => _draft.SlotImageMode;
 
     public ICommand SaveCommand { get; }
-
     public ICommand CancelCommand { get; }
-
     public ICommand DeleteCommand { get; }
-
     public ICommand CopySnippetCommand { get; }
-
     public ICommand MoveSnippetCommand { get; }
-
     public ICommand ChooseImageCommand { get; }
-
     public ICommand RemoveImageCommand { get; }
-
     public ICommand ChooseLaunchFileCommand { get; }
-
     public ICommand ChooseLaunchFolderCommand { get; }
-
+    public ICommand ChooseInstalledAppCommand { get; }
     public ICommand ChooseTerminalWorkingDirectoryCommand { get; }
 
     public void DropImageFiles(IReadOnlyList<string> sourcePaths)
     {
-        if (sourcePaths.Count != 1)
-        {
-            ErrorMessage = "이미지는 하나만 드롭해 주세요.";
-            return;
-        }
+        if (SlotEditCommon.TryDropSingleImage(sourcePaths, ReplaceImageFromPath, out var error)) return;
 
-        ReplaceImageFromPath(sourcePaths[0]);
+        ErrorMessage = error ?? string.Empty;
     }
 
     private void Save()
     {
-        var snippet = SaveSnippet();
-        if (snippet is null)
-        {
-            return;
-        }
-
-        _showStatus($"{snippet.Title} 저장됨.");
-        _afterSave(snippet);
-    }
-
-    private Snippet? SaveSnippet(bool requestAutoBackup = true)
-    {
         var autoIcon = _draft.PrepareAutoIconForSave();
         NotifyImageChanged();
-        var result = _saveSnippetUseCase.Execute(BuildSaveRequest(autoIcon), requestAutoBackup);
+
+        var result = _saveSnippetUseCase.Execute(BuildSaveRequest(autoIcon));
         if (!result.Succeeded)
         {
             ErrorMessage = result.ErrorMessage ?? string.Empty;
-            return null;
+            return;
         }
 
         if (result.SavedSlotOnly)
@@ -557,13 +476,11 @@ public sealed class SnippetEditViewModel : ObservableObject
             _originalIsSlotEnabled = IsSlotEnabled;
             _draft.DeleteCurrentUnsavedImage();
             _showStatus($"슬롯 {KeyText} 설정을 저장했습니다.");
-            // afterDelete navigates back with cache invalidation (slot enablement changed).
             _afterDelete();
-            return null;
+            return;
         }
 
-        if (ActionType == SnippetActionType.LaunchUrl
-            && !string.IsNullOrWhiteSpace(result.NormalizedLaunchUrl))
+        if (ActionType == SnippetActionType.LaunchUrl && !string.IsNullOrWhiteSpace(result.NormalizedLaunchUrl))
         {
             ApplyNormalizedLaunchUrl(result.NormalizedLaunchUrl);
         }
@@ -572,20 +489,12 @@ public sealed class SnippetEditViewModel : ObservableObject
         _draft.MarkSaved();
         _originalIsSlotEnabled = IsSlotEnabled;
         ErrorMessage = string.Empty;
-
-        return snippet;
+        _showStatus($"{snippet.Title} 저장됨.");
+        _afterSave(snippet);
     }
 
-    private SaveSnippetRequest BuildSaveRequest(AutoIconCacheEntry? autoIcon)
-    {
-        return new SaveSnippetRequest(
-            CategoryId,
-            SlotKey,
-            _snippetId,
-            IsSlotEnabled,
-            _originalIsSlotEnabled,
-            _draft.ToSnippetSaveData(autoIcon));
-    }
+    private SaveSnippetRequest BuildSaveRequest(AutoIconCacheEntry? autoIcon) =>
+        new(CategoryId, SlotKey, _snippetId, IsSlotEnabled, _originalIsSlotEnabled, _draft.ToSnippetSaveData(autoIcon));
 
     private void Cancel()
     {
@@ -595,19 +504,8 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private void Delete()
     {
-        if (!_snippetId.HasValue)
-        {
-            return;
-        }
-
-        var confirmed = _dialogService.Confirm(
-            "실행 항목 삭제",
-            "이 실행 항목을 삭제할까요?");
-
-        if (!confirmed)
-        {
-            return;
-        }
+        if (!_snippetId.HasValue) return;
+        if (!_dialogService.Confirm("실행 항목 삭제", "이 실행 항목을 삭제할까요?")) return;
 
         _draft.DeleteCurrentUnsavedImage();
         _deleteSnippetUseCase.Execute(_snippetId.Value);
@@ -615,26 +513,11 @@ public sealed class SnippetEditViewModel : ObservableObject
         _afterDelete();
     }
 
-    private void CopySnippet()
-    {
-        TransferSnippet(
-            "복사",
-            SnippetTransferOperation.Copy,
-            targetSlotKey => $"슬롯 {targetSlotKey.GetDisplayText()}에 실행 항목을 복사했습니다.");
-    }
+    private void CopySnippet() => TransferSnippet(SnippetTransferOperation.Copy);
 
-    private void MoveSnippet()
-    {
-        TransferSnippet(
-            "이동",
-            SnippetTransferOperation.Move,
-            targetSlotKey => $"슬롯 {targetSlotKey.GetDisplayText()}로 실행 항목을 이동했습니다.");
-    }
+    private void MoveSnippet() => TransferSnippet(SnippetTransferOperation.Move);
 
-    private void TransferSnippet(
-        string actionText,
-        SnippetTransferOperation operation,
-        Func<SlotKey, string> getStatusMessage)
+    private void TransferSnippet(SnippetTransferOperation operation)
     {
         if (!_snippetId.HasValue)
         {
@@ -648,65 +531,42 @@ public sealed class SnippetEditViewModel : ObservableObject
             return;
         }
 
+        var isCopy = operation == SnippetTransferOperation.Copy;
+        var (actionText, particle) = SlotEditCommon.GetTransferText(isCopy);
         var targetSlotKey = SelectedTransferTarget.SlotKey;
-        try
-        {
-            var autoIcon = _draft.PrepareAutoIconForSave();
-            NotifyImageChanged();
-            var result = ExecuteTransferSnippet(
-                operation,
-                targetSlotKey,
-                autoIcon,
-                overwriteConfirmed: false);
-            if (result.NeedsOverwriteConfirmation)
+        var autoIcon = _draft.PrepareAutoIconForSave();
+        NotifyImageChanged();
+
+        SlotEditCommon.ExecuteTransferWithConfirmation(
+            _dialogService,
+            _loggingService,
+            SlotKey,
+            "실행 항목",
+            isCopy,
+            overwriteConfirmed => ExecuteTransferSnippet(operation, targetSlotKey, autoIcon, overwriteConfirmed),
+            r => (r.NeedsOverwriteConfirmation, r.ExistingTargetTitle, r.Succeeded, r.ErrorMessage),
+            existing => $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{existing}' 실행 항목이 있습니다.\n기존 실행 항목을 덮어쓸까요?",
+            result =>
             {
-                var confirmed = _dialogService.Confirm(
-                    $"실행 항목 {actionText}",
-                    $"슬롯 {targetSlotKey.GetDisplayText()}에 이미 '{result.ExistingTargetTitle}' 실행 항목이 있습니다.\n기존 실행 항목을 덮어쓸까요?");
-                if (!confirmed)
+                if (ActionType == SnippetActionType.LaunchUrl && !string.IsNullOrWhiteSpace(result.NormalizedLaunchUrl))
                 {
-                    return;
+                    ApplyNormalizedLaunchUrl(result.NormalizedLaunchUrl);
                 }
 
-                result = ExecuteTransferSnippet(
-                    operation,
-                    targetSlotKey,
-                    autoIcon,
-                    overwriteConfirmed: true);
-            }
-
-            if (!result.Succeeded)
-            {
-                ErrorMessage = result.ErrorMessage ?? string.Empty;
-                return;
-            }
-
-            if (ActionType == SnippetActionType.LaunchUrl
-                && !string.IsNullOrWhiteSpace(result.NormalizedLaunchUrl))
-            {
-                ApplyNormalizedLaunchUrl(result.NormalizedLaunchUrl);
-            }
-
-            var transferredSnippet = result.Snippet!;
-            _draft.MarkSaved();
-            _originalIsSlotEnabled = IsSlotEnabled;
-            _afterSave(transferredSnippet);
-            _showStatus(getStatusMessage(targetSlotKey));
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"실행 항목 {actionText}에 실패했습니다.";
-            _loggingService?.Log($"Snippet {actionText} failed for slot {SlotKey}.", ex);
-        }
+                _draft.MarkSaved();
+                _originalIsSlotEnabled = IsSlotEnabled;
+                _afterSave(result.Snippet!);
+                _showStatus($"슬롯 {targetSlotKey.GetDisplayText()}{particle} 실행 항목을 {actionText}했습니다.");
+            },
+            msg => ErrorMessage = msg);
     }
 
     private TransferSnippetResult ExecuteTransferSnippet(
         SnippetTransferOperation operation,
         SlotKey targetSlotKey,
         AutoIconCacheEntry? autoIcon,
-        bool overwriteConfirmed)
-    {
-        return _transferSnippetUseCase.Execute(new TransferSnippetRequest(
+        bool overwriteConfirmed) =>
+        _transferSnippetUseCase.Execute(new TransferSnippetRequest(
             CategoryId,
             _snippetId,
             SlotKey,
@@ -715,23 +575,11 @@ public sealed class SnippetEditViewModel : ObservableObject
             operation,
             BuildSaveRequest(autoIcon),
             overwriteConfirmed));
-    }
 
     private void ChooseImage()
     {
-        if (!_draft.CanStoreImages)
-        {
-            ErrorMessage = "이미지 저장소가 준비되지 않았습니다.";
-            return;
-        }
-
-        var selectedPath = _dialogService.SelectImageFile();
-        if (selectedPath is null)
-        {
-            return;
-        }
-
-        ReplaceImageFromPath(selectedPath);
+        if (SlotEditCommon.TryChooseImage(_draft.CanStoreImages, _dialogService, ReplaceImageFromPath, out var error)) return;
+        if (error is not null) ErrorMessage = error;
     }
 
     private void ReplaceImageFromPath(string sourcePath)
@@ -757,25 +605,31 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private void ChooseLaunchFile()
     {
-        var selectedPath = IsFilePasteMode
-            ? _dialogService.SelectPasteFile()
-            : _dialogService.SelectLaunchFile();
-        if (selectedPath is null)
-        {
-            return;
-        }
+        var selectedPath = IsFilePasteMode ? _dialogService.SelectPasteFile() : _dialogService.SelectLaunchFile();
+        if (selectedPath is null) return;
 
         LaunchPath = selectedPath;
+        ErrorMessage = string.Empty;
+    }
+
+    private void ChooseInstalledApp()
+    {
+        var selected = _dialogService.SelectInstalledApp();
+        if (selected is null) return;
+
+        LaunchPath = selected.LaunchPath;
+        if (string.IsNullOrWhiteSpace(SnippetTitle) || SnippetTitle == "새 실행 항목")
+        {
+            SnippetTitle = selected.DisplayName;
+        }
+
         ErrorMessage = string.Empty;
     }
 
     private void ChooseLaunchFolder()
     {
         var selectedPath = _dialogService.SelectLaunchFolder();
-        if (selectedPath is null)
-        {
-            return;
-        }
+        if (selectedPath is null) return;
 
         _draft.SetLaunchFolderPath(selectedPath);
         OnPropertyChanged(nameof(LaunchPath));
@@ -786,10 +640,7 @@ public sealed class SnippetEditViewModel : ObservableObject
     private void ChooseTerminalWorkingDirectory()
     {
         var selectedPath = _dialogService.SelectLaunchFolder();
-        if (selectedPath is null)
-        {
-            return;
-        }
+        if (selectedPath is null) return;
 
         TerminalWorkingDirectory = selectedPath;
         ErrorMessage = string.Empty;
@@ -815,12 +666,14 @@ public sealed class SnippetEditViewModel : ObservableObject
         }
 
         _isAdbPairingEnabled = false;
+        _isBluetoothPresetSelected = false;
         _showAdvancedTerminalSettings = false;
         NotifyTerminalPropertiesChanged();
     }
 
     private void SelectAdbPairingPreset()
     {
+        _isBluetoothPresetSelected = false;
         IsAdbPairingEnabled = true;
         _showAdvancedTerminalSettings = false;
         NotifyTerminalPropertiesChanged();
@@ -828,20 +681,49 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private void SelectCustomTerminalCommandPreset()
     {
-        if (IsTurnOffDisplayPresetActive)
+        if (IsTurnOffDisplayPresetActive || TerminalCommandParameterRules.TryParseBluetoothAudioCommand(TerminalCommand, out _, allowEmptyTarget: true))
         {
             TerminalCommand = string.Empty;
         }
 
+        _isBluetoothPresetSelected = false;
         _isAdbPairingEnabled = false;
         _showAdvancedTerminalSettings = true;
         NotifyTerminalPropertiesChanged();
     }
 
-    private void ToggleAdvancedTerminalSettings()
+    private void SelectBluetoothPreset()
     {
-        ShowAdvancedTerminalSettings = !_showAdvancedTerminalSettings;
+        _isBluetoothPresetSelected = true;
+        _isAdbPairingEnabled = false;
+        _showAdvancedTerminalSettings = false;
+        _draft.ApplyBluetoothControlDefaults(_bluetoothControlAction, _bluetoothTarget);
+        NotifyTerminalPropertiesChanged();
     }
+
+    private void SyncBluetoothTerminalCommand()
+    {
+        _draft.ApplyBluetoothControlDefaults(_bluetoothControlAction, _bluetoothTarget);
+        NotifyTerminalPropertiesChanged();
+    }
+
+    private void ChooseBluetoothDevice()
+    {
+        var selected = _dialogService.SelectPairedBluetoothDevice();
+        if (selected is null) return;
+
+        BluetoothTarget = selected.MacAddress;
+        if (string.IsNullOrWhiteSpace(SnippetTitle) || SnippetTitle == "새 실행 항목")
+        {
+            var suffix = IsBluetoothDisconnectAction ? "off" : "on";
+            SnippetTitle = $"{selected.DisplayName} {suffix}";
+        }
+
+        ErrorMessage = string.Empty;
+    }
+
+    private void ToggleAdvancedTerminalSettings() =>
+        ShowAdvancedTerminalSettings = !_showAdvancedTerminalSettings;
 
     private void NotifyTerminalPropertiesChanged()
     {
@@ -852,6 +734,10 @@ public sealed class SnippetEditViewModel : ObservableObject
         OnPropertyChanged(nameof(IsAdbPairingEnabled));
         OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
         OnPropertyChanged(nameof(IsAdbPairingPresetActive));
+        OnPropertyChanged(nameof(IsBluetoothPresetActive));
+        OnPropertyChanged(nameof(IsBluetoothConnectAction));
+        OnPropertyChanged(nameof(IsBluetoothDisconnectAction));
+        OnPropertyChanged(nameof(BluetoothTarget));
         OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
         OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
         ErrorMessage = string.Empty;
@@ -907,25 +793,6 @@ public sealed class SnippetEditViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(LaunchUrl));
         }
-    }
-
-    private static IReadOnlyList<SnippetTransferTargetSlot> BuildTransferTargetSlots(
-        IReadOnlyList<TransferTargetState> transferTargets)
-    {
-        return transferTargets
-            .Select(target => new SnippetTransferTargetSlot(
-                target.SlotKey,
-                FormatTransferTargetLabel(target)))
-            .ToList();
-    }
-
-    private static string FormatTransferTargetLabel(TransferTargetState target)
-    {
-        var prefix = $"슬롯 {target.SlotKey.GetDisplayText()}";
-
-        return string.IsNullOrWhiteSpace(target.ExistingTitle)
-            ? $"{prefix} - 비어 있음"
-            : $"{prefix} - {target.ExistingTitle}";
     }
 }
 
@@ -1001,4 +868,3 @@ public sealed record SnippetMediaProviderOption(SnippetMediaProvider Provider, s
         new(SnippetMediaProvider.Spotify, "Spotify")
     ];
 }
-

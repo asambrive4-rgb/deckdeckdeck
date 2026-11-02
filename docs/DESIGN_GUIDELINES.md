@@ -8,7 +8,7 @@
 DeckDeckDeck의 시각 시스템은 **Bibata-Warm-Ivory (Warm Beige & Bold Black Border)** 방향을 따른다.
 
 ```text
-Main #F2EEE7 + Surface #FCFAF6 + Accent #D97448 + Border #1E1B18 (Bold 2.5px)
+Main #F2EEE7 + Surface #FCFAF6 + Accent #C7D7E8 + Border #1E1B18 (Bold 2.5px)
 + Bibata Modern Squircle / Pill Curve UI
 + User-provided DeckDuck Assets
 ```
@@ -23,7 +23,7 @@ Bibata Warm Ivory 마우스 커서의 조형미(포근한 베이지 바디 + 선
 
 기본 컬러 방향은 다음이다.
 
-> **Main #F2EEE7 + Surface #FCFAF6 + Border #1E1B18 (Text #1E1B18, Accent #D97448)**
+> **Main #F2EEE7 + Surface #FCFAF6 + Border #1E1B18 (Text #1E1B18, Accent #C7D7E8)**
 
 이 조합은 Bibata 마우스 커서와 완벽한 일체감을 제공하며, 눈부심 없는 부드러운 베이지 면과 또렷한 검정 외곽선으로 카드와 버튼의 경계를 명확하게 구분해 줍니다.
 
@@ -36,7 +36,7 @@ Bibata Warm Ivory 마우스 커서의 조형미(포근한 베이지 바디 + 선
 | 1 | **가독성 & 경계** | 2.5px 검정(#1E1B18) 볼드 테두리와 텍스트로 카드와 조작 영역이 선명해야 한다 |
 | 2 | **포근한 베이지감** | 차분하고 맑은 중립 아이보리/린넨 베이스(#F2EEE7)로 눈의 피로를 방지한다 |
 | 3 | **Bibata 일체감** | 실제 Bibata Warm Ivory 커서(베이지 바디 + 검정 외곽선)와 동일한 미감을 전달한다 |
-| 4 | **브랜드성** | Warm Beige 베이스 + 웜 테라코타 포인트로 세련된 레트로/모던 감성을 만든다 |
+| 4 | **브랜드성** | Warm Beige 베이스 + 소프트 스카이 슬레이트 포인트로 산뜻하고 세련된 데스크톱 감성을 만든다 |
 | 5 | **촉각성 (Tactile)** | 18px 알약형 곡률과 명확한 눌림감으로 기분 좋은 인터랙션을 제공한다 |
 
 ---
@@ -55,7 +55,7 @@ Bibata Warm Ivory 마우스 커서의 조형미(포근한 베이지 바디 + 선
 | Surface Muted (Pressed) | `#DBD4CB` | 클릭/눌림 및 비활성 영역 베이지 |
 | Border (Bold Line) | `#1E1B18` / `#000000` | Bibata 시그니처 2.5px 검정 볼드 테두리 |
 | Sub Text | `#5C554E` | 보조 텍스트, 설명 라벨 |
-| Accent (Terracotta) | `#D97448` | 주요 CTA 버튼, 포커스 링, 핵심 포인트 |
+| Accent (Soft Sky Slate) | `#C7D7E8` | 주요 CTA 버튼, 포커스 링, 핵심 포인트 |
 | Text Primary | `#1E1B18` | 검정 테두리와 어울리는 또렷한 딥 블랙 텍스트 |
 
 ---
@@ -82,7 +82,7 @@ Bibata Warm Ivory 마우스 커서의 조형미(포근한 베이지 바디 + 선
 
 | 항목 | 정책 |
 |---|---|
-| MVP 기본 팔레트 | Main `#F7F4EE`, Sub `#6E6259`, Accent `#D97448`, Text `#2B2523` |
+| MVP 기본 팔레트 | Main `#F7F4EE`, Sub `#6E6259`, Accent `#C7D7E8`, Text `#2B2523` |
 | 보조 팔레트 구현 | MVP에서는 제외 |
 | 사용자 팔레트 선택 | 추후 고려 |
 
@@ -176,7 +176,7 @@ MVP 디자인 가이드에는 다음 상태를 포함한다.
 #### Focused
 
 - 키보드 사용자를 위해 가장 명확해야 하는 상태다.
-- `focus.ring` (웜 테라코타 `#D97448`) 컬러를 사용한다.
+- `focus.ring` (소프트 스카이 슬레이트 `#C7D7E8`) 컬러를 사용한다.
 - 3px ring을 카드 바깥쪽에 표시한다.
 
 #### Empty

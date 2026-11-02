@@ -56,6 +56,48 @@ public sealed class BluetoothAudioStatusRulesTests
     }
 
     [Theory]
+    [InlineData(BluetoothDeviceCategory.Audio, 3)]
+    [InlineData(BluetoothDeviceCategory.Input, 2)]
+    [InlineData(BluetoothDeviceCategory.Other, 1)]
+    [InlineData(BluetoothDeviceCategory.Unknown, 0)]
+    public void GetCategoryPriority_OrdersAudioAboveInput(BluetoothDeviceCategory category, int expectedPriority)
+    {
+        Assert.Equal(expectedPriority, BluetoothAudioStatusRules.GetCategoryPriority(category));
+    }
+
+    [Fact]
+    public void FormatPinnedDeviceToolTip_WhenDisconnected_ShowsDisconnectedTag()
+    {
+        Assert.Equal(
+            $"WH-1000XM5\n{BluetoothAudioStatusRules.DisconnectedTagText}",
+            BluetoothAudioStatusRules.FormatPinnedDeviceToolTip("WH-1000XM5", false, null));
+    }
+
+    [Fact]
+    public void FormatPinnedDeviceToolTip_WhenConnectedWithBattery_ShowsPercent()
+    {
+        Assert.Equal(
+            "Buds3 Pro · 85%",
+            BluetoothAudioStatusRules.FormatPinnedDeviceToolTip("Buds3 Pro", true, 85));
+    }
+
+    [Fact]
+    public void FormatPinnedDeviceToolTip_WhenConnectedWithoutBattery_ShowsUnavailable()
+    {
+        Assert.Equal(
+            $"Buds3 Pro\n{BluetoothAudioStatusRules.BatteryUnavailableToolTip}",
+            BluetoothAudioStatusRules.FormatPinnedDeviceToolTip("Buds3 Pro", true, null));
+    }
+
+    [Fact]
+    public void FormatPinnedDeviceToolTip_WhenEmptyName_ShowsDisconnectedToolTip()
+    {
+        Assert.Equal(
+            BluetoothAudioStatusRules.DisconnectedToolTip,
+            BluetoothAudioStatusRules.FormatPinnedDeviceToolTip(null, false, null));
+    }
+
+    [Theory]
     [InlineData("Smart KBD Trio 500", BluetoothDeviceCategory.Input)]
     [InlineData("Logitech MX Master 3 Mouse", BluetoothDeviceCategory.Input)]
     [InlineData("주상의 Buds3 Pro", BluetoothDeviceCategory.Audio)]

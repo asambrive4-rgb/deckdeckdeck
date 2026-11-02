@@ -141,19 +141,18 @@ public sealed class SlotViewModel : ObservableObject
         set => SetProperty(ref _isTimerSlot, value);
     }
 
-    public string DisplayText =>
-        IsCategoryView && IsTimerRunning && !string.IsNullOrEmpty(FormattedTimerRemaining)
-            ? FormattedTimerRemaining
-            : IsEmpty ? "+" : Title;
+    public string DisplayText => this switch
+    {
+        { IsCategoryView: true, IsTimerRunning: true, FormattedTimerRemaining: { Length: > 0 } remaining } => remaining,
+        { IsEmpty: true } => "+",
+        _ => Title
+    };
 
     public ICommand SelectCommand { get; }
 
     public ICommand EditCommand { get; }
 
-    public void SuppressNextSelect()
-    {
-        _suppressSelectCount++;
-    }
+    public void SuppressNextSelect() => _suppressSelectCount++;
 
     private void ExecuteSelect()
     {
@@ -166,18 +165,9 @@ public sealed class SlotViewModel : ObservableObject
         _onSelected(SlotKey);
     }
 
-    public int BeginThumbnailLoadGeneration()
-    {
-        return Interlocked.Increment(ref _thumbnailLoadGeneration);
-    }
+    public int BeginThumbnailLoadGeneration() => Interlocked.Increment(ref _thumbnailLoadGeneration);
 
-    public bool IsCurrentThumbnailLoad(int generation)
-    {
-        return Volatile.Read(ref _thumbnailLoadGeneration) == generation;
-    }
+    public bool IsCurrentThumbnailLoad(int generation) => Volatile.Read(ref _thumbnailLoadGeneration) == generation;
 
-    public void ApplyThumbnailSource(ImageSource? imageSource)
-    {
-        ThumbnailSource = imageSource;
-    }
+    public void ApplyThumbnailSource(ImageSource? imageSource) => ThumbnailSource = imageSource;
 }

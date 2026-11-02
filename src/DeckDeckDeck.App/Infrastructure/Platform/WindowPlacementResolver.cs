@@ -52,15 +52,11 @@ public sealed class WindowPlacementResolver
         if (settings.LastWindowLeft is { } savedLeft
             && settings.LastWindowTop is { } savedTop
             && !IsUnsetOrWpfManualOrigin(savedLeft, savedTop)
-            && !IsLikelyShellFirstCorruption(savedLeft, savedTop, workAreas))
+            && !IsLikelyShellFirstCorruption(savedLeft, savedTop, workAreas)
+            && workAreas.FirstOrDefault(workArea =>
+                IsPlacementVisible(savedLeft, savedTop, windowWidth, windowHeight, workArea)) is { } savedWorkArea)
         {
-            var savedWorkArea = workAreas.FirstOrDefault(workArea =>
-                IsPlacementVisible(savedLeft, savedTop, windowWidth, windowHeight, workArea));
-
-            if (savedWorkArea is not null)
-            {
-                return new WindowPlacement(savedLeft, savedTop, savedWorkArea.DeviceName);
-            }
+            return new WindowPlacement(savedLeft, savedTop, savedWorkArea.DeviceName);
         }
 
         return CreateDefaultBottomRight(workAreas, fallbackWorkArea, windowWidth, windowHeight);
@@ -115,25 +111,15 @@ public sealed class WindowPlacementResolver
             ?? Matrix.Identity;
     }
 
-    private static double GetWindowWidth(WpfWindow window)
-    {
-        if (window.ActualWidth > 0)
-        {
-            return window.ActualWidth;
-        }
+    private static double GetWindowWidth(WpfWindow window) =>
+        window.ActualWidth > 0
+            ? window.ActualWidth
+            : double.IsNaN(window.Width) || window.Width <= 0 ? window.MinWidth : window.Width;
 
-        return double.IsNaN(window.Width) || window.Width <= 0 ? window.MinWidth : window.Width;
-    }
-
-    private static double GetWindowHeight(WpfWindow window)
-    {
-        if (window.ActualHeight > 0)
-        {
-            return window.ActualHeight;
-        }
-
-        return double.IsNaN(window.Height) || window.Height <= 0 ? window.MinHeight : window.Height;
-    }
+    private static double GetWindowHeight(WpfWindow window) =>
+        window.ActualHeight > 0
+            ? window.ActualHeight
+            : double.IsNaN(window.Height) || window.Height <= 0 ? window.MinHeight : window.Height;
 
     private static bool IsPlacementVisible(
         double left,
@@ -153,10 +139,8 @@ public sealed class WindowPlacementResolver
     /// Delegates to <see cref="WindowPlacementRules.IsUnsetOrWpfManualOrigin"/>.
     /// Kept for existing Infrastructure call sites and tests.
     /// </summary>
-    internal static bool IsUnsetOrWpfManualOrigin(double left, double top)
-    {
-        return WindowPlacementRules.IsUnsetOrWpfManualOrigin(left, top);
-    }
+    internal static bool IsUnsetOrWpfManualOrigin(double left, double top) =>
+        WindowPlacementRules.IsUnsetOrWpfManualOrigin(left, top);
 
     /// <summary>
     /// Shell-first startup could leave the window near the primary work-area top-left and save that

@@ -36,28 +36,13 @@ public static class UrlRules
         return true;
     }
 
-    private static bool ContainsWhitespace(string value)
-    {
-        foreach (var character in value)
-        {
-            if (char.IsWhiteSpace(character))
-            {
-                return true;
-            }
-        }
+    private static bool ContainsWhitespace(string value) => value.Any(char.IsWhiteSpace);
 
-        return false;
-    }
+    private static bool HasSchemeSeparator(string value) =>
+        value.Contains("://", StringComparison.Ordinal);
 
-    private static bool HasSchemeSeparator(string value)
-    {
-        return value.Contains("://", StringComparison.Ordinal);
-    }
-
-    private static bool IsHttpScheme(Uri uri)
-    {
-        return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
-    }
+    private static bool IsHttpScheme(Uri uri) =>
+        uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
 
     private static bool HasSupportedHost(string host)
     {

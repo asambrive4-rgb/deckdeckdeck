@@ -83,4 +83,6 @@ public interface ISettingsRepository
     void SetCategorySlotEnabled(SlotKey slotKey, bool enabled);
 
     void SetSnippetSlotEnabled(SlotKey slotKey, bool enabled);
+
+    void SetPreferredBluetoothDeviceName(string? deviceName);
 }

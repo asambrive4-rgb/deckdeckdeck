@@ -67,6 +67,73 @@
                 <views:SettingsView />
             </Border>
         </DataTemplate>
+
+        <!-- 상단바 블루투스 알약 버튼 스타일 -->
+        <Style x:Key="Deck.TopBarBluetoothPillButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
+            <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
+            <Setter Property="Padding" Value="8,2,8,2" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="PillBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PillBorder" Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+                                <Setter TargetName="PillBorder" Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Strong}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="PillBorder" Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceMuted}" />
+                                <Setter TargetName="PillBorder" Property="Margin" Value="0,1,0,-1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 블루투스 팝업 내부 메뉴 항목 버튼 스타일 -->
+        <Style x:Key="Deck.BluetoothMenuItemButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,6,8,6" />
+            <Setter Property="Margin" Value="0,1,0,1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="ItemBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceSoft}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource Deck.Brush.Background.SurfaceMuted}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -98,79 +165,265 @@
                                    Text="{Binding TopBarTitle}"
                                    Visibility="{Binding ShowTopBarTitle, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-                        <!-- 블루투스 기기명 및 배터리 표시 영역 -->
-                        <StackPanel Grid.Column="2"
-                                    Orientation="Horizontal"
-                                    VerticalAlignment="Center"
-                                    Margin="0,0,8,0"
-                                    ToolTip="{Binding TopBarStatusToolTip}">
-                            <!-- 기기명 (말줄임) -->
-                            <TextBlock Style="{StaticResource Deck.TopBarStatusTextStyle}"
-                                       MaxWidth="120"
-                                       Text="{Binding TopBarDeviceName}" />
-
-                            <!-- 배터리 뱃지 (배터리 정보가 있을 때만 표시) -->
-                            <Border Visibility="{Binding HasTopBarBattery, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                    Margin="6,0,0,0"
-                                    Padding="5,1,5,1"
-                                    CornerRadius="8"
-                                    BorderThickness="1"
-                                    VerticalAlignment="Center">
-                                <Border.Style>
-                                    <Style TargetType="{x:Type Border}">
-                                        <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
-                                        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsTopBarBatteryLow}" Value="True">
-                                                <Setter Property="Background" Value="#FFEEDD" />
-                                                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
+                        <!-- 블루투스 기기 알약 버튼 및 드롭다운 팝업 -->
+                        <Grid Grid.Column="2" VerticalAlignment="Center">
+                            <Button x:Name="BluetoothMenuButton"
+                                    Command="{Binding ToggleBluetoothMenuCommand}"
+                                    shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                                    Style="{StaticResource Deck.TopBarBluetoothPillButtonStyle}"
+                                    ToolTip="{Binding TopBarStatusToolTip}"
+                                    Margin="0,0,8,0">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <!-- 배터리 미니 아이콘 -->
-                                    <Path Width="11"
-                                          Height="8"
-                                          Stretch="Uniform"
-                                          Margin="0,0,3,0"
-                                          VerticalAlignment="Center">
-                                        <Path.Style>
-                                            <Style TargetType="{x:Type Path}">
-                                                <Setter Property="Fill" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                                    <!-- 기기명 (말줄임) -->
+                                    <TextBlock Style="{StaticResource Deck.TopBarStatusTextStyle}"
+                                               MaxWidth="70"
+                                               Text="{Binding TopBarDeviceName}" />
+
+                                    <!-- 배터리 뱃지 (배터리 정보가 있을 때만 표시) -->
+                                    <Border Visibility="{Binding HasTopBarBattery, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            Margin="6,0,0,0"
+                                            Padding="5,1,5,1"
+                                            CornerRadius="8"
+                                            BorderThickness="1"
+                                            VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="{x:Type Border}">
+                                                <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsTopBarBatteryLow}" Value="True">
-                                                        <Setter Property="Fill" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                        <Setter Property="Background" Value="#FFEEDD" />
+                                                        <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </Path.Style>
-                                        <Path.Data>
-                                            <GeometryGroup>
-                                                <RectangleGeometry Rect="0,0,10,7" RadiusX="1" RadiusY="1" />
-                                                <RectangleGeometry Rect="10,2,1.5,3" RadiusX="0.5" RadiusY="0.5" />
-                                            </GeometryGroup>
-                                        </Path.Data>
-                                    </Path>
-                                    <!-- 배터리 잔량 텍스트 -->
-                                    <TextBlock Text="{Binding TopBarBatteryText}"
+                                        </Border.Style>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <!-- 배터리 미니 아이콘 -->
+                                            <Path Width="11"
+                                                  Height="8"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,3,0"
+                                                  VerticalAlignment="Center">
+                                                <Path.Style>
+                                                    <Style TargetType="{x:Type Path}">
+                                                        <Setter Property="Fill" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsTopBarBatteryLow}" Value="True">
+                                                                <Setter Property="Fill" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Path.Style>
+                                                <Path.Data>
+                                                    <GeometryGroup>
+                                                        <RectangleGeometry Rect="0,0,10,7" RadiusX="1" RadiusY="1" />
+                                                        <RectangleGeometry Rect="10,2,1.5,3" RadiusX="0.5" RadiusY="0.5" />
+                                                    </GeometryGroup>
+                                                </Path.Data>
+                                            </Path>
+                                            <!-- 배터리 잔량 텍스트 -->
+                                            <TextBlock Text="{Binding TopBarBatteryText}"
+                                                       FontSize="11"
+                                                       FontWeight="Bold"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="{x:Type TextBlock}">
+                                                        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsTopBarBatteryLow}" Value="True">
+                                                                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- 미연결 태그 (수동 고정 모드에서 미연결일 때 표시) -->
+                                    <Border Visibility="{Binding ShowTopBarDisconnectedTag, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            Margin="6,0,0,0"
+                                            Padding="5,1,5,1"
+                                            CornerRadius="8"
+                                            BorderThickness="1"
+                                            Background="#EAE3D7"
+                                            BorderBrush="{StaticResource Deck.Brush.Line.Muted}"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="미연결"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
+                                    </Border>
+
+                                    <!-- 드롭다운 Chevron 아이콘 -->
+                                    <TextBlock Text="⌄"
                                                FontSize="11"
                                                FontWeight="Bold"
-                                               VerticalAlignment="Center">
-                                        <TextBlock.Style>
-                                            <Style TargetType="{x:Type TextBlock}">
-                                                <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsTopBarBatteryLow}" Value="True">
-                                                        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                               Margin="4,-2,0,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
                                 </StackPanel>
-                            </Border>
-                        </StackPanel>
+                            </Button>
+
+                            <!-- 블루투스 기기 선택 팝업 -->
+                            <Popup x:Name="BluetoothDevicePopup"
+                                   IsOpen="{Binding IsBluetoothMenuOpen, Mode=TwoWay}"
+                                   PlacementTarget="{Binding ElementName=BluetoothMenuButton}"
+                                   Placement="Bottom"
+                                   VerticalOffset="6"
+                                   HorizontalOffset="-100"
+                                   StaysOpen="False"
+                                   AllowsTransparency="True"
+                                   PopupAnimation="Fade">
+                                <Border Background="{StaticResource Deck.Brush.Background.Surface}"
+                                        BorderBrush="{StaticResource Deck.Brush.Line.Soft}"
+                                        BorderThickness="{StaticResource Deck.Thickness.Border}"
+                                        CornerRadius="16"
+                                        MinWidth="280"
+                                        MaxWidth="340"
+                                        Padding="8">
+                                    <StackPanel>
+                                        <!-- 헤더 -->
+                                        <TextBlock Text="블루투스 기기"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                                   Margin="8,4,8,6" />
+
+                                        <!-- 구분선 -->
+                                        <Border Height="1"
+                                                Background="{StaticResource Deck.Brush.Line.Muted}"
+                                                Margin="4,0,4,4" />
+
+                                        <!-- 자동 감지 (오디오 우선) 항목 -->
+                                        <Button Style="{StaticResource Deck.BluetoothMenuItemButtonStyle}"
+                                                Command="{Binding SelectBluetoothDeviceCommand}"
+                                                CommandParameter="{x:Null}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="22" />
+                                                    <ColumnDefinition Width="26" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- 선택 체크 표시 -->
+                                                <TextBlock Text="✓"
+                                                           FontWeight="Bold"
+                                                           FontSize="13"
+                                                           Foreground="{StaticResource Deck.Brush.Brand.Accent}"
+                                                           VerticalAlignment="Center"
+                                                           HorizontalAlignment="Center"
+                                                           Visibility="{Binding IsAutoDeviceSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                                <!-- 아이콘 -->
+                                                <TextBlock Grid.Column="1"
+                                                           Text="🔄"
+                                                           FontSize="13"
+                                                           VerticalAlignment="Center" />
+
+                                                <!-- 라벨 -->
+                                                <TextBlock Grid.Column="2"
+                                                           Text="자동 감지 (오디오 우선)"
+                                                           FontSize="13"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{StaticResource Deck.Brush.Text.Primary}"
+                                                           VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Button>
+
+                                        <!-- 구분선 -->
+                                        <Border Height="1"
+                                                Background="{StaticResource Deck.Brush.Line.Muted}"
+                                                Margin="4,4,4,4" />
+
+                                        <!-- 페어링된 기기 목록 -->
+                                        <ScrollViewer MaxHeight="320"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      Focusable="False">
+                                            <ItemsControl ItemsSource="{Binding BluetoothDevices}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource Deck.BluetoothMenuItemButtonStyle}"
+                                                            Command="{Binding DataContext.SelectBluetoothDeviceCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding DeviceName}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="22" />
+                                                                <ColumnDefinition Width="26" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <!-- 선택 체크 표시 -->
+                                                            <TextBlock Text="✓"
+                                                                       FontWeight="Bold"
+                                                                       FontSize="13"
+                                                                       Foreground="{StaticResource Deck.Brush.Brand.Accent}"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center"
+                                                                       Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                                                            <!-- 카테고리 아이콘/이모지 -->
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding CategoryEmoji}"
+                                                                       FontSize="13"
+                                                                       VerticalAlignment="Center" />
+
+                                                            <!-- 기기명 -->
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding DeviceName}"
+                                                                       FontSize="13"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{StaticResource Deck.Brush.Text.Primary}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       VerticalAlignment="Center"
+                                                                       Margin="0,0,6,0" />
+
+                                                            <!-- 배터리 뱃지 -->
+                                                            <Border Grid.Column="3"
+                                                                    Visibility="{Binding HasBattery, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                    Background="{StaticResource Deck.Brush.Background.App}"
+                                                                    BorderBrush="{StaticResource Deck.Brush.Line.Soft}"
+                                                                    BorderThickness="1"
+                                                                    CornerRadius="6"
+                                                                    Padding="4,1,4,1"
+                                                                    Margin="0,0,6,0"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding BatteryText}"
+                                                                           FontSize="10"
+                                                                           FontWeight="Bold"
+                                                                           Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                                            </Border>
+
+                                                            <!-- 상태 텍스트 (연결됨 / 미연결) -->
+                                                            <TextBlock Grid.Column="4"
+                                                                       Text="{Binding StatusText}"
+                                                                       FontSize="11"
+                                                                       FontWeight="SemiBold"
+                                                                       VerticalAlignment="Center">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="{x:Type TextBlock}">
+                                                                        <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Secondary}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                                <Setter Property="Foreground" Value="#9C9288" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </Grid>
 
                         <Button Grid.Column="3"
                                 Margin="0,0,8,0"

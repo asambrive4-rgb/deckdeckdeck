@@ -1,12 +1,4 @@
 // 역할: 윈도우에 설치된 스포티파이(Spotify) 프로그램을 찾아 실행하는 기능을 구현합니다.
-using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
-using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
-using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
-using DeckDeckDeck.App.UseCases.Ports;
 using System.Diagnostics;
 
 namespace DeckDeckDeck.App.Infrastructure.Gateways;
@@ -37,11 +29,7 @@ public sealed class SpotifyAppLaunchGatewayAdapter : ISpotifyAppLaunchGateway
 
             return true;
         }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
-        catch (System.ComponentModel.Win32Exception)
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
             return false;
         }

@@ -30,7 +30,7 @@ public sealed class SnippetRepository : ISnippetRepository
         return dbContext.Snippets
             .AsNoTracking()
             .Where(snippet => snippet.CategoryId == categoryId)
-            .ToList()
+            .AsEnumerable()
             .OrderBy(snippet => snippet.SlotKey.GetSortOrder())
             .ToList();
     }

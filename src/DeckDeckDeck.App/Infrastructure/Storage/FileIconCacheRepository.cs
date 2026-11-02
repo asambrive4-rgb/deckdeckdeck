@@ -1,11 +1,7 @@
-// 역할: 한 번 추출한 프로그램 아이콘 이미지를 로컬에 캐시하여 다음 실행 시 빠르게 불러옵니다.
-using DeckDeckDeck.App.Data;
-using DeckDeckDeck.App.Infrastructure.Gateways;
-using DeckDeckDeck.App.Infrastructure.Persistence;
+// 역할: 파일, 환경변수 경로 또는 설치된 앱(shell:AppsFolder)에서 추출한 아이콘 이미지를 로컬에 캐시하여 빠르게 불러옵니다.
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Infrastructure.Platform;
-using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.Models;
-using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
 using System.IO;
 using System.Security.Cryptography;
@@ -15,11 +11,9 @@ namespace DeckDeckDeck.App.Infrastructure.Storage;
 
 public sealed class FileIconCacheRepository
 {
-    private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".exe",
-        ".lnk"
-    };
+    private static readonly HashSet<string> SupportedExtensions = new(
+        [".exe", ".lnk"],
+        StringComparer.OrdinalIgnoreCase);
 
     private readonly IFileIconExtractor _fileIconExtractor;
     private readonly AppStoragePaths _fileStorageService;
@@ -37,13 +31,23 @@ public sealed class FileIconCacheRepository
 
     public AutoIconCacheEntry? GetOrCreateIcon(string? sourcePath, AutoIconCacheEntry? current)
     {
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return null;
+        }
+
+        if (LaunchPathRules.IsShellAppsFolderPath(sourcePath))
+        {
+            return GetOrCreateShellAppIcon(sourcePath, current);
+        }
+
         if (!TryGetSupportedFile(sourcePath, out var fileInfo))
         {
             return null;
         }
 
         if (current is not null
-            && current.Matches(fileInfo)
+            && current.Matches(fileInfo.FullName, fileInfo.LastWriteTimeUtc, fileInfo.Length)
             && File.Exists(_fileStorageService.ToAbsolutePath(current.IconPath)))
         {
             return new AutoIconCacheEntry(
@@ -54,7 +58,9 @@ public sealed class FileIconCacheRepository
         }
 
         Directory.CreateDirectory(_fileStorageService.IconCachePath);
-        var cachePath = Path.Combine(_fileStorageService.IconCachePath, GetCacheFileName(fileInfo));
+        var cachePath = Path.Combine(
+            _fileStorageService.IconCachePath,
+            GetCacheFileName(fileInfo.FullName, fileInfo.LastWriteTimeUtc, fileInfo.Length));
         var newEntry = new AutoIconCacheEntry(
             _fileStorageService.ToStoredPath(cachePath),
             fileInfo.FullName,
@@ -82,10 +88,56 @@ public sealed class FileIconCacheRepository
         return null;
     }
 
-    public static bool IsSupportedIconSource(string? sourcePath)
+    private AutoIconCacheEntry? GetOrCreateShellAppIcon(string sourcePath, AutoIconCacheEntry? current)
     {
-        return TryGetSupportedFile(sourcePath, out _);
+        var normalizedSourcePath = LaunchPathRules.NormalizeShellAppsFolderPath(sourcePath);
+        var lastWriteTimeUtc = DateTime.UnixEpoch;
+        const long sourceLength = 0L;
+
+        if (current is not null
+            && current.Matches(normalizedSourcePath, lastWriteTimeUtc, sourceLength)
+            && File.Exists(_fileStorageService.ToAbsolutePath(current.IconPath)))
+        {
+            return new AutoIconCacheEntry(
+                _fileStorageService.ToStoredPath(current.IconPath),
+                current.SourcePath,
+                current.SourceLastWriteTimeUtc,
+                current.SourceLength);
+        }
+
+        Directory.CreateDirectory(_fileStorageService.IconCachePath);
+        var cachePath = Path.Combine(
+            _fileStorageService.IconCachePath,
+            GetCacheFileName(normalizedSourcePath, lastWriteTimeUtc, sourceLength));
+        var newEntry = new AutoIconCacheEntry(
+            _fileStorageService.ToStoredPath(cachePath),
+            normalizedSourcePath,
+            lastWriteTimeUtc,
+            sourceLength);
+
+        if (File.Exists(cachePath))
+        {
+            return newEntry;
+        }
+
+        try
+        {
+            if (_fileIconExtractor.TryExtractIcon(normalizedSourcePath, cachePath) && File.Exists(cachePath))
+            {
+                return newEntry;
+            }
+        }
+        catch (Exception ex)
+        {
+            _loggingService?.Log($"Shell app icon extraction failed for {normalizedSourcePath}.", ex);
+        }
+
+        DeletePartialCacheFile(cachePath);
+        return null;
     }
+
+    public static bool IsSupportedIconSource(string? sourcePath) =>
+        LaunchPathRules.IsShellAppsFolderPath(sourcePath) || TryGetSupportedFile(sourcePath, out _);
 
     private static bool TryGetSupportedFile(string? sourcePath, out FileInfo fileInfo)
     {
@@ -97,13 +149,14 @@ public sealed class FileIconCacheRepository
 
         try
         {
-            var extension = Path.GetExtension(sourcePath);
-            if (!SupportedExtensions.Contains(extension) || !File.Exists(sourcePath))
+            var expandedPath = LaunchPathRules.ExpandPath(sourcePath);
+            var extension = Path.GetExtension(expandedPath);
+            if (!SupportedExtensions.Contains(extension) || !File.Exists(expandedPath))
             {
                 return false;
             }
 
-            fileInfo = new FileInfo(sourcePath);
+            fileInfo = new FileInfo(expandedPath);
             return true;
         }
         catch
@@ -112,13 +165,13 @@ public sealed class FileIconCacheRepository
         }
     }
 
-    private static string GetCacheFileName(FileInfo fileInfo)
+    private static string GetCacheFileName(string sourceKey, DateTime lastWriteTimeUtc, long length)
     {
         var key = string.Join(
             "|",
-            fileInfo.FullName.ToUpperInvariant(),
-            fileInfo.LastWriteTimeUtc.Ticks.ToString(),
-            fileInfo.Length.ToString());
+            sourceKey.ToUpperInvariant(),
+            lastWriteTimeUtc.Ticks.ToString(),
+            length.ToString());
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
 
         return $"{hash.ToLowerInvariant()}.png";

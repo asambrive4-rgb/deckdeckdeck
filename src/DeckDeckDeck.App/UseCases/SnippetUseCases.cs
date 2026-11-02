@@ -7,8 +7,6 @@ namespace DeckDeckDeck.App.UseCases;
 
 public sealed class SaveSnippetUseCase
 {
-    private const string SlotSettingSaveFailedMessage = "슬롯 설정을 저장하지 못했습니다.";
-
     private readonly IAutoBackupRequester? _autoBackupRequester;
     private readonly ISettingsRepository? _settingsStore;
     private readonly ISnippetRepository _snippetRepository;
@@ -77,8 +75,8 @@ public sealed class SaveSnippetUseCase
         })
             .NormalizeForStorage();
 
-        var snippet = request.SnippetId.HasValue
-            ? _snippetRepository.Update(request.SnippetId.Value, saveData)
+        var snippet = request.SnippetId is { } id
+            ? _snippetRepository.Update(id, saveData)
             : _snippetRepository.Create(request.CategoryId, request.SlotKey, saveData);
 
         if (requestAutoBackup)
@@ -119,23 +117,13 @@ public sealed class SaveSnippetUseCase
         return SaveSnippetResult.SlotOnly();
     }
 
-    private SlotSettingSaveResult SaveSlotEnabled(SaveSnippetRequest request)
-    {
-        if (_settingsStore is null || request.IsSlotEnabled == request.OriginalIsSlotEnabled)
-        {
-            return SlotSettingSaveResult.Success();
-        }
-
-        try
-        {
-            _settingsStore.SetSnippetSlotEnabled(request.SlotKey, request.IsSlotEnabled);
-            return SlotSettingSaveResult.Success();
-        }
-        catch
-        {
-            return SlotSettingSaveResult.Failure(SlotSettingSaveFailedMessage);
-        }
-    }
+    private SlotSettingSaveResult SaveSlotEnabled(SaveSnippetRequest request) =>
+        SlotSettingSaveResult.TrySave(
+            _settingsStore,
+            request.SlotKey,
+            request.IsSlotEnabled,
+            request.OriginalIsSlotEnabled,
+            (store, slotKey, enabled) => store.SetSnippetSlotEnabled(slotKey, enabled));
 }
 
 public sealed class DeleteSnippetUseCase

@@ -1,4 +1,4 @@
-// 역할: 블루투스 오디오 설정 화면에서 개별 장치의 이름, 연결 상태, 배터리 잔량을 표시하는 화면 모델입니다.
+// 역할: 블루투스 기기 드롭다운에서 각 기기의 아이콘, 이름, 연결 상태, 배터리를 표현하는 뷰모델입니다.
 using CommunityToolkit.Mvvm.ComponentModel;
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -10,27 +10,39 @@ namespace DeckDeckDeck.App.ViewModels;
 /// </summary>
 public sealed class BluetoothDeviceItemViewModel : ObservableObject
 {
-    public BluetoothAudioStatusSnapshot DeviceInfo { get; }
+    public BluetoothDeviceItem DeviceItem { get; }
 
-    public string DeviceName => DeviceInfo.DeviceName ?? string.Empty;
+    public string DeviceName => DeviceItem.DeviceName;
 
-    public bool IsConnected => DeviceInfo.IsBluetoothAudioConnected;
+    public bool IsConnected => DeviceItem.IsConnected;
 
-    public int? BatteryPercent => DeviceInfo.BatteryPercent;
+    public int? BatteryPercent => DeviceItem.BatteryPercent;
 
     public string BatteryText => BatteryPercent.HasValue ? $"{BatteryPercent.Value}%" : string.Empty;
 
     public bool HasBattery => BatteryPercent is >= 0 and <= 100;
 
-    public BluetoothDeviceCategory Category => DeviceInfo.Category;
+    public BluetoothDeviceCategory Category => DeviceItem.Category;
 
     public bool IsSelected { get; }
 
-    public string StatusText => IsConnected ? (HasBattery ? BatteryText : "연결됨") : "미연결";
+    public string StatusText => IsConnected
+        ? (HasBattery ? BatteryText : BluetoothAudioStatusRules.ConnectedTagText)
+        : BluetoothAudioStatusRules.DisconnectedTagText;
 
-    public BluetoothDeviceItemViewModel(BluetoothAudioStatusSnapshot deviceInfo, bool isSelected)
+    public string CategoryEmoji => Category switch
     {
-        DeviceInfo = deviceInfo;
+        BluetoothDeviceCategory.Audio => DeviceName.Contains("스피커", StringComparison.OrdinalIgnoreCase)
+            || DeviceName.Contains("speaker", StringComparison.OrdinalIgnoreCase)
+            || DeviceName.Contains("flip", StringComparison.OrdinalIgnoreCase) ? "🔊" : "🎧",
+        BluetoothDeviceCategory.Input => DeviceName.Contains("mouse", StringComparison.OrdinalIgnoreCase)
+            || DeviceName.Contains("마우스", StringComparison.OrdinalIgnoreCase) ? "🖱️" : "⌨️",
+        _ => "📱"
+    };
+
+    public BluetoothDeviceItemViewModel(BluetoothDeviceItem deviceItem, bool isSelected)
+    {
+        DeviceItem = deviceItem;
         IsSelected = isSelected;
     }
 }

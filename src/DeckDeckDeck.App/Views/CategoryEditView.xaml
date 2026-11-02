@@ -1,6 +1,12 @@
 <UserControl x:Class="DeckDeckDeck.App.Views.CategoryEditView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:DeckDeckDeck.App.Views.Converters">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+        </ResourceDictionary>
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
@@ -23,8 +29,7 @@
                     <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
                         <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                    Text="이름" />
-                        <TextBox Height="36"
-                                 Style="{StaticResource Deck.TextBoxStyle}"
+                        <TextBox Style="{StaticResource Deck.TextBoxStyle}"
                                  Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
 
@@ -32,7 +37,7 @@
                         <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                    Text="설명" />
                         <TextBox MinHeight="46"
-                                 MaxHeight="80"
+                                 MaxHeight="140"
                                  AcceptsReturn="True"
                                  Style="{StaticResource Deck.TextBoxStyle}"
                                  Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
@@ -59,9 +64,31 @@
                                 DragOver="ImageDropTarget_DragOver"
                                 Drop="ImageDropTarget_Drop"
                                 Style="{StaticResource Deck.ThumbnailFrameBorderStyle}">
-                            <Image Source="{Binding ThumbnailPath, IsAsync=True, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=96}"
-                                   IsHitTestVisible="False"
-                                   Stretch="Uniform" />
+                            <Grid>
+                                <Image Source="{Binding ThumbnailPath, IsAsync=True, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=96}"
+                                       IsHitTestVisible="False"
+                                       Stretch="Uniform" />
+                                <StackPanel HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Opacity="0.45"
+                                            IsHitTestVisible="False"
+                                            Visibility="{Binding HasImage, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                                    <Path HorizontalAlignment="Center"
+                                          Width="18"
+                                          Height="18"
+                                          Data="M 9 2 V 16 M 2 9 H 16"
+                                          Stroke="{StaticResource Deck.Brush.Text.Primary}"
+                                          StrokeThickness="2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round" />
+                                    <TextBlock Margin="0,4,0,0"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource Deck.Brush.Text.Primary}"
+                                               HorizontalAlignment="Center"
+                                               Text="이미지 드롭" />
+                                </StackPanel>
+                            </Grid>
                         </Border>
                         <StackPanel Margin="12,0,0,0"
                                     VerticalAlignment="Center">
@@ -86,24 +113,21 @@
                 <StackPanel Style="{StaticResource Deck.FieldGroupStyle}">
                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                Text="카테고리 복사/이동" />
-                    <Grid>
+                    <ComboBox ItemsSource="{Binding TransferTargetSlots}"
+                              SelectedItem="{Binding SelectedTransferTarget}"
+                              DisplayMemberPath="Label"
+                              Style="{StaticResource Deck.ComboBoxStyle}" />
+                    <Grid Margin="0,8,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-
-                        <ComboBox ItemsSource="{Binding TransferTargetSlots}"
-                                  SelectedItem="{Binding SelectedTransferTarget}"
-                                  DisplayMemberPath="Label"
-                                  Style="{StaticResource Deck.ComboBoxStyle}" />
-                        <Button Grid.Column="1"
-                                Margin="12,0,0,0"
+                        <Button Grid.Column="0"
                                 Command="{Binding CopyCategoryCommand}"
                                 Style="{StaticResource Deck.ImageActionButtonStyle}"
                                 Content="카테고리 복사" />
                         <Button Grid.Column="2"
-                                Margin="8,0,0,0"
                                 Command="{Binding MoveCategoryCommand}"
                                 Style="{StaticResource Deck.ImageActionButtonStyle}"
                                 Content="카테고리 이동" />

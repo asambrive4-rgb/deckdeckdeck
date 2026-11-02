@@ -31,6 +31,14 @@ public static class Win32Constants
 
     public const int SwShownoactivate = 4;
 
+    public const uint RdwInvalidate = 0x0001;
+
+    public const uint RdwErase = 0x0004;
+
+    public const uint RdwAllchildren = 0x0080;
+
+    public const uint RdwUpdatenow = 0x0100;
+
     public const int SwShow = 5;
 
     public const int SwRestore = 9;

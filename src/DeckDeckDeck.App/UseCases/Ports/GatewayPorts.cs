@@ -1,4 +1,5 @@
-// 역할: 백업 파일 생성, 사용자 대화상자 알림, 로깅, 클립보드 제어 등 외부 시스템 연동에 필요한 규격을 정의합니다.
+// 역할: 백업 파일 생성, 사용자 대화상자 알림, 로깅, 클립보드 제어 및 블루투스 기기 제어 등 외부 시스템 연동에 필요한 규격을 정의합니다.
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.UseCases.Ports;
@@ -46,6 +47,10 @@ public interface IDialogAdapter
         string title,
         string fixedIp,
         out string port);
+
+    InstalledAppSelection? SelectInstalledApp() => null;
+
+    BluetoothDeviceSelection? SelectPairedBluetoothDevice() => null;
 }
 
 public interface IAppLogger
@@ -117,4 +122,9 @@ public interface ISpotifyConnectionGateway
     Task<SpotifyConnectionGatewayResult> ConnectAsync(
         string clientId,
         CancellationToken cancellationToken = default);
+}
+
+public interface IBluetoothDeviceControlGateway
+{
+    Task<bool> TryControlAsync(BluetoothAudioCommand command, CancellationToken cancellationToken = default);
 }

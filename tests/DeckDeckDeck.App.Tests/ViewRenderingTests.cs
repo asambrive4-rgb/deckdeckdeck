@@ -193,9 +193,9 @@ public sealed class ViewRenderingTests
                 Assert.All(titleBlocks, textBlock =>
                 {
                     Assert.Equal(TextWrapping.Wrap, textBlock.TextWrapping);
-                    Assert.Equal(20, textBlock.LineHeight);
+                    Assert.Equal(22, textBlock.LineHeight);
                     Assert.Equal(LineStackingStrategy.BlockLineHeight, textBlock.LineStackingStrategy);
-                    Assert.Equal(40, textBlock.MaxHeight);
+                    Assert.Equal(66, textBlock.MaxHeight);
                 });
             }
             catch (Exception ex)
