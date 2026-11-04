@@ -1,0 +1,7 @@
+interface:
+  display_name: "체크리스트 문서화"
+  short_description: "대화의 분석 결과를 표준 체크리스트 문서로 덮어씁니다."
+  default_prompt: "Use $make-checklist to organize the analysis already discussed in this conversation into docs/체크리스트.md."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "코드 패턴 현대화"
+  short_description: "구형 코드·우회로·동기 블로킹 등을 전수 탐색하여 현대화 방안을 제안하고 docs/체크리스트.md로 정리합니다."
+  default_prompt: "Use $modernize-code-patterns to audit the codebase for legacy patterns, workarounds, blocking calls, and UX friction, then generate docs/체크리스트.md."
+
+policy:
+  allow_implicit_invocation: true
