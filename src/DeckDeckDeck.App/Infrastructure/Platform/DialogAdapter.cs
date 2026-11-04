@@ -86,20 +86,20 @@ public class DialogAdapter : IDialogAdapter
         return true;
     }
 
-    public virtual bool TryPromptAdbPort(
+    public virtual bool TryPromptAdbAction(
         string title,
         string fixedIp,
-        out string port)
+        out AdbPromptResult result)
     {
         if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
         {
-            var capturedPort = string.Empty;
+            AdbPromptResult? capturedResult = null;
             var confirmed = false;
             dispatcher.Invoke(() =>
             {
-                confirmed = TryPromptAdbPort(title, fixedIp, out capturedPort);
+                confirmed = TryPromptAdbAction(title, fixedIp, out capturedResult!);
             });
-            port = capturedPort;
+            result = capturedResult ?? new AdbPromptResult(AdbPromptMode.Connect, string.Empty);
             return confirmed;
         }
 
@@ -111,14 +111,19 @@ public class DialogAdapter : IDialogAdapter
             window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
         }
 
-        if (window.ShowDialog() != true)
-        {
-            port = string.Empty;
-            return false;
-        }
+        var dialogResult = window.ShowDialog();
+        result = window.Result;
+        return dialogResult == true;
+    }
 
-        port = window.Port.Trim();
-        return true;
+    public virtual bool TryPromptAdbPort(
+        string title,
+        string fixedIp,
+        out string port)
+    {
+        var confirmed = TryPromptAdbAction(title, fixedIp, out var result);
+        port = confirmed ? result.Port : string.Empty;
+        return confirmed;
     }
 
     public virtual string? SelectImageFile()

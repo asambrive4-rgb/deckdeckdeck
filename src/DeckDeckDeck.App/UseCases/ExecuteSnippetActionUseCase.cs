@@ -211,7 +211,7 @@ public sealed class ExecuteSnippetActionUseCase(
                 : ReportTerminalCommandFailure(action, "블루투스 기기 연결/해제에 실패했습니다. 기기 전원과 페어링 상태를 확인해 주세요.");
         }
 
-        if (!TryResolveTerminalCommand(action, commandTemplate, out var command, out var resolveFailure))
+        if (!TryResolveTerminalCommand(action, commandTemplate, out var command, out var isAdbPair, out var resolveFailure))
             return resolveFailure!;
 
         var shell = action.TerminalShell ?? SnippetTerminalShell.Cmd;
@@ -228,13 +228,15 @@ public sealed class ExecuteSnippetActionUseCase(
             {
                 return ReportTerminalCommandFailure(
                     action,
+                    isAdbPair ? "ADB 페어링 명령을 시작하지 못했습니다." :
                     isAdbConnect ? "ADB 연결 명령을 시작하지 못했습니다." : "터미널 명령을 시작하지 못했습니다.");
             }
 
-            var statusMessage = (isAdbConnect, isTurnOffDisplay) switch
+            var statusMessage = (isAdbPair, isAdbConnect, isTurnOffDisplay) switch
             {
-                (true, _) => $"{action.Title} ADB 연결 실행됨",
-                (_, true) => $"{action.Title} 실행됨",
+                (true, _, _) => $"{action.Title} ADB 페어링 실행됨",
+                (_, true, _) => $"{action.Title} ADB 연결 실행됨",
+                (_, _, true) => $"{action.Title} 실행됨",
                 _ => $"{action.Title} 터미널 명령 실행됨"
             };
 
@@ -268,10 +270,12 @@ public sealed class ExecuteSnippetActionUseCase(
         ExecutableAction action,
         string commandTemplate,
         out string command,
+        out bool isAdbPair,
         out ExecuteSnippetActionResult? failure)
     {
+        isAdbPair = false;
         if (TerminalCommandParameterRules.IsAdbWirelessConnectCommand(commandTemplate))
-            return TryResolveAdbConnectCommand(action, commandTemplate, out command, out failure);
+            return TryResolveAdbConnectCommand(action, commandTemplate, out command, out isAdbPair, out failure);
 
         var parameterNames = TerminalCommandParameterRules.ExtractParameterNames(commandTemplate);
         if (parameterNames.Count == 0)
@@ -301,9 +305,11 @@ public sealed class ExecuteSnippetActionUseCase(
         ExecutableAction action,
         string commandTemplate,
         out string command,
+        out bool isAdbPair,
         out ExecuteSnippetActionResult? failure)
     {
         command = string.Empty;
+        isAdbPair = false;
 
         if (!TerminalCommandParameterRules.TryNormalizeAdbIp(action.AdbDeviceIp, out var normalizedIp, out var ipError))
         {
@@ -311,27 +317,50 @@ public sealed class ExecuteSnippetActionUseCase(
             return false;
         }
 
-        if (!dialogAdapter.TryPromptAdbPort(action.Title, normalizedIp, out var port))
+        if (!dialogAdapter.TryPromptAdbAction(action.Title, normalizedIp, out var promptResult))
         {
             failure = ExecuteSnippetActionResult.Failure(statusMessage: $"{action.Title} 입력이 취소되었습니다.");
             return false;
         }
 
-        if (!TerminalCommandParameterRules.TryNormalizeAdbPort(port, out var normalizedPort, out var portError))
+        if (promptResult.Mode == AdbPromptMode.Pair)
         {
-            failure = ReportTerminalCommandFailure(action, portError ?? TerminalCommandParameterRules.InvalidAdbPortMessage);
-            return false;
-        }
-
-        command = TerminalCommandParameterRules.ApplyParameters(
-            commandTemplate,
-            new Dictionary<string, string>(StringComparer.Ordinal)
+            if (!TerminalCommandParameterRules.TryNormalizeAdbPort(promptResult.Port, out var normalizedPort, out var portError))
             {
-                [TerminalCommandParameterRules.AdbIpParameterName] = normalizedIp,
-                [TerminalCommandParameterRules.AdbPortParameterName] = normalizedPort
-            });
-        failure = null;
-        return true;
+                failure = ReportTerminalCommandFailure(action, portError ?? TerminalCommandParameterRules.InvalidAdbPortMessage);
+                return false;
+            }
+
+            if (!TerminalCommandParameterRules.TryNormalizeAdbPairCode(promptResult.PairCode, out var normalizedCode, out var codeError))
+            {
+                failure = ReportTerminalCommandFailure(action, codeError ?? TerminalCommandParameterRules.InvalidAdbPairCodeMessage);
+                return false;
+            }
+
+            command = TerminalCommandParameterRules.BuildAdbPairCommand(commandTemplate, normalizedIp, normalizedPort, normalizedCode);
+            isAdbPair = true;
+            failure = null;
+            return true;
+        }
+        else
+        {
+            if (!TerminalCommandParameterRules.TryNormalizeAdbPort(promptResult.Port, out var normalizedPort, out var portError))
+            {
+                failure = ReportTerminalCommandFailure(action, portError ?? TerminalCommandParameterRules.InvalidAdbPortMessage);
+                return false;
+            }
+
+            command = TerminalCommandParameterRules.ApplyParameters(
+                commandTemplate,
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [TerminalCommandParameterRules.AdbIpParameterName] = normalizedIp,
+                    [TerminalCommandParameterRules.AdbPortParameterName] = normalizedPort
+                });
+            isAdbPair = false;
+            failure = null;
+            return true;
+        }
     }
 
     private static ExecuteSnippetActionResult ReportFilePasteFailure(

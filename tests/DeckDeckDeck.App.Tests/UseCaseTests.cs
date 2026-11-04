@@ -358,6 +358,130 @@ public sealed class UseCaseTests
     }
 
     [Fact]
+    public async Task ExecuteSnippetActionUseCasePromptsAdbPairAndRunsCommand()
+    {
+        var terminalService = new RecordingTerminalCommandGatewayAdapter();
+        var dialog = new RecordingDialogAdapter
+        {
+            PromptConfirmed = true,
+            AdbMode = AdbPromptMode.Pair,
+            AdbPort = "38421",
+            AdbPairCode = "834192"
+        };
+        var useCase = new ExecuteSnippetActionUseCase(
+            new RecordingClipboardPasteGateway(),
+            new RecordingFileLaunchGatewayAdapter(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new TestSpotifyMediaActionGateway(),
+            terminalService,
+            new RecordingFilePasteGateway(),
+            dialog);
+
+        var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
+            new Snippet
+            {
+                Id = Guid.NewGuid(),
+                Title = "ADB Wireless",
+                ActionType = SnippetActionType.TerminalCommand,
+                TerminalCommand =
+                    @"& ""$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"" connect {{IP}}:{{Port}}",
+                TerminalShell = SnippetTerminalShell.PowerShell,
+                OpenTerminalWindow = true,
+                AdbDeviceIp = "10.42.17.83"
+            },
+            new AppSettings(),
+            IntPtr.Zero));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, dialog.AdbPromptCount);
+        Assert.Equal("10.42.17.83", dialog.LastAdbPromptIp);
+        Assert.Contains("ADB 페어링 실행됨", result.StatusMessage);
+        var call = Assert.Single(terminalService.Calls);
+        Assert.Equal(
+            @"& ""$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"" pair 10.42.17.83:38421 834192",
+            call.Command);
+    }
+
+    [Fact]
+    public async Task ExecuteSnippetActionUseCaseFailsAdbWhenPairCodeIsInvalid()
+    {
+        var terminalService = new RecordingTerminalCommandGatewayAdapter();
+        var dialog = new RecordingDialogAdapter
+        {
+            PromptConfirmed = true,
+            AdbMode = AdbPromptMode.Pair,
+            AdbPort = "38421",
+            AdbPairCode = "123"
+        };
+        var useCase = new ExecuteSnippetActionUseCase(
+            new RecordingClipboardPasteGateway(),
+            new RecordingFileLaunchGatewayAdapter(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new TestSpotifyMediaActionGateway(),
+            terminalService,
+            new RecordingFilePasteGateway(),
+            dialog);
+
+        var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
+            new Snippet
+            {
+                Id = Guid.NewGuid(),
+                Title = "ADB Wireless",
+                ActionType = SnippetActionType.TerminalCommand,
+                TerminalCommand = "adb connect {{IP}}:{{Port}}",
+                AdbDeviceIp = "10.42.17.83"
+            },
+            new AppSettings(),
+            IntPtr.Zero));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(1, dialog.AdbPromptCount);
+        Assert.Contains("페어링 코드", result.StatusMessage);
+        Assert.Empty(terminalService.Calls);
+    }
+
+    [Fact]
+    public async Task ExecuteSnippetActionUseCaseFailsAdbWhenPairPortIsInvalid()
+    {
+        var terminalService = new RecordingTerminalCommandGatewayAdapter();
+        var dialog = new RecordingDialogAdapter
+        {
+            PromptConfirmed = true,
+            AdbMode = AdbPromptMode.Pair,
+            AdbPort = "invalid",
+            AdbPairCode = "834192"
+        };
+        var useCase = new ExecuteSnippetActionUseCase(
+            new RecordingClipboardPasteGateway(),
+            new RecordingFileLaunchGatewayAdapter(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new TestSpotifyMediaActionGateway(),
+            terminalService,
+            new RecordingFilePasteGateway(),
+            dialog);
+
+        var result = await useCase.ExecuteAsync(new ExecuteSnippetActionRequest(
+            new Snippet
+            {
+                Id = Guid.NewGuid(),
+                Title = "ADB Wireless",
+                ActionType = SnippetActionType.TerminalCommand,
+                TerminalCommand = "adb connect {{IP}}:{{Port}}",
+                AdbDeviceIp = "10.42.17.83"
+            },
+            new AppSettings(),
+            IntPtr.Zero));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(1, dialog.AdbPromptCount);
+        Assert.Contains("포트", result.StatusMessage);
+        Assert.Empty(terminalService.Calls);
+    }
+
+    [Fact]
     public void CreateManualBackupUseCaseStopsWhenBackupFolderIsInvalid()
     {
         var gateway = new RecordingBackupGateway

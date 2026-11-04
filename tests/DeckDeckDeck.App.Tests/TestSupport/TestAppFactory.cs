@@ -512,6 +512,10 @@ internal sealed class RecordingDialogAdapter : IDialogAdapter
 
     public string AdbPort { get; set; } = "12345";
 
+    public string? AdbPairCode { get; set; } = "123456";
+
+    public AdbPromptMode AdbMode { get; set; } = AdbPromptMode.Connect;
+
     public string? LastAdbPromptIp { get; private set; }
 
     public bool Confirm(string title, string message) => true;
@@ -561,19 +565,28 @@ internal sealed class RecordingDialogAdapter : IDialogAdapter
         return true;
     }
 
-    public bool TryPromptAdbPort(string title, string fixedIp, out string port)
+    public bool TryPromptAdbAction(string title, string fixedIp, out AdbPromptResult result)
     {
         AdbPromptCount++;
         LastAdbPromptIp = fixedIp;
         if (!PromptConfirmed)
         {
-            port = string.Empty;
+            result = new AdbPromptResult(AdbMode, string.Empty);
             return false;
         }
 
-        port = AdbPort;
+        result = new AdbPromptResult(AdbMode, AdbPort, AdbMode == AdbPromptMode.Pair ? AdbPairCode : null);
         return true;
     }
+
+    public bool TryPromptAdbPort(string title, string fixedIp, out string port)
+    {
+        var confirmed = TryPromptAdbAction(title, fixedIp, out var result);
+        port = confirmed ? result.Port : string.Empty;
+        return confirmed;
+    }
+
+
 }
 
 internal sealed record TerminalCommandCall(

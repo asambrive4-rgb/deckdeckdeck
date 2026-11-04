@@ -1,4 +1,4 @@
-// 역할: 터미널 명령어 내의 동적 입력 변수({변수명}), 무선 ADB 연결, 화면 끄기 및 블루투스 오디오 연결/해제 명령을 추출·판별·치환하는 규칙을 담당합니다.
+// 역할: 터미널 명령어 내의 동적 입력 변수({변수명}), 무선 ADB 연결/페어링, 화면 끄기 및 블루투스 오디오 연결/해제 명령을 추출·판별·치환하는 규칙을 담당합니다.
 using System.Text.RegularExpressions;
 
 namespace DeckDeckDeck.App.Domain;
@@ -27,9 +27,13 @@ public static partial class TerminalCommandParameterRules
 
     public const string AdbIpParameterName = "IP";
     public const string AdbPortParameterName = "Port";
+    public const string AdbPairCodeParameterName = "PairCode";
 
     public const string AdbWirelessPowerShellExample =
         @"& ""$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"" connect {{IP}}:{{Port}}";
+
+    public const string AdbPairPowerShellExample =
+        @"& ""$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"" pair {{IP}}:{{Port}} {{PairCode}}";
 
     public const string TurnOffDisplayCommand =
         @"(Add-Type '[DllImport(\""user32.dll\"")]public static extern int PostMessage(int hWnd,int hMsg,int wParam,int lParam);' -Name a -Passthru)::PostMessage(-1,0x0112,0xF170,2)";
@@ -38,6 +42,8 @@ public static partial class TerminalCommandParameterRules
     public const string InvalidAdbIpMessage = "IP는 숫자와 점(.)만 입력해 주세요. 예: 10.42.17.83";
     public const string EmptyAdbPortMessage = "포트를 입력해 주세요.";
     public const string InvalidAdbPortMessage = "포트는 1~65535 사이 숫자만 입력해 주세요.";
+    public const string EmptyAdbPairCodeMessage = "6자리 페어링 코드를 입력해 주세요.";
+    public const string InvalidAdbPairCodeMessage = "페어링 코드는 6자리 숫자여야 합니다.";
 
     public static string BuildBluetoothAudioCommand(BluetoothAudioActionKind action, string? target)
     {
@@ -214,6 +220,25 @@ public static partial class TerminalCommandParameterRules
         && command.Contains("adb", StringComparison.OrdinalIgnoreCase)
         && command.Contains("connect", StringComparison.OrdinalIgnoreCase);
 
+    public static bool IsAdbWirelessPairCommand(string? command)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+        {
+            return false;
+        }
+
+        var parameters = ExtractParameterNames(command);
+        var hasAdbParameter = parameters.Contains(AdbPortParameterName, StringComparer.Ordinal)
+            || parameters.Contains(AdbPairCodeParameterName, StringComparer.Ordinal);
+
+        return hasAdbParameter
+            && command.Contains("adb", StringComparison.OrdinalIgnoreCase)
+            && command.Contains("pair", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsAdbWirelessCommand(string? command) =>
+        IsAdbWirelessConnectCommand(command) || IsAdbWirelessPairCommand(command);
+
     public static bool TryNormalizeAdbIp(
         string? ip,
         out string normalizedIp,
@@ -274,6 +299,92 @@ public static partial class TerminalCommandParameterRules
         }
 
         return TryNormalizeAdbPort(port, out normalizedPort, out errorMessage);
+    }
+
+    public static bool TryNormalizeAdbPairCode(
+        string? pairCode,
+        out string normalizedCode,
+        out string? errorMessage)
+    {
+        var cleaned = (pairCode ?? string.Empty)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Replace("-", string.Empty, StringComparison.Ordinal)
+            .Trim();
+
+        if (cleaned.Length == 0)
+        {
+            normalizedCode = string.Empty;
+            errorMessage = EmptyAdbPairCodeMessage;
+            return false;
+        }
+
+        if (cleaned.Length != 6 || !cleaned.All(c => c is >= '0' and <= '9'))
+        {
+            normalizedCode = string.Empty;
+            errorMessage = InvalidAdbPairCodeMessage;
+            return false;
+        }
+
+        normalizedCode = cleaned;
+        errorMessage = null;
+        return true;
+    }
+
+    public static string BuildAdbPairCommand(
+        string commandTemplate,
+        string ip,
+        string port,
+        string pairCode)
+    {
+        if (string.IsNullOrWhiteSpace(commandTemplate))
+        {
+            return string.Empty;
+        }
+
+        var result = ConnectWordRegex().Replace(commandTemplate, "pair");
+
+        var paramNames = ExtractParameterNames(result);
+        var hasPairCodeParam = paramNames.Contains(AdbPairCodeParameterName, StringComparer.OrdinalIgnoreCase);
+
+        if (hasPairCodeParam)
+        {
+            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [AdbIpParameterName] = ip,
+                [AdbPortParameterName] = port,
+                [AdbPairCodeParameterName] = pairCode
+            };
+            return ApplyParameters(result, values);
+        }
+
+        if (AdbEndpointPlaceholderRegex().IsMatch(result))
+        {
+            result = AdbEndpointPlaceholderRegex().Replace(result, $"{ip}:{port} {pairCode}");
+            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [AdbIpParameterName] = ip,
+                [AdbPortParameterName] = port
+            };
+            return ApplyParameters(result, values);
+        }
+
+        if (paramNames.Contains(AdbIpParameterName, StringComparer.OrdinalIgnoreCase)
+            || paramNames.Contains(AdbPortParameterName, StringComparer.OrdinalIgnoreCase))
+        {
+            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [AdbIpParameterName] = ip,
+                [AdbPortParameterName] = port
+            };
+            result = ApplyParameters(result, values);
+        }
+
+        if (!string.IsNullOrWhiteSpace(pairCode) && !result.Contains(pairCode, StringComparison.Ordinal))
+        {
+            result = $"{result} {pairCode}";
+        }
+
+        return result;
     }
 
     public static IReadOnlyList<string> ExtractParameterNames(string? command) =>
@@ -399,4 +510,10 @@ public static partial class TerminalCommandParameterRules
 
     [GeneratedRegex(@"(?i)(?:^|\s)-r(?:\s|$)", RegexOptions.CultureInvariant)]
     private static partial Regex BtcomDisconnectFlagRegex();
+
+    [GeneratedRegex(@"\bconnect\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ConnectWordRegex();
+
+    [GeneratedRegex(@"\{\{\s*IP\s*\}\}\s*:\s*\{\{\s*Port\s*\}\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex AdbEndpointPlaceholderRegex();
 }

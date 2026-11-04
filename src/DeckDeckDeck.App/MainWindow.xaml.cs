@@ -283,7 +283,7 @@ public partial class MainWindow : Window
 
     private void OnHotkeyLongPressed(object? sender, HotkeyPressedEventArgs e)
     {
-        RunOnUiThread(() => HandleHotkeyLongPress(e.SlotKey));
+        PostToUiThread(() => HandleHotkeyLongPress(e.SlotKey));
     }
 
     internal void OnDirectHotkeyPressed(object? sender, DirectHotkeyPressedEventArgs e)

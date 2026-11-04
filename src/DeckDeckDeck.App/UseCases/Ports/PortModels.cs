@@ -117,3 +117,14 @@ public sealed record InstalledAppSelection(
 public sealed record BluetoothDeviceSelection(
     string DisplayName,
     string MacAddress);
+
+public enum AdbPromptMode
+{
+    Connect,
+    Pair
+}
+
+public sealed record AdbPromptResult(
+    AdbPromptMode Mode,
+    string Port,
+    string? PairCode = null);

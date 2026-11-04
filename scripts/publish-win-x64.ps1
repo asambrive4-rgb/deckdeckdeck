@@ -35,9 +35,7 @@ $publishArgs = @(
     $selfContainedValue,
     "-o",
     $Output,
-    "-p:PublishSingleFile=$singleFileValue",
-    "-p:PublishReadyToRun=true",
-    "-p:PublishReadyToRunEmitSymbols=false"
+    "-p:PublishSingleFile=$singleFileValue"
 )
 
 if ($SingleFile) {

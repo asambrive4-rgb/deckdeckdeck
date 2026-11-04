@@ -41,6 +41,24 @@ public interface IDialogAdapter
         out IReadOnlyDictionary<string, string> values);
 
     /// <summary>
+    /// Shows an ADB connect or pair form. Returns false when the user cancels.
+    /// </summary>
+    bool TryPromptAdbAction(
+        string title,
+        string fixedIp,
+        out AdbPromptResult result)
+    {
+        if (TryPromptAdbPort(title, fixedIp, out var port))
+        {
+            result = new AdbPromptResult(AdbPromptMode.Connect, port);
+            return true;
+        }
+
+        result = new AdbPromptResult(AdbPromptMode.Connect, string.Empty);
+        return false;
+    }
+
+    /// <summary>
     /// Shows an ADB connect form for port only. Returns false when the user cancels.
     /// </summary>
     bool TryPromptAdbPort(
