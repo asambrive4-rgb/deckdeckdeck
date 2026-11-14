@@ -291,6 +291,11 @@ public sealed class SnippetRepository : ISnippetRepository
             TerminalWorkingDirectory = source.TerminalWorkingDirectory,
             AdbDeviceIp = source.AdbDeviceIp,
             RunAsAdministrator = source.RunAsAdministrator,
+            RemoteInstallProjectPath = source.RemoteInstallProjectPath,
+            RemoteInstallModule = source.RemoteInstallModule,
+            RemoteInstallDeviceKind = source.RemoteInstallDeviceKind,
+            RemoteInstallTargetDevice = source.RemoteInstallTargetDevice,
+            RemoteInstallLaunchAfterInstall = source.RemoteInstallLaunchAfterInstall,
             SlotImageMode = source.SlotImageMode,
             Description = source.Description,
             ImagePath = imageFiles.ImagePath,
@@ -349,6 +354,11 @@ public sealed class SnippetRepository : ISnippetRepository
         snippet.TerminalWorkingDirectory = data.TerminalWorkingDirectory;
         snippet.AdbDeviceIp = data.AdbDeviceIp;
         snippet.RunAsAdministrator = data.RunAsAdministrator;
+        snippet.RemoteInstallProjectPath = data.RemoteInstallProjectPath;
+        snippet.RemoteInstallModule = data.RemoteInstallModule;
+        snippet.RemoteInstallDeviceKind = data.RemoteInstallDeviceKind;
+        snippet.RemoteInstallTargetDevice = data.RemoteInstallTargetDevice;
+        snippet.RemoteInstallLaunchAfterInstall = data.RemoteInstallLaunchAfterInstall;
         snippet.SlotImageMode = data.SlotImageMode;
         snippet.Description = data.Description;
         snippet.ImagePath = data.ImagePath;

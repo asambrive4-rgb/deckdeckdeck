@@ -24,10 +24,16 @@ public static class ExecutableActionStorageRules
         FileActionMode fileActionMode,
         bool openTerminalWindow = false,
         string? terminalWorkingDirectory = null,
-        string? adbDeviceIp = null)
+        string? adbDeviceIp = null,
+        string? remoteInstallProjectPath = null,
+        string? remoteInstallModule = null,
+        RemoteInstallDeviceKind? remoteInstallDeviceKind = null,
+        string? remoteInstallTargetDevice = null,
+        bool remoteInstallLaunchAfterInstall = true)
     {
         var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
         var isTerminal = actionType == SnippetActionType.TerminalCommand;
+        var isRemoteInstall = actionType == SnippetActionType.RemoteInstall;
 
         return new ExecutableActionStorageData(
             title.Trim(),
@@ -65,7 +71,20 @@ public static class ExecutableActionStorageRules
                 : null,
             isTerminal
                 ? NormalizeOptionalText(adbDeviceIp)
-                : null);
+                : null,
+            isRemoteInstall
+                ? NormalizeOptionalText(remoteInstallProjectPath)
+                : null,
+            isRemoteInstall
+                ? RemoteInstallRules.NormalizeModuleName(remoteInstallModule)
+                : null,
+            isRemoteInstall
+                ? remoteInstallDeviceKind ?? RemoteInstallDeviceKind.Phone
+                : null,
+            isRemoteInstall
+                ? NormalizeOptionalText(remoteInstallTargetDevice)
+                : null,
+            !isRemoteInstall || remoteInstallLaunchAfterInstall);
     }
 
     private static string? NormalizeOptionalText(string? value) =>
@@ -95,4 +114,9 @@ public sealed record ExecutableActionStorageData(
     FileActionMode FileActionMode,
     bool OpenTerminalWindow,
     string? TerminalWorkingDirectory,
-    string? AdbDeviceIp);
+    string? AdbDeviceIp,
+    string? RemoteInstallProjectPath = null,
+    string? RemoteInstallModule = null,
+    RemoteInstallDeviceKind? RemoteInstallDeviceKind = null,
+    string? RemoteInstallTargetDevice = null,
+    bool RemoteInstallLaunchAfterInstall = true);

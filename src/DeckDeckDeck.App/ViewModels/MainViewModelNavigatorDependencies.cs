@@ -37,4 +37,5 @@ internal sealed record MainViewModelNavigatorDependencies(
     IStoredImagePathResolver? StoredImagePathResolver,
     ISpotifyConnectionUseCase SpotifyConnectionUseCase,
     IClipboardTextWriter ClipboardTextWriter,
-    ISlotTimerCoordinator? SlotTimerCoordinator = null);
+    ISlotTimerCoordinator? SlotTimerCoordinator = null,
+    IAndroidRemoteInstallGateway? AndroidRemoteInstallGateway = null);

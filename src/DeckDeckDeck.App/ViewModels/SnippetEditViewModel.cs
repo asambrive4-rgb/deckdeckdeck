@@ -1,9 +1,11 @@
-// 역할: 텍스트 스니펫 및 동작(URL, 파일, 앱, 미디어, 블루투스 등) 편집 화면의 모든 입력 필드와 저장 동작을 관리하는 화면 모델입니다.
+// 역할: 텍스트 스니펫 및 동작(URL, 파일, 앱, 미디어, 블루투스, Android 원격설치 등) 편집 화면의 입력 필드와 프리셋 설정을 관리하는 화면 모델입니다.
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DeckDeckDeck.App.Domain;
+using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -19,6 +21,8 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly IDialogAdapter _dialogService;
     private readonly ExecutableActionEditDraft _draft;
     private readonly IAppLogger? _loggingService;
+    private readonly IAndroidRemoteInstallGateway? _androidRemoteInstallGateway;
+    private readonly string? _defaultRemoteInstallProjectPath;
     private readonly bool _isSpotifyConnected;
     private bool _originalIsSlotEnabled;
     private readonly SaveSnippetUseCase _saveSnippetUseCase;
@@ -28,6 +32,9 @@ public sealed class SnippetEditViewModel : ObservableObject
     private string _errorMessage = string.Empty;
     private bool _isAdbPairingEnabled;
     private bool _showAdvancedTerminalSettings;
+    private bool _showAdvancedRemoteInstallSettings;
+    private string _remoteInstallConnectedDevicesSummary = "연결 기기 새로고침을 눌러 ADB 분류 결과를 확인하세요.";
+    private IReadOnlyList<AndroidAppModuleOption> _remoteInstallModuleOptions = [];
     private BluetoothAudioActionKind _bluetoothControlAction = BluetoothAudioActionKind.Connect;
     private string _bluetoothTarget = string.Empty;
     private bool _isBluetoothPresetSelected;
@@ -51,7 +58,8 @@ public sealed class SnippetEditViewModel : ObservableObject
         IImageFileRepository? thumbnailService = null,
         IAppLogger? loggingService = null,
         ISnippetImageResolver? snippetImageService = null,
-        IStoredImagePathResolver? storedImagePathResolver = null)
+        IStoredImagePathResolver? storedImagePathResolver = null,
+        IAndroidRemoteInstallGateway? androidRemoteInstallGateway = null)
     {
         CategoryId = category.Id;
         CategoryName = category.Name;
@@ -63,6 +71,9 @@ public sealed class SnippetEditViewModel : ObservableObject
         _transferSnippetUseCase = transferSnippetUseCase;
         _dialogService = dialogService;
         _loggingService = loggingService;
+        _androidRemoteInstallGateway = androidRemoteInstallGateway;
+        _defaultRemoteInstallProjectPath = editorState.DefaultRemoteInstallProjectPath;
+        CategoryAdbIpHints = editorState.AdbSlotIpHints ?? [];
         _cancel = cancel;
         _afterSave = afterSave;
         _afterDelete = afterDelete;
@@ -72,6 +83,10 @@ public sealed class SnippetEditViewModel : ObservableObject
             thumbnailService,
             snippetImageService,
             storedImagePathResolver);
+        if (snippet is null)
+        {
+            _draft.RemoteInstallDeviceKind = RemoteInstallRules.GetDefaultDeviceKindForSlot(slotKey);
+        }
         _isSpotifyConnected = editorState.SpotifyConnection.IsConnected;
 
         _mediaCommandOptions = SnippetMediaCommandOption.ForProvider(_draft.MediaProvider);
@@ -99,12 +114,27 @@ public sealed class SnippetEditViewModel : ObservableObject
         SelectBluetoothPresetCommand = new RelayCommand(SelectBluetoothPreset);
         ChooseBluetoothDeviceCommand = new RelayCommand(ChooseBluetoothDevice);
         ToggleAdvancedTerminalSettingsCommand = new RelayCommand(ToggleAdvancedTerminalSettings);
+        SelectRemoteInstallTabletCommand = new RelayCommand(() => SelectRemoteInstallDeviceKind(RemoteInstallDeviceKind.Tablet));
+        SelectRemoteInstallPhoneCommand = new RelayCommand(() => SelectRemoteInstallDeviceKind(RemoteInstallDeviceKind.Phone));
+        SelectRemoteInstallWatchCommand = new RelayCommand(() => SelectRemoteInstallDeviceKind(RemoteInstallDeviceKind.Watch));
+        ChooseRemoteInstallProjectFolderCommand = new RelayCommand(ChooseRemoteInstallProjectFolder);
+        RescanRemoteInstallModulesCommand = new RelayCommand(() => RefreshRemoteInstallModules(autoRecommendModule: false));
+        RefreshRemoteInstallDevicesCommand = new RelayCommand(() => _ = RefreshRemoteInstallDevicesAsync());
+        ToggleAdvancedRemoteInstallSettingsCommand = new RelayCommand(ToggleAdvancedRemoteInstallSettings);
+        ApplyAdbIpHintCommand = new RelayCommand<string?>(ApplyAdbIpHint);
+        ApplyBatch456RemoteInstallSlotsCommand = new RelayCommand(ApplyBatch456RemoteInstallSlots);
         _isAdbPairingEnabled = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(_draft.TerminalCommand);
         if (TerminalCommandParameterRules.TryParseBluetoothAudioCommand(_draft.TerminalCommand, out var parsedBt, allowEmptyTarget: true))
         {
             _isBluetoothPresetSelected = true;
             _bluetoothControlAction = parsedBt.Action;
             _bluetoothTarget = parsedBt.Target;
+        }
+
+        if (IsRemoteInstallAction)
+        {
+            RefreshRemoteInstallModules(autoRecommendModule: string.IsNullOrWhiteSpace(_draft.RemoteInstallModule));
+            _ = RefreshRemoteInstallDevicesAsync();
         }
     }
 
@@ -138,7 +168,13 @@ public sealed class SnippetEditViewModel : ObservableObject
     public string SnippetTitle
     {
         get => _draft.Title;
-        set => SetDraftValue(_draft.Title, value, static (draft, v) => draft.Title = v);
+        set
+        {
+            if (SetDraftValue(_draft.Title, value, static (draft, v) => draft.Title = v))
+            {
+                NotifyDetectedAudioIconChanged();
+            }
+        }
     }
 
     public string Content
@@ -205,6 +241,18 @@ public sealed class SnippetEditViewModel : ObservableObject
     {
         get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.Timer);
         set { if (value) ActionType = SnippetActionType.Timer; }
+    }
+
+    public bool IsRemoteInstallAction
+    {
+        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.RemoteInstall);
+        set
+        {
+            if (value)
+            {
+                ActivateRemoteInstallAction();
+            }
+        }
     }
 
     public string LaunchPath
@@ -342,6 +390,7 @@ public sealed class SnippetEditViewModel : ObservableObject
             OnPropertyChanged(nameof(IsBluetoothConnectAction));
             OnPropertyChanged(nameof(IsBluetoothDisconnectAction));
             if (IsBluetoothPresetActive) SyncBluetoothTerminalCommand();
+            NotifyDetectedAudioIconChanged();
         }
     }
 
@@ -366,7 +415,21 @@ public sealed class SnippetEditViewModel : ObservableObject
             _bluetoothTarget = value;
             OnPropertyChanged();
             if (IsBluetoothPresetActive) SyncBluetoothTerminalCommand();
+            NotifyDetectedAudioIconChanged();
         }
+    }
+
+    public string DetectedAudioDeviceIconResourcePath =>
+        AudioPresetIconResolver.GetAutoIconResourcePath(
+            TerminalCommandParameterRules.BuildBluetoothAudioCommand(BluetoothControlAction, BluetoothTarget),
+            SnippetTitle) ?? string.Empty;
+
+    public bool HasDetectedAudioDeviceIcon => !string.IsNullOrWhiteSpace(DetectedAudioDeviceIconResourcePath);
+
+    private void NotifyDetectedAudioIconChanged()
+    {
+        OnPropertyChanged(nameof(DetectedAudioDeviceIconResourcePath));
+        OnPropertyChanged(nameof(HasDetectedAudioDeviceIcon));
     }
 
     public IRelayCommand SelectTurnOffDisplayPresetCommand { get; }
@@ -375,6 +438,94 @@ public sealed class SnippetEditViewModel : ObservableObject
     public IRelayCommand SelectBluetoothPresetCommand { get; }
     public IRelayCommand ChooseBluetoothDeviceCommand { get; }
     public IRelayCommand ToggleAdvancedTerminalSettingsCommand { get; }
+    public IRelayCommand SelectRemoteInstallTabletCommand { get; }
+    public IRelayCommand SelectRemoteInstallPhoneCommand { get; }
+    public IRelayCommand SelectRemoteInstallWatchCommand { get; }
+    public IRelayCommand ChooseRemoteInstallProjectFolderCommand { get; }
+    public IRelayCommand RescanRemoteInstallModulesCommand { get; }
+    public IRelayCommand RefreshRemoteInstallDevicesCommand { get; }
+    public IRelayCommand ToggleAdvancedRemoteInstallSettingsCommand { get; }
+    public IRelayCommand<string?> ApplyAdbIpHintCommand { get; }
+    public IRelayCommand ApplyBatch456RemoteInstallSlotsCommand { get; }
+
+    public IReadOnlyList<AdbSlotIpHint> CategoryAdbIpHints { get; }
+    public bool HasCategoryAdbIpHints => CategoryAdbIpHints.Count > 0;
+
+    public IReadOnlyList<AndroidAppModuleOption> RemoteInstallModuleOptions
+    {
+        get => _remoteInstallModuleOptions;
+        private set
+        {
+            if (SetProperty(ref _remoteInstallModuleOptions, value))
+            {
+                OnPropertyChanged(nameof(HasRemoteInstallModuleOptions));
+            }
+        }
+    }
+
+    public bool HasRemoteInstallModuleOptions => _remoteInstallModuleOptions.Count > 0;
+
+    public RemoteInstallDeviceKind RemoteInstallDeviceKind
+    {
+        get => _draft.RemoteInstallDeviceKind;
+        set
+        {
+            if (!SetDraftValue(_draft.RemoteInstallDeviceKind, value, static (draft, v) => draft.RemoteInstallDeviceKind = v))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsRemoteInstallTabletSelected));
+            OnPropertyChanged(nameof(IsRemoteInstallPhoneSelected));
+            OnPropertyChanged(nameof(IsRemoteInstallWatchSelected));
+        }
+    }
+
+    public bool IsRemoteInstallTabletSelected => RemoteInstallDeviceKind == RemoteInstallDeviceKind.Tablet;
+    public bool IsRemoteInstallPhoneSelected => RemoteInstallDeviceKind == RemoteInstallDeviceKind.Phone;
+    public bool IsRemoteInstallWatchSelected => RemoteInstallDeviceKind == RemoteInstallDeviceKind.Watch;
+
+    public string RemoteInstallProjectPath
+    {
+        get => _draft.RemoteInstallProjectPath;
+        set
+        {
+            if (SetDraftValue(_draft.RemoteInstallProjectPath, value, static (draft, v) => draft.RemoteInstallProjectPath = v))
+            {
+                RefreshRemoteInstallModules(autoRecommendModule: true);
+            }
+        }
+    }
+
+    public string RemoteInstallModule
+    {
+        get => _draft.RemoteInstallModule;
+        set => SetDraftValue(_draft.RemoteInstallModule, value, static (draft, v) => draft.RemoteInstallModule = v);
+    }
+
+    public string RemoteInstallTargetDevice
+    {
+        get => _draft.RemoteInstallTargetDevice;
+        set => SetDraftValue(_draft.RemoteInstallTargetDevice, value, static (draft, v) => draft.RemoteInstallTargetDevice = v);
+    }
+
+    public bool RemoteInstallLaunchAfterInstall
+    {
+        get => _draft.RemoteInstallLaunchAfterInstall;
+        set => SetDraftValue(_draft.RemoteInstallLaunchAfterInstall, value, static (draft, v) => draft.RemoteInstallLaunchAfterInstall = v);
+    }
+
+    public bool ShowAdvancedRemoteInstallSettings
+    {
+        get => _showAdvancedRemoteInstallSettings || !string.IsNullOrWhiteSpace(RemoteInstallTargetDevice);
+        set => SetProperty(ref _showAdvancedRemoteInstallSettings, value);
+    }
+
+    public string RemoteInstallConnectedDevicesSummary
+    {
+        get => _remoteInstallConnectedDevicesSummary;
+        private set => SetProperty(ref _remoteInstallConnectedDevicesSummary, value);
+    }
 
     public SnippetTerminalShell SelectedTerminalShell
     {
@@ -725,6 +876,247 @@ public sealed class SnippetEditViewModel : ObservableObject
     private void ToggleAdvancedTerminalSettings() =>
         ShowAdvancedTerminalSettings = !_showAdvancedTerminalSettings;
 
+    private void ToggleAdvancedRemoteInstallSettings() =>
+        ShowAdvancedRemoteInstallSettings = !_showAdvancedRemoteInstallSettings;
+
+    private void ActivateRemoteInstallAction()
+    {
+        ActionType = SnippetActionType.RemoteInstall;
+
+        if (string.IsNullOrWhiteSpace(RemoteInstallProjectPath))
+        {
+            var candidatePath = ResolveInitialRemoteInstallProjectPath();
+            if (!string.IsNullOrWhiteSpace(candidatePath))
+            {
+                RemoteInstallProjectPath = candidatePath;
+            }
+        }
+        else
+        {
+            RefreshRemoteInstallModules(autoRecommendModule: string.IsNullOrWhiteSpace(RemoteInstallModule));
+        }
+
+        if (RemoteInstallRules.IsAutoGeneratedSlotTitle(SnippetTitle))
+        {
+            SnippetTitle = RemoteInstallRules.RecommendDefaultSlotTitle(RemoteInstallProjectPath, RemoteInstallDeviceKind);
+        }
+
+        _ = RefreshRemoteInstallDevicesAsync();
+    }
+
+    private void SelectRemoteInstallDeviceKind(RemoteInstallDeviceKind kind)
+    {
+        RemoteInstallDeviceKind = kind;
+
+        if (_remoteInstallModuleOptions.Count > 0)
+        {
+            var moduleNames = _remoteInstallModuleOptions.Select(static o => o.ModuleName).ToList();
+            var recommended = RemoteInstallRules.RecommendModuleForDeviceKind(moduleNames, kind);
+            if (!string.IsNullOrWhiteSpace(recommended))
+            {
+                RemoteInstallModule = recommended;
+            }
+        }
+
+        if (RemoteInstallRules.IsAutoGeneratedSlotTitle(SnippetTitle))
+        {
+            SnippetTitle = RemoteInstallRules.RecommendDefaultSlotTitle(RemoteInstallProjectPath, kind);
+        }
+
+        ErrorMessage = string.Empty;
+    }
+
+    private void ChooseRemoteInstallProjectFolder()
+    {
+        var selectedPath = _dialogService.SelectLaunchFolder();
+        if (selectedPath is null) return;
+
+        RemoteInstallProjectPath = selectedPath;
+        if (RemoteInstallRules.IsAutoGeneratedSlotTitle(SnippetTitle))
+        {
+            SnippetTitle = RemoteInstallRules.RecommendDefaultSlotTitle(selectedPath, RemoteInstallDeviceKind);
+        }
+
+        ErrorMessage = string.Empty;
+    }
+
+    private void RefreshRemoteInstallModules(bool autoRecommendModule)
+    {
+        if (_androidRemoteInstallGateway is null || string.IsNullOrWhiteSpace(RemoteInstallProjectPath))
+        {
+            RemoteInstallModuleOptions = [];
+            return;
+        }
+
+        var modules = _androidRemoteInstallGateway.ScanProjectModules(RemoteInstallProjectPath);
+        RemoteInstallModuleOptions = modules
+            .Select(static m => new AndroidAppModuleOption(
+                m.ModuleName,
+                string.IsNullOrWhiteSpace(m.ApplicationId)
+                    ? m.ModuleName
+                    : $"{m.ModuleName} ({m.ApplicationId})"))
+            .ToList();
+
+        if (modules.Count == 0)
+        {
+            return;
+        }
+
+        var moduleNames = modules.Select(static m => m.ModuleName).ToList();
+        var currentNormalized = RemoteInstallRules.NormalizeModuleName(RemoteInstallModule);
+        if (autoRecommendModule
+            || string.IsNullOrWhiteSpace(currentNormalized)
+            || !moduleNames.Contains(currentNormalized, StringComparer.OrdinalIgnoreCase))
+        {
+            var recommended = RemoteInstallRules.RecommendModuleForDeviceKind(moduleNames, RemoteInstallDeviceKind);
+            if (!string.IsNullOrWhiteSpace(recommended))
+            {
+                RemoteInstallModule = recommended;
+            }
+        }
+    }
+
+    private async Task RefreshRemoteInstallDevicesAsync()
+    {
+        if (_androidRemoteInstallGateway is null)
+        {
+            RemoteInstallConnectedDevicesSummary = "ADB 실행기가 준비되지 않았습니다.";
+            return;
+        }
+
+        try
+        {
+            RemoteInstallConnectedDevicesSummary = "ADB 기기 스캔 및 4단계 분류 중...";
+            var devices = await _androidRemoteInstallGateway.ScanConnectedDevicesAsync();
+            if (devices.Count == 0)
+            {
+                RemoteInstallConnectedDevicesSummary = "현재 연결된 ADB 기기가 없습니다. (1·2·3 슬롯으로 무선 ADB 연결 후 확인)";
+                return;
+            }
+
+            RemoteInstallConnectedDevicesSummary =
+                "감지됨: " + string.Join(" / ", devices.Select(static d => $"{d.DisplaySummary} ({d.ClassificationSource})"));
+        }
+        catch (Exception ex)
+        {
+            RemoteInstallConnectedDevicesSummary = $"ADB 기기 스캔 실패: {ex.Message}";
+        }
+    }
+
+    private void ApplyAdbIpHint(string? ipAddress)
+    {
+        RemoteInstallTargetDevice = ipAddress ?? string.Empty;
+        ErrorMessage = string.Empty;
+    }
+
+    private void ApplyBatch456RemoteInstallSlots()
+    {
+        if (string.IsNullOrWhiteSpace(RemoteInstallProjectPath))
+        {
+            ErrorMessage = RemoteInstallRules.ProjectPathRequiredMessage;
+            return;
+        }
+
+        var modules = _androidRemoteInstallGateway?.ScanProjectModules(RemoteInstallProjectPath) ?? [];
+        var moduleNames = modules.Select(static m => m.ModuleName).ToList();
+        if (moduleNames.Count == 0 && !string.IsNullOrWhiteSpace(RemoteInstallModule))
+        {
+            var fallbackMod = RemoteInstallRules.NormalizeModuleName(RemoteInstallModule);
+            if (!string.IsNullOrWhiteSpace(fallbackMod))
+            {
+                moduleNames.Add(fallbackMod);
+            }
+        }
+
+        if (moduleNames.Count == 0)
+        {
+            ErrorMessage = "선택한 폴더에서 Android 앱 모듈(settings.gradle)을 찾지 못했습니다.";
+            return;
+        }
+
+        var batchTargets = new (SlotKey Slot, RemoteInstallDeviceKind Kind)[]
+        {
+            (SlotKey.Numpad4, RemoteInstallDeviceKind.Tablet),
+            (SlotKey.Numpad5, RemoteInstallDeviceKind.Phone),
+            (SlotKey.Numpad6, RemoteInstallDeviceKind.Watch)
+        };
+
+        Snippet? lastSaved = null;
+        foreach (var (slot, kind) in batchTargets)
+        {
+            var moduleForKind = RemoteInstallRules.RecommendModuleForDeviceKind(moduleNames, kind) ?? moduleNames[0];
+            var title = RemoteInstallRules.RecommendDefaultSlotTitle(RemoteInstallProjectPath, kind);
+            var saveData = new SnippetSaveData(
+                Title: title,
+                Content: string.Empty,
+                Description: $"{RemoteInstallRules.GetDeviceKindKoreanLabel(kind)} ({moduleForKind}) 원격설치",
+                ImagePath: null,
+                ThumbnailPath: null,
+                ActionType: SnippetActionType.RemoteInstall,
+                RemoteInstallProjectPath: RemoteInstallProjectPath.Trim(),
+                RemoteInstallModule: moduleForKind,
+                RemoteInstallDeviceKind: kind,
+                RemoteInstallTargetDevice: null,
+                RemoteInstallLaunchAfterInstall: RemoteInstallLaunchAfterInstall);
+
+            var existingId = slot == SlotKey ? _snippetId : null;
+            var result = _saveSnippetUseCase.Execute(new SaveSnippetRequest(
+                CategoryId,
+                slot,
+                existingId,
+                IsSlotEnabled: true,
+                OriginalIsSlotEnabled: true,
+                saveData));
+
+            if (!result.Succeeded)
+            {
+                ErrorMessage = result.ErrorMessage ?? "슬롯 4·5·6 일괄 배치에 실패했습니다.";
+                return;
+            }
+
+            if (result.Snippet is not null)
+            {
+                lastSaved = result.Snippet;
+            }
+        }
+
+        if (lastSaved is not null)
+        {
+            _draft.MarkSaved();
+            ErrorMessage = string.Empty;
+            _showStatus("슬롯 4(태블릿) · 5(폰) · 6(워치) 원격설치 구성을 저장했습니다.");
+            _afterSave(lastSaved);
+        }
+    }
+
+    private string? ResolveInitialRemoteInstallProjectPath()
+    {
+        if (!string.IsNullOrWhiteSpace(_defaultRemoteInstallProjectPath)
+            && Directory.Exists(_defaultRemoteInstallProjectPath))
+        {
+            return _defaultRemoteInstallProjectPath;
+        }
+
+        try
+        {
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrWhiteSpace(userProfile))
+            {
+                var watchYouDoinPath = Path.Combine(userProfile, "AndroidStudioProjects", "WatchYouDoin");
+                if (Directory.Exists(watchYouDoinPath))
+                {
+                    return watchYouDoinPath;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore directory discovery errors
+        }
+
+        return null;
+    }
+
     private void NotifyTerminalPropertiesChanged()
     {
         OnPropertyChanged(nameof(TerminalCommand));
@@ -759,6 +1151,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         OnPropertyChanged(nameof(IsMediaAction));
         OnPropertyChanged(nameof(IsTerminalCommandAction));
         OnPropertyChanged(nameof(IsTimerAction));
+        OnPropertyChanged(nameof(IsRemoteInstallAction));
     }
 
     private void NotifyFileActionModeChanged()
@@ -797,6 +1190,8 @@ public sealed class SnippetEditViewModel : ObservableObject
 }
 
 public sealed record SnippetTransferTargetSlot(SlotKey SlotKey, string Label);
+
+public sealed record AndroidAppModuleOption(string ModuleName, string DisplayLabel);
 
 public sealed record SnippetMediaCommandOption(SnippetMediaCommand Command, string Label)
 {

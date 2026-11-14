@@ -173,8 +173,8 @@
     <Style x:Key="Deck.SlotThumbnailFrameBorderStyle"
            BasedOn="{StaticResource Deck.ThumbnailFrameBorderStyle}"
            TargetType="{x:Type Border}">
-        <Setter Property="Width" Value="42" />
-        <Setter Property="Height" Value="42" />
+        <Setter Property="Width" Value="46" />
+        <Setter Property="Height" Value="46" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="HorizontalAlignment" Value="Center" />

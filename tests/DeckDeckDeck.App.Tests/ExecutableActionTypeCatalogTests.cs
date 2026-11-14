@@ -12,6 +12,7 @@ public sealed class ExecutableActionTypeCatalogTests
     [InlineData(SnippetActionType.LaunchUrl, ActionEditorPanel.LaunchUrl)]
     [InlineData(SnippetActionType.MediaAction, ActionEditorPanel.Media)]
     [InlineData(SnippetActionType.TerminalCommand, ActionEditorPanel.TerminalCommand)]
+    [InlineData(SnippetActionType.RemoteInstall, ActionEditorPanel.RemoteInstall)]
     public void GetEditorPanelMapsEveryKnownActionType(
         SnippetActionType actionType,
         ActionEditorPanel expectedPanel)
@@ -36,6 +37,7 @@ public sealed class ExecutableActionTypeCatalogTests
     [InlineData(SnippetActionType.LaunchUrl, FileActionMode.Launch, "웹 주소 열기")]
     [InlineData(SnippetActionType.MediaAction, FileActionMode.Launch, "음악/미디어 제어")]
     [InlineData(SnippetActionType.TerminalCommand, FileActionMode.Launch, "터미널 명령 실행")]
+    [InlineData(SnippetActionType.RemoteInstall, FileActionMode.Launch, "Android 원격설치")]
     public void GetDisplayLabelMatchesExistingUiCopy(
         SnippetActionType actionType,
         FileActionMode fileActionMode,

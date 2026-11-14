@@ -116,7 +116,7 @@
                                             Style="{StaticResource Deck.SlotThumbnailFrameBorderStyle}">
                                         <Border.Background>
                                             <ImageBrush ImageSource="{Binding ThumbnailSource}"
-                                                        Stretch="UniformToFill" />
+                                                        Stretch="Uniform" />
                                         </Border.Background>
                                     </Border>
                                     <Viewbox x:Name="DisplayTextContainer"

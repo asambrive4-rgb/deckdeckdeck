@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Windows;
 using DeckDeckDeck.App.Domain;
+using DeckDeckDeck.App.Infrastructure.Storage;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -154,6 +155,6 @@ public sealed class SlotGridViewModelFactory
                     => ResolveDisplayPath(snippet.AutoIconPath),
                 { SlotImageMode: SlotImageMode.Auto, ActionType: SnippetActionType.MediaAction }
                     => MediaIconResourcePaths.GetIconResourcePath(snippet.MediaCommand),
-                _ => null
+                _ => AudioPresetIconResolver.GetAutoIconResourcePath(snippet?.TerminalCommand, snippet?.Title)
             };
 }

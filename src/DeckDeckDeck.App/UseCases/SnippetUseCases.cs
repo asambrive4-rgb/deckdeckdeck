@@ -42,7 +42,12 @@ public sealed class SaveSnippetUseCase
             data.RunAsAdministrator,
             data.OpenTerminalWindow,
             data.TerminalWorkingDirectory,
-            data.AdbDeviceIp);
+            data.AdbDeviceIp,
+            data.RemoteInstallProjectPath,
+            data.RemoteInstallModule,
+            data.RemoteInstallDeviceKind,
+            data.RemoteInstallTargetDevice,
+            data.RemoteInstallLaunchAfterInstall);
 
         if (!validation.Succeeded)
         {
@@ -71,11 +76,21 @@ public sealed class SaveSnippetUseCase
             RunAsAdministrator = validation.RunAsAdministrator,
             OpenTerminalWindow = validation.OpenTerminalWindow,
             TerminalWorkingDirectory = validation.TerminalWorkingDirectory,
-            AdbDeviceIp = validation.AdbDeviceIp
+            AdbDeviceIp = validation.AdbDeviceIp,
+            RemoteInstallProjectPath = validation.RemoteInstallProjectPath,
+            RemoteInstallModule = validation.RemoteInstallModule,
+            RemoteInstallDeviceKind = validation.RemoteInstallDeviceKind,
+            RemoteInstallTargetDevice = validation.RemoteInstallTargetDevice,
+            RemoteInstallLaunchAfterInstall = validation.RemoteInstallLaunchAfterInstall
         })
             .NormalizeForStorage();
 
-        var snippet = request.SnippetId is { } id
+        var targetSnippetId = request.SnippetId
+            ?? _snippetRepository
+                .GetByCategoryId(request.CategoryId)
+                .FirstOrDefault(s => s.SlotKey == request.SlotKey)?.Id;
+
+        var snippet = targetSnippetId is { } id
             ? _snippetRepository.Update(id, saveData)
             : _snippetRepository.Create(request.CategoryId, request.SlotKey, saveData);
 

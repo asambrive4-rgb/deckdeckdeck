@@ -120,6 +120,31 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "AdbDeviceIp",
                 "ALTER TABLE Snippets ADD COLUMN AdbDeviceIp TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "RemoteInstallProjectPath",
+                "ALTER TABLE Snippets ADD COLUMN RemoteInstallProjectPath TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "RemoteInstallModule",
+                "ALTER TABLE Snippets ADD COLUMN RemoteInstallModule TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "RemoteInstallDeviceKind",
+                "ALTER TABLE Snippets ADD COLUMN RemoteInstallDeviceKind TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "RemoteInstallTargetDevice",
+                "ALTER TABLE Snippets ADD COLUMN RemoteInstallTargetDevice TEXT NULL");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "RemoteInstallLaunchAfterInstall",
+                "ALTER TABLE Snippets ADD COLUMN RemoteInstallLaunchAfterInstall INTEGER NOT NULL DEFAULT 1");
             var addedSlotImageMode = AddColumnIfMissing(
                 dbContext,
                 existingColumns,

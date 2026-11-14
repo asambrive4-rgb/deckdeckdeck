@@ -66,6 +66,11 @@
                                              IsChecked="{Binding IsTimerAction, Mode=TwoWay}"
                                              Style="{StaticResource Deck.ActionTypeToggleStyle}" />
                             </UniformGrid>
+                            <RadioButton Margin="0,2,0,0"
+                                         Content="Android 원격설치 (태블릿 4 · 폰 5 · 워치 6)"
+                                         GroupName="SnippetActionType"
+                                         IsChecked="{Binding IsRemoteInstallAction, Mode=TwoWay}"
+                                         Style="{StaticResource Deck.ActionTypeToggleStyle}" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -444,6 +449,20 @@
                                              Style="{StaticResource Deck.TextBoxStyle}"
                                              Text="{Binding BluetoothTarget, UpdateSourceTrigger=PropertyChanged}"
                                              ToolTip="예: E4:92:82:82:D5:9B 또는 WH-1000XM5" />
+                                    <!-- 감지된 기기 아이콘 미리보기 -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
+                                                Visibility="{Binding HasDetectedAudioDeviceIcon, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Border Width="26" Height="26" CornerRadius="6"
+                                                Background="{StaticResource Deck.Brush.Background.SurfaceSoft}"
+                                                BorderBrush="{StaticResource Deck.Brush.Line.Soft}"
+                                                BorderThickness="1"
+                                                Margin="0,0,8,0">
+                                            <Image Source="{Binding DetectedAudioDeviceIconResourcePath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=32}"
+                                                   Stretch="Uniform" Margin="2" />
+                                        </Border>
+                                        <TextBlock Text="전용 기기 프리셋 아이콘이 슬롯에 자동 적용됩니다" FontSize="11.5" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}" VerticalAlignment="Center" />
+                                    </StackPanel>
                                     <WrapPanel Margin="0,8,0,0">
                                         <Button Command="{Binding ChooseBluetoothDeviceCommand}"
                                                 Style="{StaticResource Deck.ImageActionButtonStyle}"
@@ -533,6 +552,206 @@
                                            Foreground="{StaticResource Deck.Brush.Text.Secondary}"
                                            Text="신뢰하는 명령만 저장하고 실행하세요. 명령을 비우면 작업 폴더에서 셸만 엽니다. 관리자 권한 실행 시 Windows 확인창이 표시될 수 있습니다."
                                            TextWrapping="Wrap" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Android 원격설치 (태블릿 4 / 폰 5 / 워치 6) -->
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsRemoteInstallAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="1. 대상 기기 종류 (태블릿 4 · 폰 5 · 워치 6)" />
+
+                            <Grid Margin="0,4,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- 태블릿 (4) -->
+                                <Button Grid.Column="0"
+                                        Command="{Binding SelectRemoteInstallTabletCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRemoteInstallTabletSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="태블릿" FontSize="12.5" FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        <TextBlock Text="슬롯 4 · ≥600dp" FontSize="10"
+                                                   Margin="0,2,0,0"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- 폰 (5) -->
+                                <Button Grid.Column="2"
+                                        Command="{Binding SelectRemoteInstallPhoneCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRemoteInstallPhoneSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="폰" FontSize="12.5" FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        <TextBlock Text="슬롯 5 · 스마트폰" FontSize="10"
+                                                   Margin="0,2,0,0"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- 워치 (6) -->
+                                <Button Grid.Column="4"
+                                        Command="{Binding SelectRemoteInstallWatchCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRemoteInstallWatchSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="워치" FontSize="12.5" FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        <TextBlock Text="슬롯 6 · Wear OS" FontSize="10"
+                                                   Margin="0,2,0,0"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="2. Android 프로젝트 폴더" />
+                            <TextBox FontFamily="Cascadia Code, Consolas"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding RemoteInstallProjectPath, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="예: C:\Users\joajo\AndroidStudioProjects\WatchYouDoin" />
+                            <WrapPanel Margin="0,8,0,10">
+                                <Button Command="{Binding ChooseRemoteInstallProjectFolderCommand}"
+                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                        Content="프로젝트 폴더 선택" />
+                                <Button Margin="8,0,0,0"
+                                        Command="{Binding RescanRemoteInstallModulesCommand}"
+                                        Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                        Padding="10,4"
+                                        MinHeight="28"
+                                        Content="모듈 다시 스캔" />
+                                <Button Margin="8,0,0,0"
+                                        Command="{Binding ApplyBatch456RemoteInstallSlotsCommand}"
+                                        Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                        Padding="10,4"
+                                        MinHeight="28"
+                                        ToolTip="현재 프로젝트 기준으로 이 카테고리의 슬롯 4(태블릿)·5(폰)·6(워치)을 한 번에 저장합니다."
+                                        Content="슬롯 4·5·6 한 번에 배치 ⚡" />
+                            </WrapPanel>
+
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="3. 빌드할 Android 앱 모듈" />
+                            <ComboBox Margin="0,0,0,6"
+                                      ItemsSource="{Binding RemoteInstallModuleOptions}"
+                                      SelectedValue="{Binding RemoteInstallModule, Mode=TwoWay}"
+                                      SelectedValuePath="ModuleName"
+                                      DisplayMemberPath="DisplayLabel"
+                                      Style="{StaticResource Deck.ComboBoxStyle}"
+                                      Visibility="{Binding HasRemoteInstallModuleOptions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <TextBox FontFamily="Cascadia Code, Consolas"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding RemoteInstallModule, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="예: :phone:android 또는 :wear:android 또는 :app" />
+
+                            <CheckBox Margin="0,10,0,8"
+                                      Content="설치 완료 후 앱 자동 실행 (assembleDebug 빌드 후 실행)"
+                                      Style="{StaticResource Deck.CheckBoxStyle}"
+                                      IsChecked="{Binding RemoteInstallLaunchAfterInstall}" />
+
+                            <!-- 연결된 ADB 기기 4단계 분류 미리보기 카드 -->
+                            <Border Margin="0,4,0,6"
+                                    Padding="12,10"
+                                    CornerRadius="12"
+                                    BorderThickness="1"
+                                    BorderBrush="{StaticResource Deck.Brush.Line.Soft}"
+                                    Background="{StaticResource Deck.Brush.Background.Surface}">
+                                <StackPanel>
+                                    <TextBlock FontSize="11.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource Deck.Brush.Text.Primary}"
+                                               Text="실시간 ADB 기기 분류 상태 (특성 · 화면 dp · 모델명)" />
+                                    <TextBlock Margin="0,4,0,8"
+                                               FontSize="11.5"
+                                               Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                               Text="{Binding RemoteInstallConnectedDevicesSummary}"
+                                               TextWrapping="Wrap" />
+                                    <WrapPanel>
+                                        <Button Command="{Binding RefreshRemoteInstallDevicesCommand}"
+                                                Padding="10,4"
+                                                MinHeight="26"
+                                                FontSize="11.5"
+                                                Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                                Content="연결 기기 새로고침 ↻" />
+                                        <Button Margin="8,0,0,0"
+                                                Command="{Binding ToggleAdvancedRemoteInstallSettingsCommand}"
+                                                Padding="10,4"
+                                                MinHeight="26"
+                                                FontSize="11.5"
+                                                Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                                Content="고급: 특정 IP/시리얼 고정 ⌵" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 고급: 특정 기기 IP/시리얼 필터 -->
+                            <StackPanel Visibility="{Binding ShowAdvancedRemoteInstallSettings, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        Margin="0,4,0,0">
+                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="특정 기기 IP 또는 시리얼 고정 (비워두면 기기 종류로 자동 매칭)" />
+                                <TextBox FontFamily="Cascadia Code, Consolas"
+                                         Style="{StaticResource Deck.TextBoxStyle}"
+                                         Text="{Binding RemoteInstallTargetDevice, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="비워두면 연결된 태블릿/폰/워치 중 해당 종류 기기에 자동 설치합니다." />
+                                <ItemsControl Margin="0,6,0,0"
+                                              ItemsSource="{Binding CategoryAdbIpHints}"
+                                              Visibility="{Binding HasCategoryAdbIpHints, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Margin="0,0,6,6"
+                                                    Padding="8,3"
+                                                    MinHeight="24"
+                                                    FontSize="11"
+                                                    Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                                    Command="{Binding DataContext.ApplyAdbIpHintCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding IpAddress}"
+                                                    Content="{Binding DisplayLabel}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </StackPanel>
                     </Grid>

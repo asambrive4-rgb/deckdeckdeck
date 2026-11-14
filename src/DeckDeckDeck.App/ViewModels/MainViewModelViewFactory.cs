@@ -54,7 +54,9 @@ internal sealed class MainViewModelViewFactory
             showSettings,
             editSnippet,
             _executeSnippet,
-            reorderSnippet);
+            reorderSnippet,
+            _dependencies.SlotTimerCoordinator,
+            _dependencies.AndroidRemoteInstallGateway);
     }
 
     public CategoryEditViewModel CreateCategoryEditor(
@@ -107,7 +109,8 @@ internal sealed class MainViewModelViewFactory
             _dependencies.ImageFileRepository,
             _dependencies.Logger,
             _dependencies.SnippetImageResolver,
-            _dependencies.StoredImagePathResolver);
+            _dependencies.StoredImagePathResolver,
+            _dependencies.AndroidRemoteInstallGateway);
     }
 
     public SettingsViewModel CreateSettings(

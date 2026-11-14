@@ -57,8 +57,8 @@ public sealed class LoadSnippetEditorStateUseCase
         var settings = _settingsStore.Load();
         var isSlotEnabled = !settings.EnabledSnippetSlotKeys.TryGetValue(request.SlotKey, out var enabled)
             || enabled;
-        var snippetsBySlot = _snippetRepository
-            .GetByCategoryId(request.CategoryId)
+        var allCategorySnippets = _snippetRepository.GetByCategoryId(request.CategoryId);
+        var snippetsBySlot = allCategorySnippets
             .Where(snippet => !request.SnippetId.HasValue || snippet.Id != request.SnippetId.Value)
             .ToDictionary(snippet => snippet.SlotKey);
         var transferTargets = SlotKeyCatalog.All
@@ -70,10 +70,22 @@ public sealed class LoadSnippetEditorStateUseCase
             })
             .ToList();
 
+        var adbIpHints = allCategorySnippets
+            .Where(static s => !string.IsNullOrWhiteSpace(s.AdbDeviceIp))
+            .OrderBy(static s => s.SlotKey.GetSortOrder())
+            .Select(static s => new AdbSlotIpHint(s.SlotKey, s.Title, s.AdbDeviceIp!.Trim()))
+            .ToList();
+
+        var defaultProjectPath = allCategorySnippets
+            .Select(static s => s.RemoteInstallProjectPath)
+            .FirstOrDefault(static p => !string.IsNullOrWhiteSpace(p));
+
         return new SnippetEditorState(
             isSlotEnabled,
             transferTargets,
-            SpotifyConnectionState.FromSettings(settings));
+            SpotifyConnectionState.FromSettings(settings),
+            adbIpHints,
+            defaultProjectPath);
     }
 }
 
@@ -88,7 +100,17 @@ public sealed record CategoryEditorState(
 public sealed record SnippetEditorState(
     bool IsSlotEnabled,
     IReadOnlyList<TransferTargetState> TransferTargets,
-    SpotifyConnectionState SpotifyConnection);
+    SpotifyConnectionState SpotifyConnection,
+    IReadOnlyList<AdbSlotIpHint>? AdbSlotIpHints = null,
+    string? DefaultRemoteInstallProjectPath = null);
+
+public sealed record AdbSlotIpHint(SlotKey SlotKey, string Title, string IpAddress)
+{
+    public string DisplayLabel =>
+        string.IsNullOrWhiteSpace(Title)
+            ? $"슬롯 {SlotKey.GetDisplayText()}: {IpAddress}"
+            : $"슬롯 {SlotKey.GetDisplayText()} ({Title}): {IpAddress}";
+}
 
 public sealed record TransferTargetState(SlotKey SlotKey, string? ExistingTitle);
 

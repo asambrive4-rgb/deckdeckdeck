@@ -1,4 +1,4 @@
-// 역할: 슬롯 실행 요청을 받아 텍스트·파일 붙여넣기, 앱 실행, URL 열기, 미디어 제어, 터미널 명령 및 블루투스 기기 제어 등 대상 동작을 조율하고 실행합니다.
+// 역할: 슬롯 실행 요청을 받아 텍스트·파일 붙여넣기, 앱 실행, URL 열기, 미디어 제어, 터미널 명령, 블루투스 기기 제어 및 Android 원격설치 등 대상 동작을 조율하고 실행합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.UseCases.Ports;
@@ -20,7 +20,8 @@ public sealed class ExecuteSnippetActionUseCase(
     IDialogAdapter dialogAdapter,
     ITimerActionGateway? timerActionGateway = null,
     IDisplayPowerGateway? displayPowerGateway = null,
-    IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null)
+    IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null,
+    IAndroidRemoteInstallGateway? androidRemoteInstallGateway = null)
 {
     public async Task<ExecuteSnippetActionResult> ExecuteAsync(
         ExecuteSnippetActionRequest request,
@@ -37,6 +38,7 @@ public sealed class ExecuteSnippetActionUseCase(
                 SnippetActionType.MediaAction => await ExecuteMediaSnippetAsync(request.Action, request.Settings, cancellationToken),
                 SnippetActionType.TerminalCommand => await ExecuteTerminalCommandSnippetAsync(request.Action, request.Settings, cancellationToken),
                 SnippetActionType.Timer => ExecuteTimerSnippet(request.Action),
+                SnippetActionType.RemoteInstall => await ExecuteRemoteInstallSnippetAsync(request.Action, request.Settings, cancellationToken),
                 _ => await PasteTextSnippetAsync(request)
             };
         }
@@ -45,6 +47,60 @@ public sealed class ExecuteSnippetActionUseCase(
             return ExecuteSnippetActionResult.Failure(
                 logMessage: $"Paste failed for action {request.Action.Id}.",
                 exception: ex);
+        }
+    }
+
+    private async Task<ExecuteSnippetActionResult> ExecuteRemoteInstallSnippetAsync(
+        ExecutableAction action,
+        AppSettings settings,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(action.RemoteInstallProjectPath))
+        {
+            return ReportRemoteInstallFailure(action, RemoteInstallRules.ProjectPathRequiredMessage);
+        }
+
+        var normalizedModule = RemoteInstallRules.NormalizeModuleName(action.RemoteInstallModule);
+        if (string.IsNullOrWhiteSpace(normalizedModule))
+        {
+            return ReportRemoteInstallFailure(action, RemoteInstallRules.ModuleRequiredMessage);
+        }
+
+        if (androidRemoteInstallGateway is null)
+        {
+            return ReportRemoteInstallFailure(action, "원격설치 실행기가 준비되지 않았습니다.");
+        }
+
+        var targetKind = action.RemoteInstallDeviceKind
+            ?? (action.TargetSlotKey is { } slotKey
+                ? RemoteInstallRules.GetDefaultDeviceKindForSlot(slotKey)
+                : RemoteInstallDeviceKind.Phone);
+
+        var remoteRequest = new AndroidRemoteInstallRequest(
+            string.IsNullOrWhiteSpace(action.Title)
+                ? $"{RemoteInstallRules.GetDeviceKindKoreanLabel(targetKind)} 원격설치"
+                : action.Title,
+            action.RemoteInstallProjectPath.Trim(),
+            normalizedModule,
+            targetKind,
+            string.IsNullOrWhiteSpace(action.RemoteInstallTargetDevice)
+                ? null
+                : action.RemoteInstallTargetDevice.Trim(),
+            action.RemoteInstallLaunchAfterInstall);
+
+        try
+        {
+            var started = await androidRemoteInstallGateway.TryStartRemoteInstallAsync(remoteRequest, cancellationToken);
+            var kindLabel = RemoteInstallRules.GetDeviceKindKoreanLabel(targetKind);
+            return started
+                ? ExecuteSnippetActionResult.Success(
+                    shouldHideWindow: settings.AutoHideAfterPaste,
+                    statusMessage: $"{action.Title} ({kindLabel} · {normalizedModule}) 원격설치 시작됨")
+                : ReportRemoteInstallFailure(action, "원격설치 작업을 시작하지 못했습니다.");
+        }
+        catch (Exception ex)
+        {
+            return ReportRemoteInstallFailure(action, "원격설치를 실행하지 못했습니다.", ex);
         }
     }
 
@@ -396,6 +452,13 @@ public sealed class ExecuteSnippetActionUseCase(
         ExecuteSnippetActionResult.Failure(
             statusMessage: $"{action.Title} 터미널 명령 실행 실패: {message}",
             logMessage: $"Terminal command failed for action {action.Id}: {message}",
+            exception: exception);
+
+    private static ExecuteSnippetActionResult ReportRemoteInstallFailure(
+        ExecutableAction action, string message, Exception? exception = null) =>
+        ExecuteSnippetActionResult.Failure(
+            statusMessage: $"{action.Title} 원격설치 실패: {message}",
+            logMessage: $"Remote install failed for action {action.Id}: {message}",
             exception: exception);
 }
 

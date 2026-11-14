@@ -27,7 +27,12 @@ public sealed record SnippetSaveData(
     FileActionMode FileActionMode = FileActionMode.Launch,
     bool OpenTerminalWindow = false,
     string? TerminalWorkingDirectory = null,
-    string? AdbDeviceIp = null);
+    string? AdbDeviceIp = null,
+    string? RemoteInstallProjectPath = null,
+    string? RemoteInstallModule = null,
+    RemoteInstallDeviceKind? RemoteInstallDeviceKind = null,
+    string? RemoteInstallTargetDevice = null,
+    bool RemoteInstallLaunchAfterInstall = true);
 
 public sealed record HotkeyActionSaveData(
     string Title,
@@ -51,7 +56,12 @@ public sealed record HotkeyActionSaveData(
     FileActionMode FileActionMode = FileActionMode.Launch,
     bool OpenTerminalWindow = false,
     string? TerminalWorkingDirectory = null,
-    string? AdbDeviceIp = null);
+    string? AdbDeviceIp = null,
+    string? RemoteInstallProjectPath = null,
+    string? RemoteInstallModule = null,
+    RemoteInstallDeviceKind? RemoteInstallDeviceKind = null,
+    string? RemoteInstallTargetDevice = null,
+    bool RemoteInstallLaunchAfterInstall = true);
 
 public enum FilePasteGatewayStatus
 {
@@ -128,3 +138,39 @@ public sealed record AdbPromptResult(
     AdbPromptMode Mode,
     string Port,
     string? PairCode = null);
+
+public sealed record AndroidAppModuleInfo(
+    string ModuleName,
+    string RelativeDirectory,
+    string? ApplicationId);
+
+public sealed record AndroidConnectedDeviceInfo(
+    string Serial,
+    string Model,
+    string Manufacturer,
+    RemoteInstallDeviceKind DeviceKind,
+    int? SmallestWidthDp,
+    string ClassificationSource,
+    string? IpAddress)
+{
+    public string DisplaySummary =>
+        SmallestWidthDp.HasValue
+            ? $"{Model} [{RemoteInstallDeviceKindText(DeviceKind)} · {SmallestWidthDp}dp · {Serial}]"
+            : $"{Model} [{RemoteInstallDeviceKindText(DeviceKind)} · {Serial}]";
+
+    private static string RemoteInstallDeviceKindText(RemoteInstallDeviceKind kind) => kind switch
+    {
+        RemoteInstallDeviceKind.Tablet => "태블릿",
+        RemoteInstallDeviceKind.Phone => "폰",
+        RemoteInstallDeviceKind.Watch => "워치",
+        _ => "폰"
+    };
+}
+
+public sealed record AndroidRemoteInstallRequest(
+    string Title,
+    string ProjectPath,
+    string ModuleName,
+    RemoteInstallDeviceKind TargetDeviceKind,
+    string? TargetDeviceFilter,
+    bool LaunchAfterInstall);

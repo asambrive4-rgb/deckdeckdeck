@@ -35,6 +35,11 @@ public static class FrozenImageCache
             return resourceImage;
         }
 
+        if (AudioPresetIconResolver.TryGetImage(path, out var audioImage))
+        {
+            return audioImage;
+        }
+
         if (!TryCreateCacheKey(path, decodePixelWidth, out var key))
         {
             return null;

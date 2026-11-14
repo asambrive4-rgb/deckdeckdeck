@@ -26,7 +26,12 @@ public static class ExecutableActionSaveDataExtensions
             data.FileActionMode,
             data.OpenTerminalWindow,
             data.TerminalWorkingDirectory,
-            data.AdbDeviceIp);
+            data.AdbDeviceIp,
+            data.RemoteInstallProjectPath,
+            data.RemoteInstallModule,
+            data.RemoteInstallDeviceKind,
+            data.RemoteInstallTargetDevice,
+            data.RemoteInstallLaunchAfterInstall);
 
         return data with
         {
@@ -47,7 +52,12 @@ public static class ExecutableActionSaveDataExtensions
             FileActionMode = normalized.FileActionMode,
             OpenTerminalWindow = normalized.OpenTerminalWindow,
             TerminalWorkingDirectory = normalized.TerminalWorkingDirectory,
-            AdbDeviceIp = normalized.AdbDeviceIp
+            AdbDeviceIp = normalized.AdbDeviceIp,
+            RemoteInstallProjectPath = normalized.RemoteInstallProjectPath,
+            RemoteInstallModule = normalized.RemoteInstallModule,
+            RemoteInstallDeviceKind = normalized.RemoteInstallDeviceKind,
+            RemoteInstallTargetDevice = normalized.RemoteInstallTargetDevice,
+            RemoteInstallLaunchAfterInstall = normalized.RemoteInstallLaunchAfterInstall
         };
     }
 
@@ -72,7 +82,12 @@ public static class ExecutableActionSaveDataExtensions
             data.FileActionMode,
             data.OpenTerminalWindow,
             data.TerminalWorkingDirectory,
-            data.AdbDeviceIp);
+            data.AdbDeviceIp,
+            data.RemoteInstallProjectPath,
+            data.RemoteInstallModule,
+            data.RemoteInstallDeviceKind,
+            data.RemoteInstallTargetDevice,
+            data.RemoteInstallLaunchAfterInstall);
 
         return data with
         {
@@ -93,7 +108,12 @@ public static class ExecutableActionSaveDataExtensions
             FileActionMode = normalized.FileActionMode,
             OpenTerminalWindow = normalized.OpenTerminalWindow,
             TerminalWorkingDirectory = normalized.TerminalWorkingDirectory,
-            AdbDeviceIp = normalized.AdbDeviceIp
+            AdbDeviceIp = normalized.AdbDeviceIp,
+            RemoteInstallProjectPath = normalized.RemoteInstallProjectPath,
+            RemoteInstallModule = normalized.RemoteInstallModule,
+            RemoteInstallDeviceKind = normalized.RemoteInstallDeviceKind,
+            RemoteInstallTargetDevice = normalized.RemoteInstallTargetDevice,
+            RemoteInstallLaunchAfterInstall = normalized.RemoteInstallLaunchAfterInstall
         };
     }
 }

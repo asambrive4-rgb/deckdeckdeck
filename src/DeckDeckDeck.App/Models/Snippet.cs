@@ -1,4 +1,4 @@
-// 역할: 특정 슬롯에 등록된 텍스트 스니펫의 이름, 본문 내용, 표시 설정을 담는 데이터 모델입니다.
+// 역할: 특정 슬롯에 등록된 텍스트 스니펫 및 Android 원격설치 등 실행 항목의 이름, 본문 내용, 표시 설정을 담는 데이터 모델입니다.
 namespace DeckDeckDeck.App.Models;
 
 public sealed class Snippet
@@ -43,6 +43,32 @@ public sealed class Snippet
     public string? AdbDeviceIp { get; set; }
 
     public bool RunAsAdministrator { get; set; } = true;
+
+    /// <summary>
+    /// Root directory of the target Android Gradle project for <see cref="SnippetActionType.RemoteInstall"/>.
+    /// </summary>
+    public string? RemoteInstallProjectPath { get; set; }
+
+    /// <summary>
+    /// Gradle app module name (e.g. ":phone:android", ":wear:android", ":app") for <see cref="SnippetActionType.RemoteInstall"/>.
+    /// </summary>
+    public string? RemoteInstallModule { get; set; }
+
+    /// <summary>
+    /// Target Android device category (Tablet / Phone / Watch) for <see cref="SnippetActionType.RemoteInstall"/>.
+    /// </summary>
+    public RemoteInstallDeviceKind? RemoteInstallDeviceKind { get; set; }
+
+    /// <summary>
+    /// Optional device IP or ADB serial filter for <see cref="SnippetActionType.RemoteInstall"/>.
+    /// </summary>
+    public string? RemoteInstallTargetDevice { get; set; }
+
+    /// <summary>
+    /// Whether to automatically launch the installed app activity after APK installation.
+    /// (Note: Currently builds Debug variant via assembleDebug; a future RemoteInstallBuildVariant property can extend this for Release builds.)
+    /// </summary>
+    public bool RemoteInstallLaunchAfterInstall { get; set; } = true;
 
     public SlotImageMode SlotImageMode { get; set; } = SlotImageMode.Auto;
 

@@ -47,6 +47,11 @@ public sealed class ExecutableActionEditDraft
         RunAsAdministrator = state.ActionType == SnippetActionType.TerminalCommand
             ? state.RunAsAdministrator
             : true;
+        RemoteInstallProjectPath = state.RemoteInstallProjectPath;
+        RemoteInstallModule = state.RemoteInstallModule;
+        RemoteInstallDeviceKind = state.RemoteInstallDeviceKind;
+        RemoteInstallTargetDevice = state.RemoteInstallTargetDevice;
+        RemoteInstallLaunchAfterInstall = state.RemoteInstallLaunchAfterInstall;
         SlotImageMode = GetInitialSlotImageMode(state.SlotImageMode, state.ImagePath);
         _autoIcon = state.AutoIcon;
     }
@@ -82,6 +87,16 @@ public sealed class ExecutableActionEditDraft
     public string AdbDeviceIp { get; set; }
 
     public bool RunAsAdministrator { get; set; }
+
+    public string RemoteInstallProjectPath { get; set; }
+
+    public string RemoteInstallModule { get; set; }
+
+    public RemoteInstallDeviceKind RemoteInstallDeviceKind { get; set; }
+
+    public string RemoteInstallTargetDevice { get; set; }
+
+    public bool RemoteInstallLaunchAfterInstall { get; set; }
 
     public SlotImageMode SlotImageMode { get; private set; }
 
@@ -278,7 +293,12 @@ public sealed class ExecutableActionEditDraft
             FileActionMode,
             OpenTerminalWindow,
             TerminalWorkingDirectory,
-            AdbDeviceIp);
+            AdbDeviceIp,
+            RemoteInstallProjectPath,
+            RemoteInstallModule,
+            RemoteInstallDeviceKind,
+            RemoteInstallTargetDevice,
+            RemoteInstallLaunchAfterInstall);
     }
 
     public HotkeyActionSaveData ToHotkeyActionSaveData(
@@ -358,7 +378,12 @@ internal sealed record ExecutableActionEditDraftState(
     string AdbDeviceIp,
     bool RunAsAdministrator,
     SlotImageMode SlotImageMode,
-    AutoIconCacheEntry? AutoIcon)
+    AutoIconCacheEntry? AutoIcon,
+    string RemoteInstallProjectPath = "",
+    string RemoteInstallModule = "",
+    RemoteInstallDeviceKind RemoteInstallDeviceKind = RemoteInstallDeviceKind.Phone,
+    string RemoteInstallTargetDevice = "",
+    bool RemoteInstallLaunchAfterInstall = true)
 {
     public static ExecutableActionEditDraftState Default()
     {
@@ -382,7 +407,12 @@ internal sealed record ExecutableActionEditDraftState(
             string.Empty,
             true,
             SlotImageMode.Auto,
-            null);
+            null,
+            string.Empty,
+            string.Empty,
+            RemoteInstallDeviceKind.Phone,
+            string.Empty,
+            true);
     }
 
     public static ExecutableActionEditDraftState FromSnippet(Snippet snippet)
@@ -407,7 +437,12 @@ internal sealed record ExecutableActionEditDraftState(
             snippet.AdbDeviceIp ?? string.Empty,
             snippet.RunAsAdministrator,
             snippet.SlotImageMode,
-            AutoIconCacheEntry.FromSnippet(snippet));
+            AutoIconCacheEntry.FromSnippet(snippet),
+            snippet.RemoteInstallProjectPath ?? string.Empty,
+            snippet.RemoteInstallModule ?? string.Empty,
+            snippet.RemoteInstallDeviceKind ?? RemoteInstallRules.GetDefaultDeviceKindForSlot(snippet.SlotKey),
+            snippet.RemoteInstallTargetDevice ?? string.Empty,
+            snippet.RemoteInstallLaunchAfterInstall);
     }
 
     public static ExecutableActionEditDraftState FromHotkeyAction(HotkeyAction action)

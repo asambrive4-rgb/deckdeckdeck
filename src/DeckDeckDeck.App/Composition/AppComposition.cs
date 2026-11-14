@@ -62,7 +62,8 @@ internal sealed record AppComposition(
     ISpotifyConnectionUseCase SpotifyConnectionUseCase,
     IClipboardAdapter ClipboardAdapter,
     ISlotTimerUseCases SlotTimerUseCases,
-    ISlotTimerCoordinator SlotTimerCoordinator)
+    ISlotTimerCoordinator SlotTimerCoordinator,
+    IAndroidRemoteInstallGateway? AndroidRemoteInstallGateway = null)
 {
     public static AppComposition CreateDefault(StartupTimingLog? startupTiming = null)
     {
@@ -175,6 +176,7 @@ internal sealed record AppComposition(
         IStartupRegistrationGateway startupRegistrationGateway;
         ISpotifyConnectionUseCase spotifyConnectionUseCase;
         DialogAdapter dialogAdapter;
+        IAndroidRemoteInstallGateway androidRemoteInstallGateway;
 
         // Secondary services timed separately for L1; still assembled before first home for a complete graph.
         using (startupTiming?.Measure("deferred composition"))
@@ -188,6 +190,7 @@ internal sealed record AppComposition(
                 spotifyConnectionGatewayAdapter,
                 urlLaunchGatewayAdapter);
             dialogAdapter = new DialogAdapter();
+            androidRemoteInstallGateway = new AndroidRemoteInstallGateway(fileLogger);
             executeSnippetActionUseCase = CreateExecuteSnippetActionUseCase(
                 clipboardPasteGateway,
                 fileLaunchGatewayAdapter,
@@ -199,7 +202,8 @@ internal sealed record AppComposition(
                 dialogAdapter,
                 slotTimerCoordinator,
                 displayPowerGateway: new DisplayPowerGatewayAdapter(),
-                bluetoothDeviceControlGateway: new WindowsBluetoothDeviceControlGateway(fileLogger));
+                bluetoothDeviceControlGateway: new WindowsBluetoothDeviceControlGateway(fileLogger),
+                androidRemoteInstallGateway: androidRemoteInstallGateway);
         }
 
         return new AppComposition(
@@ -228,7 +232,8 @@ internal sealed record AppComposition(
             spotifyConnectionUseCase,
             clipboardAdapter,
             slotTimerUseCases,
-            slotTimerCoordinator);
+            slotTimerCoordinator,
+            androidRemoteInstallGateway);
     }
 
     public static AppComposition Create(
@@ -256,7 +261,8 @@ internal sealed record AppComposition(
         ISlotTimerUseCases? slotTimerUseCases = null,
         ISlotTimerCoordinator? slotTimerCoordinator = null,
         IDisplayPowerGateway? displayPowerGateway = null,
-        IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null)
+        IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null,
+        IAndroidRemoteInstallGateway? androidRemoteInstallGateway = null)
     {
         var effectiveClipboardPasteGateway = clipboardPasteGateway ?? new ClipboardPasteGateway();
         var effectiveFileLaunchGatewayAdapter = fileLaunchGateway ?? new FileLaunchGatewayAdapter();
@@ -283,6 +289,8 @@ internal sealed record AppComposition(
         var effectiveSlotTimerUseCases = slotTimerUseCases ?? new SlotTimerUseCases(effectiveToastGateway);
         var effectiveSlotTimerCoordinator = slotTimerCoordinator
             ?? new SlotTimerCoordinator(effectiveSlotTimerUseCases, PromptTimerDuration);
+        var effectiveAndroidRemoteInstallGateway = androidRemoteInstallGateway
+            ?? new AndroidRemoteInstallGateway(fileLogger);
 
         return new AppComposition(
             categoryRepository,
@@ -316,7 +324,8 @@ internal sealed record AppComposition(
                 dialogAdapter,
                 effectiveSlotTimerCoordinator,
                 displayPowerGateway: displayPowerGateway ?? new DisplayPowerGatewayAdapter(),
-                bluetoothDeviceControlGateway: bluetoothDeviceControlGateway ?? new WindowsBluetoothDeviceControlGateway(fileLogger)),
+                bluetoothDeviceControlGateway: bluetoothDeviceControlGateway ?? new WindowsBluetoothDeviceControlGateway(fileLogger),
+                androidRemoteInstallGateway: effectiveAndroidRemoteInstallGateway),
             new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
             new SpotifyConnectionUseCase(
                 settingsRepository,
@@ -324,7 +333,8 @@ internal sealed record AppComposition(
                 effectiveUrlLaunchGatewayAdapter),
             effectiveClipboardAdapter,
             effectiveSlotTimerUseCases,
-            effectiveSlotTimerCoordinator);
+            effectiveSlotTimerCoordinator,
+            effectiveAndroidRemoteInstallGateway);
     }
 
     public MainViewModelDependencies CreateMainViewModelDependencies(
@@ -412,7 +422,8 @@ internal sealed record AppComposition(
             StoredImagePathResolver,
             SpotifyConnectionUseCase,
             ClipboardAdapter,
-            SlotTimerCoordinator);
+            SlotTimerCoordinator,
+            AndroidRemoteInstallGateway);
 
         var effectiveBluetoothUseCase = bluetoothAudioStatusUseCase
             ?? new BluetoothAudioStatusUseCase(
@@ -444,7 +455,8 @@ internal sealed record AppComposition(
         IDialogAdapter dialogAdapter,
         ITimerActionGateway? timerActionGateway = null,
         IDisplayPowerGateway? displayPowerGateway = null,
-        IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null)
+        IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null,
+        IAndroidRemoteInstallGateway? androidRemoteInstallGateway = null)
     {
         return new ExecuteSnippetActionUseCase(
             clipboardPasteGateway,
@@ -457,7 +469,8 @@ internal sealed record AppComposition(
             dialogAdapter,
             timerActionGateway,
             displayPowerGateway: displayPowerGateway ?? new DisplayPowerGatewayAdapter(),
-            bluetoothDeviceControlGateway: bluetoothDeviceControlGateway ?? new WindowsBluetoothDeviceControlGateway());
+            bluetoothDeviceControlGateway: bluetoothDeviceControlGateway ?? new WindowsBluetoothDeviceControlGateway(),
+            androidRemoteInstallGateway: androidRemoteInstallGateway ?? new AndroidRemoteInstallGateway());
     }
 
     private static TimeSpan? PromptTimerDuration()

@@ -366,10 +366,28 @@
                                                                        Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                                                             <!-- 카테고리 아이콘/이모지 -->
-                                                            <TextBlock Grid.Column="1"
-                                                                       Text="{Binding CategoryEmoji}"
-                                                                       FontSize="13"
-                                                                       VerticalAlignment="Center" />
+                                                            <Grid Grid.Column="1" Width="20" Height="20" VerticalAlignment="Center">
+                                                                <Image Source="{Binding DeviceIconResourcePath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=32}"
+                                                                       Stretch="Uniform"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Center"
+                                                                       Visibility="{Binding HasDeviceIcon, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                                <TextBlock Text="{Binding CategoryEmoji}"
+                                                                           FontSize="13"
+                                                                           VerticalAlignment="Center"
+                                                                           HorizontalAlignment="Center">
+                                                                    <TextBlock.Style>
+                                                                        <Style TargetType="{x:Type TextBlock}">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding HasDeviceIcon}" Value="False">
+                                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBlock.Style>
+                                                                </TextBlock>
+                                                            </Grid>
 
                                                             <!-- 기기명 -->
                                                             <TextBlock Grid.Column="2"

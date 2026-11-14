@@ -17,6 +17,7 @@ public static class ExecutableActionTypeCatalog
         SnippetActionType.MediaAction => ActionEditorPanel.Media,
         SnippetActionType.TerminalCommand => ActionEditorPanel.TerminalCommand,
         SnippetActionType.Timer => ActionEditorPanel.Timer,
+        SnippetActionType.RemoteInstall => ActionEditorPanel.RemoteInstall,
         _ => ActionEditorPanel.PasteText
     };
 
@@ -30,6 +31,7 @@ public static class ExecutableActionTypeCatalog
         SnippetActionType.MediaAction => "음악/미디어 제어",
         SnippetActionType.TerminalCommand => "터미널 명령 실행",
         SnippetActionType.Timer => "타이머 실행",
+        SnippetActionType.RemoteInstall => "Android 원격설치",
         _ => "문구 붙여넣기"
     };
 
@@ -57,5 +59,6 @@ public enum ActionEditorPanel
     LaunchUrl,
     Media,
     TerminalCommand,
-    Timer
+    Timer,
+    RemoteInstall
 }

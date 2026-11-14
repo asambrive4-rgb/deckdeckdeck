@@ -1,4 +1,4 @@
-// 역할: 블루투스 기기의 연결 상태, 배터리, 카테고리 판별 및 기기 우선순위와 포맷팅 규칙을 정의합니다.
+// 역할: 블루투스 기기의 연결 상태, 배터리, 카테고리 및 세부 오디오 기기 유형(헤드폰/이어폰/스피커) 판별 규칙을 정의합니다.
 using System.Text;
 
 namespace DeckDeckDeck.App.Domain;
@@ -323,6 +323,41 @@ public static class BluetoothAudioStatusRules
         return BluetoothDeviceCategory.Other;
     }
 
+    private static readonly string[] HeadphoneKeywords =
+        ["wh-", "headphone", "headset", "xm5", "xm4", "헤드폰", "헤드셋"];
+
+    private static readonly string[] EarbudKeywords =
+        ["buds", "wf-", "airpod", "earbud", "earphone", "이어폰", "버즈"];
+
+    private static readonly string[] SpeakerKeywords =
+        ["flip", "speaker", "soundbar", "스피커", "사운드바", "jbl"];
+
+    public static BluetoothAudioDeviceType DetermineAudioDeviceType(string? deviceName)
+    {
+        if (string.IsNullOrWhiteSpace(deviceName))
+        {
+            return BluetoothAudioDeviceType.Unknown;
+        }
+
+        var lower = deviceName.ToLowerInvariant();
+        if (SpeakerKeywords.Any(lower.Contains))
+        {
+            return BluetoothAudioDeviceType.Speaker;
+        }
+
+        if (HeadphoneKeywords.Any(lower.Contains))
+        {
+            return BluetoothAudioDeviceType.Headphones;
+        }
+
+        if (EarbudKeywords.Any(lower.Contains))
+        {
+            return BluetoothAudioDeviceType.Earbuds;
+        }
+
+        return BluetoothAudioDeviceType.Unknown;
+    }
+
     private static bool IsTwelveHex(string value)
     {
         return value.Length == 12 && value.All(character =>
@@ -336,6 +371,14 @@ public enum BluetoothDeviceCategory
     Input,
     Audio,
     Other
+}
+
+public enum BluetoothAudioDeviceType
+{
+    Unknown,
+    Headphones,
+    Earbuds,
+    Speaker
 }
 
 internal sealed record BluetoothDeviceMatchContext(

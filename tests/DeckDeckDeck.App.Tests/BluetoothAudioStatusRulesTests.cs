@@ -1,4 +1,4 @@
-// 역할: 블루투스 오디오 기기의 연결 상태 및 배터리 잔량 판별 규칙이 정확한지 검증하는 단위 테스트 모음입니다.
+// 역할: 블루투스 오디오 기기의 연결 상태, 배터리 잔량 및 세부 기기 유형(헤드폰/이어폰/스피커) 판별 규칙을 검증하는 단위 테스트 모음입니다.
 using DeckDeckDeck.App.Domain;
 
 namespace DeckDeckDeck.App.Tests;
@@ -215,6 +215,23 @@ public sealed class BluetoothAudioStatusRulesTests
         params string[] addresses)
     {
         return new BluetoothDeviceMatchCandidate(instanceId, name, container, Set(addresses));
+    }
+
+    [Theory]
+    [InlineData("WH-1000XM5", BluetoothAudioDeviceType.Headphones)]
+    [InlineData("Sony WH-1000XM4", BluetoothAudioDeviceType.Headphones)]
+    [InlineData("블루투스 헤드폰", BluetoothAudioDeviceType.Headphones)]
+    [InlineData("Galaxy Buds2 Pro", BluetoothAudioDeviceType.Earbuds)]
+    [InlineData("버즈 라이브", BluetoothAudioDeviceType.Earbuds)]
+    [InlineData("AirPods Pro", BluetoothAudioDeviceType.Earbuds)]
+    [InlineData("JBL Flip 4", BluetoothAudioDeviceType.Speaker)]
+    [InlineData("거실 스피커", BluetoothAudioDeviceType.Speaker)]
+    [InlineData("MX Master 3S Mouse", BluetoothAudioDeviceType.Unknown)]
+    [InlineData(null, BluetoothAudioDeviceType.Unknown)]
+    [InlineData("", BluetoothAudioDeviceType.Unknown)]
+    public void DetermineAudioDeviceType_ClassifiesCorrectly(string? deviceName, BluetoothAudioDeviceType expected)
+    {
+        Assert.Equal(expected, BluetoothAudioStatusRules.DetermineAudioDeviceType(deviceName));
     }
 
     private static IReadOnlySet<string> Set(params string[] values)

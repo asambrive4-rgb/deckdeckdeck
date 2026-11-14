@@ -1,4 +1,4 @@
-// 역할: 백업 파일 생성, 사용자 대화상자 알림, 로깅, 클립보드 제어 및 블루투스 기기 제어 등 외부 시스템 연동에 필요한 규격을 정의합니다.
+// 역할: 백업 파일 생성, 사용자 대화상자 알림, 로깅, 클립보드 제어, 블루투스 기기 제어 및 Android 원격설치 등 외부 시스템 연동에 필요한 규격을 정의합니다.
 using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 
@@ -145,4 +145,16 @@ public interface ISpotifyConnectionGateway
 public interface IBluetoothDeviceControlGateway
 {
     Task<bool> TryControlAsync(BluetoothAudioCommand command, CancellationToken cancellationToken = default);
+}
+
+public interface IAndroidRemoteInstallGateway
+{
+    IReadOnlyList<AndroidAppModuleInfo> ScanProjectModules(string? projectPath);
+
+    Task<IReadOnlyList<AndroidConnectedDeviceInfo>> ScanConnectedDevicesAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<bool> TryStartRemoteInstallAsync(
+        AndroidRemoteInstallRequest request,
+        CancellationToken cancellationToken = default);
 }

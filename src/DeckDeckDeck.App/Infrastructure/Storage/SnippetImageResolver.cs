@@ -1,4 +1,4 @@
-// 역할: 슬롯에 설정된 텍스트 스니펫의 대표 이미지 경로를 찾아 반환합니다.
+// 역할: 슬롯에 설정된 텍스트 스니펫의 대표 이미지 및 오디오·편의성 자동 아이콘 경로를 찾아 반환합니다.
 using DeckDeckDeck.App.Data;
 using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Infrastructure.Persistence;
@@ -55,14 +55,15 @@ public sealed class SnippetImageResolver : ISnippetImageResolver
 
         return snippet.SlotImageMode switch
         {
-            SlotImageMode.Custom => ResolveDisplayPath(snippet.ThumbnailPath, storedImagePathResolver),
+            SlotImageMode.Custom when !string.IsNullOrWhiteSpace(snippet.ThumbnailPath) =>
+                ResolveDisplayPath(snippet.ThumbnailPath, storedImagePathResolver),
             SlotImageMode.Auto when snippet.ActionType == SnippetActionType.LaunchFile
                 && !string.IsNullOrWhiteSpace(snippet.AutoIconPath)
                 && CanDisplayStoredPath(snippet.AutoIconPath, storedImagePathResolver) =>
                 ResolveDisplayPath(snippet.AutoIconPath, storedImagePathResolver),
             SlotImageMode.Auto when snippet.ActionType == SnippetActionType.MediaAction =>
                 MediaIconResourcePaths.GetIconResourcePath(snippet.MediaCommand),
-            _ => null
+            _ => AudioPresetIconResolver.GetAutoIconResourcePath(snippet.TerminalCommand, snippet.Title)
         };
     }
 

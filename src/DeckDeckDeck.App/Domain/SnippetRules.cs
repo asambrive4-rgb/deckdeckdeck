@@ -24,7 +24,12 @@ public static class SnippetRules
         bool runAsAdministrator = true,
         bool openTerminalWindow = false,
         string? terminalWorkingDirectory = null,
-        string? adbDeviceIp = null)
+        string? adbDeviceIp = null,
+        string? remoteInstallProjectPath = null,
+        string? remoteInstallModule = null,
+        RemoteInstallDeviceKind? remoteInstallDeviceKind = null,
+        string? remoteInstallTargetDevice = null,
+        bool remoteInstallLaunchAfterInstall = true)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -53,6 +58,32 @@ public static class SnippetRules
             && string.IsNullOrWhiteSpace(terminalCommand))
         {
             return SnippetSaveValidationResult.Failure(TerminalCommandRequiredMessage);
+        }
+
+        var isRemoteInstall = actionType == SnippetActionType.RemoteInstall;
+        string? normalizedRemoteInstallProjectPath = null;
+        string? normalizedRemoteInstallModule = null;
+        RemoteInstallDeviceKind? normalizedRemoteInstallDeviceKind = null;
+        string? normalizedRemoteInstallTargetDevice = null;
+
+        if (isRemoteInstall)
+        {
+            if (string.IsNullOrWhiteSpace(remoteInstallProjectPath))
+            {
+                return SnippetSaveValidationResult.Failure(RemoteInstallRules.ProjectPathRequiredMessage);
+            }
+
+            normalizedRemoteInstallModule = RemoteInstallRules.NormalizeModuleName(remoteInstallModule);
+            if (string.IsNullOrWhiteSpace(normalizedRemoteInstallModule))
+            {
+                return SnippetSaveValidationResult.Failure(RemoteInstallRules.ModuleRequiredMessage);
+            }
+
+            normalizedRemoteInstallProjectPath = remoteInstallProjectPath.Trim();
+            normalizedRemoteInstallDeviceKind = remoteInstallDeviceKind ?? RemoteInstallDeviceKind.Phone;
+            normalizedRemoteInstallTargetDevice = string.IsNullOrWhiteSpace(remoteInstallTargetDevice)
+                ? null
+                : remoteInstallTargetDevice.Trim();
         }
 
         var isMedia = actionType == SnippetActionType.MediaAction;
@@ -94,7 +125,12 @@ public static class SnippetRules
             isTerminal && runAsAdministrator,
             isTerminal && openTerminalWindow,
             normalizedTerminalWorkingDirectory,
-            normalizedAdbDeviceIp);
+            normalizedAdbDeviceIp,
+            normalizedRemoteInstallProjectPath,
+            normalizedRemoteInstallModule,
+            normalizedRemoteInstallDeviceKind,
+            normalizedRemoteInstallTargetDevice,
+            !isRemoteInstall || remoteInstallLaunchAfterInstall);
     }
 }
 
@@ -109,7 +145,12 @@ public sealed record SnippetSaveValidationResult(
     bool RunAsAdministrator,
     bool OpenTerminalWindow,
     string? TerminalWorkingDirectory,
-    string? AdbDeviceIp)
+    string? AdbDeviceIp,
+    string? RemoteInstallProjectPath = null,
+    string? RemoteInstallModule = null,
+    RemoteInstallDeviceKind? RemoteInstallDeviceKind = null,
+    string? RemoteInstallTargetDevice = null,
+    bool RemoteInstallLaunchAfterInstall = true)
 {
     public static SnippetSaveValidationResult Success(
         string? normalizedLaunchUrl,
@@ -120,10 +161,17 @@ public sealed record SnippetSaveValidationResult(
         bool runAsAdministrator,
         bool openTerminalWindow = false,
         string? terminalWorkingDirectory = null,
-        string? adbDeviceIp = null) =>
+        string? adbDeviceIp = null,
+        string? remoteInstallProjectPath = null,
+        string? remoteInstallModule = null,
+        RemoteInstallDeviceKind? remoteInstallDeviceKind = null,
+        string? remoteInstallTargetDevice = null,
+        bool remoteInstallLaunchAfterInstall = true) =>
         new(true, null, normalizedLaunchUrl, mediaProvider, mediaCommand,
             normalizedTerminalCommand, terminalShell, runAsAdministrator,
-            openTerminalWindow, terminalWorkingDirectory, adbDeviceIp);
+            openTerminalWindow, terminalWorkingDirectory, adbDeviceIp,
+            remoteInstallProjectPath, remoteInstallModule, remoteInstallDeviceKind,
+            remoteInstallTargetDevice, remoteInstallLaunchAfterInstall);
 
     public static SnippetSaveValidationResult Failure(string errorMessage) =>
         new(false, errorMessage, null, null, null, null, null, false, false, null, null);
