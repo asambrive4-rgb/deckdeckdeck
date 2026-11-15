@@ -296,6 +296,7 @@ public sealed class SnippetRepository : ISnippetRepository
             RemoteInstallDeviceKind = source.RemoteInstallDeviceKind,
             RemoteInstallTargetDevice = source.RemoteInstallTargetDevice,
             RemoteInstallLaunchAfterInstall = source.RemoteInstallLaunchAfterInstall,
+            RemoteInstallPromptProject = source.RemoteInstallPromptProject,
             SlotImageMode = source.SlotImageMode,
             Description = source.Description,
             ImagePath = imageFiles.ImagePath,
@@ -359,6 +360,7 @@ public sealed class SnippetRepository : ISnippetRepository
         snippet.RemoteInstallDeviceKind = data.RemoteInstallDeviceKind;
         snippet.RemoteInstallTargetDevice = data.RemoteInstallTargetDevice;
         snippet.RemoteInstallLaunchAfterInstall = data.RemoteInstallLaunchAfterInstall;
+        snippet.RemoteInstallPromptProject = data.RemoteInstallPromptProject;
         snippet.SlotImageMode = data.SlotImageMode;
         snippet.Description = data.Description;
         snippet.ImagePath = data.ImagePath;

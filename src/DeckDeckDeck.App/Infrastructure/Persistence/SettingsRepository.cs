@@ -98,6 +98,28 @@ public sealed class SettingsRepository : ISettingsRepository
         }
     }
 
+    public void RecordRecentRemoteInstallProject(string projectPath)
+    {
+        var normalized = Domain.RemoteInstallRules.NormalizeProjectPath(projectPath);
+        if (normalized is null)
+        {
+            return;
+        }
+
+        lock (_settingsLock)
+        {
+            EnsureDefaultsLocked();
+            _settingsCache ??= LoadFromStore();
+            var updated = Domain.RemoteInstallRules.PrependRecentProjectPath(
+                _settingsCache.RecentRemoteInstallProjects,
+                normalized);
+            _entryStore.Upsert(
+                SettingsKeys.RecentRemoteInstallProjects,
+                Domain.RemoteInstallRules.SerializeRecentProjectPaths(updated));
+            _settingsCache.RecentRemoteInstallProjects = updated;
+        }
+    }
+
     public void Save(AppSettings settings)
     {
         KeyValuePair<string, string>[] values =
@@ -119,7 +141,10 @@ public sealed class SettingsRepository : ISettingsRepository
             new(SettingsKeys.LastWindowLeft, SettingsValueParser.FormatNullableDouble(settings.LastWindowLeft)),
             new(SettingsKeys.LastWindowTop, SettingsValueParser.FormatNullableDouble(settings.LastWindowTop)),
             new(SettingsKeys.LastWindowScreenDeviceName, settings.LastWindowScreenDeviceName ?? string.Empty),
-            new(SettingsKeys.PreferredBluetoothDeviceName, settings.PreferredBluetoothDeviceName ?? string.Empty)
+            new(SettingsKeys.PreferredBluetoothDeviceName, settings.PreferredBluetoothDeviceName ?? string.Empty),
+            new(
+                SettingsKeys.RecentRemoteInstallProjects,
+                Domain.RemoteInstallRules.SerializeRecentProjectPaths(settings.RecentRemoteInstallProjects))
         ];
 
         lock (_settingsLock)
@@ -242,6 +267,11 @@ public sealed class SettingsRepository : ISettingsRepository
             PreferredBluetoothDeviceName = SettingsValueParser.ReadNullableString(
                 entries,
                 SettingsKeys.PreferredBluetoothDeviceName),
+            RecentRemoteInstallProjects = Domain.RemoteInstallRules.ParseRecentProjectPaths(
+                SettingsValueParser.ReadString(
+                    entries,
+                    SettingsKeys.RecentRemoteInstallProjects,
+                    string.Empty)),
             EnabledCategorySlotKeys = _slotSettingsRepository.ReadCategorySlotStates(entries),
             EnabledSnippetSlotKeys = _slotSettingsRepository.ReadSnippetSlotStates(entries)
         };
@@ -270,7 +300,8 @@ public sealed class SettingsRepository : ISettingsRepository
             LastWindowLeft = settings.LastWindowLeft,
             LastWindowTop = settings.LastWindowTop,
             LastWindowScreenDeviceName = settings.LastWindowScreenDeviceName,
-            PreferredBluetoothDeviceName = settings.PreferredBluetoothDeviceName
+            PreferredBluetoothDeviceName = settings.PreferredBluetoothDeviceName,
+            RecentRemoteInstallProjects = [.. settings.RecentRemoteInstallProjects]
         };
     }
 }

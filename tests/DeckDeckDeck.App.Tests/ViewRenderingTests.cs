@@ -489,6 +489,143 @@ public sealed class ViewRenderingTests
         Assert.Null(exception);
     }
 
+    [Fact]
+    public void SnippetEditViewRendersAtWindowSizeForSystemUtilityAndAndroidCategories()
+    {
+        Exception? exception = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                EnsureApplicationResources();
+                var services = CreateServices();
+                var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
+                var viewModel = new SnippetEditViewModel(
+                    category,
+                    SlotKey.Numpad3,
+                    snippet: null,
+                    new LoadSnippetEditorStateUseCase(
+                        services.SnippetRepository,
+                        services.SettingsRepository)
+                        .Execute(new LoadSnippetEditorStateRequest(category.Id, SlotKey.Numpad3, SnippetId: null)),
+                    new SaveSnippetUseCase(
+                        services.SnippetRepository,
+                        services.SettingsRepository,
+                        autoBackupRequester: null),
+                    new DeleteSnippetUseCase(
+                        services.SnippetRepository,
+                        services.ImageFileRepository),
+                    new TransferSnippetUseCase(
+                        services.SnippetRepository,
+                        services.SettingsRepository,
+                        new SaveSnippetUseCase(services.SnippetRepository, services.SettingsRepository),
+                        services.ImageFileRepository),
+                    new DialogAdapter(),
+                    () => { },
+                    _ => { },
+                    () => { },
+                    _ => { });
+                var view = new SnippetEditView { DataContext = viewModel };
+
+                foreach (Action selectPanel in new Action[]
+                {
+                    () => viewModel.IsPasteAction = true,
+                    () => { viewModel.IsPasteAction = true; viewModel.IsFilePasteMode = true; },
+                    () => viewModel.IsOpenLaunchAction = true,
+                    () => { viewModel.IsOpenLaunchAction = true; viewModel.IsLaunchUrlMode = true; },
+                    () => viewModel.IsMediaAction = true,
+                    () => viewModel.IsSystemUtilityAction = true,
+                    () => { viewModel.IsSystemUtilityAction = true; viewModel.IsBluetoothPresetActive = true; },
+                    () => { viewModel.IsSystemUtilityAction = true; viewModel.IsTimerMode = true; },
+                    () => viewModel.IsTerminalAction = true,
+                    () => viewModel.IsAndroidAction = true,
+                    () => { viewModel.IsAndroidAction = true; viewModel.IsRemoteInstallMode = true; }
+                })
+                {
+                    selectPanel();
+                    view.Measure(new Size(440, 680));
+                    view.Arrange(new Rect(0, 0, 440, 680));
+                    view.UpdateLayout();
+                }
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+            }
+            finally
+            {
+                ShutdownCurrentThreadApplication();
+                Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void HotkeyEditViewRendersAtWindowSizeForSystemUtilityAndAndroidCategories()
+    {
+        Exception? exception = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                EnsureApplicationResources();
+                var services = CreateServices();
+                var viewModel = new HotkeyEditViewModel(
+                    action: null,
+                    new LoadHotkeyActionEditorStateUseCase(services.SettingsRepository).Execute(),
+                    new SaveHotkeyActionUseCase(services.HotkeyActionRepository),
+                    new DeleteHotkeyActionUseCase(services.HotkeyActionRepository, services.ImageFileRepository),
+                    new DialogAdapter(),
+                    () => { },
+                    _ => { },
+                    () => { },
+                    () => { },
+                    _ => { });
+                var view = new HotkeyEditView { DataContext = viewModel };
+
+                foreach (Action selectPanel in new Action[]
+                {
+                    () => viewModel.IsPasteAction = true,
+                    () => { viewModel.IsPasteAction = true; viewModel.IsFilePasteMode = true; },
+                    () => viewModel.IsOpenLaunchAction = true,
+                    () => { viewModel.IsOpenLaunchAction = true; viewModel.IsLaunchUrlMode = true; },
+                    () => viewModel.IsMediaAction = true,
+                    () => viewModel.IsSystemUtilityAction = true,
+                    () => { viewModel.IsSystemUtilityAction = true; viewModel.IsBluetoothPresetActive = true; },
+                    () => viewModel.IsTerminalAction = true,
+                    () => viewModel.IsAndroidAction = true
+                })
+                {
+                    selectPanel();
+                    view.Measure(new Size(440, 680));
+                    view.Arrange(new Rect(0, 0, 440, 680));
+                    view.UpdateLayout();
+                }
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+            }
+            finally
+            {
+                ShutdownCurrentThreadApplication();
+                Dispatcher.CurrentDispatcher.InvokeShutdown();
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(exception);
+    }
+
     private static DataTemplate CreateViewTemplate(string viewTypeName)
     {
         var xaml =

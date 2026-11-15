@@ -70,6 +70,11 @@ public sealed class Snippet
     /// </summary>
     public bool RemoteInstallLaunchAfterInstall { get; set; } = true;
 
+    /// <summary>
+    /// Whether to prompt the user to select the Android project and module when executing <see cref="SnippetActionType.RemoteInstall"/>.
+    /// </summary>
+    public bool RemoteInstallPromptProject { get; set; }
+
     public SlotImageMode SlotImageMode { get; set; } = SlotImageMode.Auto;
 
     public string? Description { get; set; }

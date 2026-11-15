@@ -52,6 +52,7 @@ public sealed class ExecutableActionEditDraft
         RemoteInstallDeviceKind = state.RemoteInstallDeviceKind;
         RemoteInstallTargetDevice = state.RemoteInstallTargetDevice;
         RemoteInstallLaunchAfterInstall = state.RemoteInstallLaunchAfterInstall;
+        RemoteInstallPromptProject = state.RemoteInstallPromptProject;
         SlotImageMode = GetInitialSlotImageMode(state.SlotImageMode, state.ImagePath);
         _autoIcon = state.AutoIcon;
     }
@@ -98,6 +99,8 @@ public sealed class ExecutableActionEditDraft
 
     public bool RemoteInstallLaunchAfterInstall { get; set; }
 
+    public bool RemoteInstallPromptProject { get; set; }
+
     public SlotImageMode SlotImageMode { get; private set; }
 
     public AutoIconCacheEntry? AutoIcon => _autoIcon;
@@ -140,6 +143,9 @@ public sealed class ExecutableActionEditDraft
             storedImagePathResolver);
     }
 
+    public ActionEditorPanel EditorPanel =>
+        ExecutableActionTypeCatalog.GetEditorPanel(ActionType, FileActionMode, TerminalCommand);
+
     public void SetActionType(SnippetActionType actionType)
     {
         var isSwitchingToTerminal = actionType == SnippetActionType.TerminalCommand && ActionType != SnippetActionType.TerminalCommand;
@@ -149,6 +155,59 @@ public sealed class ExecutableActionEditDraft
             OpenTerminalWindow = true;
         }
     }
+
+    public void ActivatePasteText() => SetActionType(SnippetActionType.PasteText);
+
+    public void ActivatePasteFile()
+    {
+        SetActionType(SnippetActionType.LaunchFile);
+        SetFileActionMode(FileActionMode.Paste);
+    }
+
+    public void ActivateOpenFile()
+    {
+        SetActionType(SnippetActionType.LaunchFile);
+        SetFileActionMode(FileActionMode.Launch);
+    }
+
+    public void ActivateOpenUrl() => SetActionType(SnippetActionType.LaunchUrl);
+
+    public void ActivateMedia() => SetActionType(SnippetActionType.MediaAction);
+
+    public void ActivateTurnOffDisplay()
+    {
+        ActionType = SnippetActionType.TerminalCommand;
+        ApplyTurnOffDisplayDefaults();
+    }
+
+    public void ActivateBluetoothControl(BluetoothAudioActionKind action, string? target)
+    {
+        ActionType = SnippetActionType.TerminalCommand;
+        ApplyBluetoothControlDefaults(action, target);
+    }
+
+    public void ActivateTimer() => SetActionType(SnippetActionType.Timer);
+
+    public void ActivateCustomTerminalCommand()
+    {
+        if (ExecutableActionTypeCatalog.IsPresetTerminalCommand(TerminalCommand))
+        {
+            TerminalCommand = string.Empty;
+            TerminalShell = SnippetTerminalShell.Cmd;
+            OpenTerminalWindow = true;
+            RunAsAdministrator = true;
+        }
+
+        SetActionType(SnippetActionType.TerminalCommand);
+    }
+
+    public void ActivateAdbConnect()
+    {
+        ActionType = SnippetActionType.TerminalCommand;
+        ApplyAdbPairingDefaults();
+    }
+
+    public void ActivateRemoteInstall() => SetActionType(SnippetActionType.RemoteInstall);
 
     public void SetLaunchPath(string launchPath)
     {
@@ -298,7 +357,8 @@ public sealed class ExecutableActionEditDraft
             RemoteInstallModule,
             RemoteInstallDeviceKind,
             RemoteInstallTargetDevice,
-            RemoteInstallLaunchAfterInstall);
+            RemoteInstallLaunchAfterInstall,
+            RemoteInstallPromptProject);
     }
 
     public HotkeyActionSaveData ToHotkeyActionSaveData(
@@ -383,7 +443,8 @@ internal sealed record ExecutableActionEditDraftState(
     string RemoteInstallModule = "",
     RemoteInstallDeviceKind RemoteInstallDeviceKind = RemoteInstallDeviceKind.Phone,
     string RemoteInstallTargetDevice = "",
-    bool RemoteInstallLaunchAfterInstall = true)
+    bool RemoteInstallLaunchAfterInstall = true,
+    bool RemoteInstallPromptProject = false)
 {
     public static ExecutableActionEditDraftState Default()
     {
@@ -412,7 +473,8 @@ internal sealed record ExecutableActionEditDraftState(
             string.Empty,
             RemoteInstallDeviceKind.Phone,
             string.Empty,
-            true);
+            true,
+            false);
     }
 
     public static ExecutableActionEditDraftState FromSnippet(Snippet snippet)
@@ -442,7 +504,8 @@ internal sealed record ExecutableActionEditDraftState(
             snippet.RemoteInstallModule ?? string.Empty,
             snippet.RemoteInstallDeviceKind ?? RemoteInstallRules.GetDefaultDeviceKindForSlot(snippet.SlotKey),
             snippet.RemoteInstallTargetDevice ?? string.Empty,
-            snippet.RemoteInstallLaunchAfterInstall);
+            snippet.RemoteInstallLaunchAfterInstall,
+            snippet.RemoteInstallPromptProject);
     }
 
     public static ExecutableActionEditDraftState FromHotkeyAction(HotkeyAction action)

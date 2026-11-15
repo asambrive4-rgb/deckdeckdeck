@@ -275,4 +275,33 @@ public class DialogAdapter : IDialogAdapter
 
         return null;
     }
+
+    public virtual RemoteInstallProjectSelection? SelectRemoteInstallProject(
+        RemoteInstallProjectPromptRequest request)
+    {
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            RemoteInstallProjectSelection? result = null;
+            dispatcher.Invoke(() =>
+            {
+                result = SelectRemoteInstallProject(request);
+            });
+            return result;
+        }
+
+        var window = new RemoteInstallProjectPickerWindow(request);
+        var owner = Application.Current?.MainWindow;
+        if (owner is { IsLoaded: true, IsVisible: true })
+        {
+            window.Owner = owner;
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        }
+        else
+        {
+            window.Topmost = true;
+            window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+
+        return window.ShowDialog() == true ? window.Selection : null;
+    }
 }

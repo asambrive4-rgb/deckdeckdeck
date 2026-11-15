@@ -9,24 +9,44 @@ internal static class HotkeyActionDisplayText
     public static string GetActionTypeLabel(HotkeyAction action) =>
         ExecutableActionTypeCatalog.GetDisplayLabel(
             action.ActionType,
-            action.FileActionMode);
+            action.FileActionMode,
+            action.TerminalCommand);
 
     public static string GetSummary(HotkeyAction action)
     {
         return action.ActionType switch
         {
             SnippetActionType.LaunchFile => string.IsNullOrWhiteSpace(action.LaunchPath)
-                ? "실행 대상 없음"
+                ? (action.FileActionMode == FileActionMode.Paste ? "붙여넣을 파일 없음" : "실행 대상 없음")
                 : action.LaunchPath,
             SnippetActionType.LaunchUrl => string.IsNullOrWhiteSpace(action.LaunchUrl)
                 ? "웹 주소 없음"
                 : action.LaunchUrl,
             SnippetActionType.MediaAction => GetMediaSummary(action),
+            SnippetActionType.TerminalCommand when TerminalCommandParameterRules.IsTurnOffDisplayCommand(action.TerminalCommand) =>
+                "모니터 화면 끄기",
+            SnippetActionType.TerminalCommand when TerminalCommandParameterRules.TryParseBluetoothAudioCommand(
+                    action.TerminalCommand,
+                    out var btCommand,
+                    allowEmptyTarget: true) =>
+                GetBluetoothSummary(btCommand),
+            SnippetActionType.TerminalCommand when TerminalCommandParameterRules.IsAdbWirelessConnectCommand(action.TerminalCommand) =>
+                string.IsNullOrWhiteSpace(action.AdbDeviceIp)
+                    ? "무선 ADB 연결 (실행 시 IP·포트 입력)"
+                    : $"무선 ADB 연결 ({action.AdbDeviceIp})",
             SnippetActionType.TerminalCommand => string.IsNullOrWhiteSpace(action.TerminalCommand)
                 ? "터미널 명령 없음"
                 : action.TerminalCommand,
             _ => GetPasteSummary(action)
         };
+    }
+
+    private static string GetBluetoothSummary(BluetoothAudioCommand command)
+    {
+        var verb = command.Action == BluetoothAudioActionKind.Disconnect ? "연결 해제" : "연결";
+        return string.IsNullOrWhiteSpace(command.Target)
+            ? $"블루투스 {verb} (대상 미지정)"
+            : $"블루투스 {verb}: {command.Target}";
     }
 
     private static string GetPasteSummary(HotkeyAction action)

@@ -24,7 +24,8 @@ public sealed record ExecutableAction(
     RemoteInstallDeviceKind? RemoteInstallDeviceKind = null,
     string? RemoteInstallTargetDevice = null,
     bool RemoteInstallLaunchAfterInstall = true,
-    Guid? CategoryId = null)
+    Guid? CategoryId = null,
+    bool RemoteInstallPromptProject = false)
 {
     public static ExecutableAction FromSnippet(Snippet snippet)
     {
@@ -51,7 +52,8 @@ public sealed record ExecutableAction(
             snippet.RemoteInstallDeviceKind,
             snippet.RemoteInstallTargetDevice,
             snippet.RemoteInstallLaunchAfterInstall,
-            snippet.CategoryId);
+            snippet.CategoryId,
+            snippet.RemoteInstallPromptProject);
     }
 
     public static ExecutableAction FromHotkeyAction(HotkeyAction action)

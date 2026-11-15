@@ -57,7 +57,7 @@ public sealed class SnippetEditViewModelTests
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
         viewModel.SnippetTitle = "Open";
-        viewModel.IsLaunchFileAction = true;
+        viewModel.IsOpenLaunchAction = true;
         viewModel.SaveCommand.Execute(null);
 
         Assert.Null(savedSnippet);
@@ -73,7 +73,8 @@ public sealed class SnippetEditViewModelTests
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
         viewModel.SnippetTitle = "Open site";
-        viewModel.IsLaunchUrlAction = true;
+        viewModel.IsOpenLaunchAction = true;
+        viewModel.IsLaunchUrlMode = true;
         viewModel.SaveCommand.Execute(null);
 
         Assert.Null(savedSnippet);
@@ -89,7 +90,7 @@ public sealed class SnippetEditViewModelTests
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
         viewModel.SnippetTitle = "Reconnect Bluetooth";
-        viewModel.IsTerminalCommandAction = true;
+        viewModel.IsTerminalAction = true;
         viewModel.OpenTerminalWindow = false;
         viewModel.SaveCommand.Execute(null);
 
@@ -106,7 +107,7 @@ public sealed class SnippetEditViewModelTests
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
         viewModel.SnippetTitle = "Open Terminal Only";
-        viewModel.IsTerminalCommandAction = true;
+        viewModel.IsTerminalAction = true;
         viewModel.OpenTerminalWindow = true;
         viewModel.SaveCommand.Execute(null);
 
@@ -125,7 +126,7 @@ public sealed class SnippetEditViewModelTests
 
         viewModel.SnippetTitle = "Open notes";
         viewModel.Content = "unused";
-        viewModel.IsLaunchFileAction = true;
+        viewModel.IsOpenLaunchAction = true;
         viewModel.LaunchPath = @"C:\notes";
         viewModel.SaveCommand.Execute(null);
 
@@ -152,8 +153,8 @@ public sealed class SnippetEditViewModelTests
             dialogService);
 
         viewModel.SnippetTitle = "Paste notes";
-        viewModel.IsLaunchFileAction = true;
-        viewModel.SelectedFileActionMode = FileActionMode.Paste;
+        viewModel.IsPasteAction = true;
+        viewModel.IsFilePasteMode = true;
         viewModel.ChooseLaunchFileCommand.Execute(null);
         viewModel.SaveCommand.Execute(null);
 
@@ -177,7 +178,8 @@ public sealed class SnippetEditViewModelTests
         viewModel.SnippetTitle = "Open docs";
         viewModel.Content = "unused";
         viewModel.LaunchPath = @"C:\unused";
-        viewModel.IsLaunchUrlAction = true;
+        viewModel.IsOpenLaunchAction = true;
+        viewModel.IsLaunchUrlMode = true;
         viewModel.LaunchUrl = "example.com/docs";
         viewModel.SaveCommand.Execute(null);
 
@@ -230,7 +232,7 @@ public sealed class SnippetEditViewModelTests
         viewModel.Content = "unused";
         viewModel.LaunchPath = @"C:\unused";
         viewModel.LaunchUrl = "https://example.com";
-        viewModel.IsTerminalCommandAction = true;
+        viewModel.IsTerminalAction = true;
         viewModel.TerminalCommand = "echo reconnect";
         viewModel.SaveCommand.Execute(null);
 
@@ -255,7 +257,7 @@ public sealed class SnippetEditViewModelTests
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
         viewModel.SnippetTitle = "List";
-        viewModel.IsTerminalCommandAction = true;
+        viewModel.IsTerminalAction = true;
         viewModel.SelectedTerminalShell = SnippetTerminalShell.PowerShell;
         viewModel.RunAsAdministrator = false;
         viewModel.TerminalCommand = "Get-ChildItem";
@@ -273,10 +275,12 @@ public sealed class SnippetEditViewModelTests
         var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Tools", null);
         var viewModel = CreateViewModel(services, category, _ => { });
 
-        viewModel.IsTerminalCommandAction = true;
-        viewModel.IsAdbPairingEnabled = true;
+        viewModel.IsAndroidAction = true;
+        viewModel.IsAdbPairingPresetActive = true;
 
-        Assert.True(viewModel.IsAdbPairingEnabled);
+        Assert.True(viewModel.IsAndroidAction);
+        Assert.True(viewModel.IsAdbPairingPresetActive);
+        Assert.False(viewModel.IsRemoteInstallMode);
         Assert.True(viewModel.OpenTerminalWindow);
         Assert.False(viewModel.RunAsAdministrator);
         Assert.Equal(SnippetTerminalShell.PowerShell, viewModel.SelectedTerminalShell);
@@ -294,8 +298,8 @@ public sealed class SnippetEditViewModelTests
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
         viewModel.SnippetTitle = "Phone A";
-        viewModel.IsTerminalCommandAction = true;
-        viewModel.IsAdbPairingEnabled = true;
+        viewModel.IsAndroidAction = true;
+        viewModel.IsAdbPairingPresetActive = true;
         viewModel.AdbDeviceIp = "172.16.88.201";
         viewModel.SaveCommand.Execute(null);
 
@@ -394,7 +398,7 @@ public sealed class SnippetEditViewModelTests
         var viewModel = CreateViewModel(services, category, snippet => savedSnippet = snippet);
 
         viewModel.SnippetTitle = "Open tool";
-        viewModel.IsLaunchFileAction = true;
+        viewModel.IsOpenLaunchAction = true;
         viewModel.LaunchPath = launchPath;
         viewModel.SaveCommand.Execute(null);
 
@@ -709,7 +713,7 @@ public sealed class SnippetEditViewModelTests
         var viewModel = CreateViewModel(services, category, _ => { }, dialogService: stubDialog);
 
         viewModel.SnippetTitle = string.Empty;
-        viewModel.IsLaunchFileAction = true;
+        viewModel.IsOpenLaunchAction = true;
         viewModel.ChooseInstalledAppCommand.Execute(null);
 
         Assert.Equal(@"shell:AppsFolder\OpenAI.Codex_2p2nqsd0c76g0!App", viewModel.LaunchPath);
@@ -729,8 +733,8 @@ public sealed class SnippetEditViewModelTests
         var viewModel = CreateViewModel(services, category, s => savedSnippet = s, dialogService: stubDialog);
 
         viewModel.SnippetTitle = string.Empty;
-        viewModel.IsTerminalCommandAction = true;
-        viewModel.SelectBluetoothPresetCommand.Execute(null);
+        viewModel.IsSystemUtilityAction = true;
+        viewModel.IsBluetoothPresetActive = true;
         viewModel.IsBluetoothDisconnectAction = true;
         viewModel.ChooseBluetoothDeviceCommand.Execute(null);
         viewModel.SaveCommand.Execute(null);
@@ -740,6 +744,126 @@ public sealed class SnippetEditViewModelTests
         Assert.False(savedSnippet.OpenTerminalWindow);
         Assert.Equal("bt-audio disconnect E4:92:82:82:D5:9B", savedSnippet.TerminalCommand);
         Assert.Equal("WH-1000XM5 off", savedSnippet.Title);
+    }
+
+    [Fact]
+    public void SixCategoryTransitionsMaintainConsistentSubModesAndCommands()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Unified", null);
+        var viewModel = CreateViewModel(services, category, _ => { });
+
+        Assert.True(viewModel.IsPasteAction);
+        Assert.True(viewModel.IsPasteTextMode);
+
+        viewModel.IsFilePasteMode = true;
+        Assert.True(viewModel.IsPasteAction);
+        Assert.True(viewModel.IsFilePasteMode);
+        Assert.Equal(FileActionMode.Paste, viewModel.SelectedFileActionMode);
+
+        viewModel.IsOpenLaunchAction = true;
+        Assert.True(viewModel.IsOpenLaunchAction);
+        Assert.True(viewModel.IsFileLaunchMode);
+        Assert.Equal(FileActionMode.Launch, viewModel.SelectedFileActionMode);
+
+        viewModel.IsLaunchUrlMode = true;
+        Assert.True(viewModel.IsOpenLaunchAction);
+        Assert.True(viewModel.IsLaunchUrlMode);
+
+        viewModel.IsSystemUtilityAction = true;
+        Assert.True(viewModel.IsSystemUtilityAction);
+        Assert.True(viewModel.IsTurnOffDisplayPresetActive);
+        Assert.Equal(TerminalCommandParameterRules.TurnOffDisplayCommand, viewModel.TerminalCommand);
+
+        viewModel.IsTimerMode = true;
+        Assert.True(viewModel.IsSystemUtilityAction);
+        Assert.True(viewModel.IsTimerMode);
+
+        viewModel.IsAndroidAction = true;
+        Assert.True(viewModel.IsAndroidAction);
+        Assert.True(viewModel.IsAdbPairingPresetActive);
+        Assert.False(viewModel.IsRemoteInstallMode);
+
+        viewModel.IsRemoteInstallMode = true;
+        Assert.True(viewModel.IsAndroidAction);
+        Assert.True(viewModel.IsRemoteInstallMode);
+
+        viewModel.IsAdbPairingPresetActive = true;
+        Assert.True(viewModel.IsAndroidAction);
+        Assert.True(viewModel.IsAdbPairingPresetActive);
+
+        // Moving from a preset (ADB/Bluetooth/Display) to pure Terminal clears the preset command.
+        viewModel.IsTerminalAction = true;
+        Assert.True(viewModel.IsTerminalAction);
+        Assert.True(viewModel.ShowTerminalCommandEditor);
+        Assert.Equal(string.Empty, viewModel.TerminalCommand);
+    }
+
+    [Fact]
+    public void LoadedSnippetsRestoreExpectedUnifiedCategoryAndSubModes()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad1, "Legacy", null);
+
+        var filePasteSnippet = services.SnippetRepository.Create(
+            category.Id,
+            SlotKey.Numpad2,
+            "Paste File",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.LaunchFile,
+            launchPath: @"C:\temp\note.txt",
+            fileActionMode: FileActionMode.Paste);
+        var filePasteVm = CreateViewModel(services, category, _ => { }, snippet: filePasteSnippet);
+        Assert.True(filePasteVm.IsPasteAction);
+        Assert.True(filePasteVm.IsFilePasteMode);
+
+        var btSnippet = services.SnippetRepository.Create(
+            category.Id,
+            SlotKey.Numpad3,
+            "BT",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.TerminalCommand,
+            terminalCommand: "bt-audio connect AA:BB:CC:DD:EE:FF");
+        var btVm = CreateViewModel(services, category, _ => { }, snippet: btSnippet);
+        Assert.True(btVm.IsSystemUtilityAction);
+        Assert.True(btVm.IsBluetoothPresetActive);
+        Assert.False(btVm.IsTerminalAction);
+
+        var timerSnippet = services.SnippetRepository.Create(
+            category.Id,
+            SlotKey.Numpad4,
+            "Timer",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.Timer);
+        var timerVm = CreateViewModel(services, category, _ => { }, snippet: timerSnippet);
+        Assert.True(timerVm.IsSystemUtilityAction);
+        Assert.True(timerVm.IsTimerMode);
+
+        var adbSnippet = services.SnippetRepository.Create(
+            category.Id,
+            SlotKey.Numpad5,
+            "ADB",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.TerminalCommand,
+            terminalCommand: TerminalCommandParameterRules.AdbWirelessPowerShellExample);
+        var adbVm = CreateViewModel(services, category, _ => { }, snippet: adbSnippet);
+        Assert.True(adbVm.IsAndroidAction);
+        Assert.True(adbVm.IsAdbPairingPresetActive);
+
+        var remoteSnippet = services.SnippetRepository.Create(
+            category.Id,
+            SlotKey.Numpad6,
+            "Remote",
+            string.Empty,
+            null,
+            actionType: SnippetActionType.RemoteInstall);
+        var remoteVm = CreateViewModel(services, category, _ => { }, snippet: remoteSnippet);
+        Assert.True(remoteVm.IsAndroidAction);
+        Assert.True(remoteVm.IsRemoteInstallMode);
     }
 
     private sealed class StubDialogAdapter : DialogAdapter

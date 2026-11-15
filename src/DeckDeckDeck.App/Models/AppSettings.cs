@@ -44,4 +44,6 @@ public sealed class AppSettings
     public string? LastWindowScreenDeviceName { get; set; }
 
     public string? PreferredBluetoothDeviceName { get; set; }
+
+    public IReadOnlyList<string> RecentRemoteInstallProjects { get; set; } = [];
 }

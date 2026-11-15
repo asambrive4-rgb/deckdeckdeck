@@ -40,37 +40,32 @@
                         <StackPanel Style="{StaticResource Deck.FieldGroupSpacedStyle}">
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                        Text="실행 타입" />
-                            <UniformGrid Columns="3">
-                                <RadioButton Content="문구 붙여넣기"
+                            <UniformGrid Columns="3" Margin="-3,0,-3,-3">
+                                <RadioButton Content="붙여넣기"
                                              GroupName="SnippetActionType"
-                                             IsChecked="{Binding IsPasteTextAction, Mode=TwoWay}"
+                                             IsChecked="{Binding IsPasteAction, Mode=TwoWay}"
                                              Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                                <RadioButton Content="파일/바로 가기 실행"
+                                <RadioButton Content="열기 · 실행"
                                              GroupName="SnippetActionType"
-                                             IsChecked="{Binding IsLaunchFileAction, Mode=TwoWay}"
+                                             IsChecked="{Binding IsOpenLaunchAction, Mode=TwoWay}"
                                              Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                                <RadioButton Content="웹 주소 열기"
-                                             GroupName="SnippetActionType"
-                                             IsChecked="{Binding IsLaunchUrlAction, Mode=TwoWay}"
-                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                                <RadioButton Content="음악/미디어 제어"
+                                <RadioButton Content="미디어 제어"
                                              GroupName="SnippetActionType"
                                              IsChecked="{Binding IsMediaAction, Mode=TwoWay}"
                                              Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                                <RadioButton Content="터미널 명령 실행"
+                                <RadioButton Content="시스템 · 편의"
                                              GroupName="SnippetActionType"
-                                             IsChecked="{Binding IsTerminalCommandAction, Mode=TwoWay}"
+                                             IsChecked="{Binding IsSystemUtilityAction, Mode=TwoWay}"
                                              Style="{StaticResource Deck.ActionTypeToggleStyle}" />
-                                <RadioButton Content="타이머 실행"
+                                <RadioButton Content="터미널"
                                              GroupName="SnippetActionType"
-                                             IsChecked="{Binding IsTimerAction, Mode=TwoWay}"
+                                             IsChecked="{Binding IsTerminalAction, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                <RadioButton Content="Android"
+                                             GroupName="SnippetActionType"
+                                             IsChecked="{Binding IsAndroidAction, Mode=TwoWay}"
                                              Style="{StaticResource Deck.ActionTypeToggleStyle}" />
                             </UniformGrid>
-                            <RadioButton Margin="0,2,0,0"
-                                         Content="Android 원격설치 (태블릿 4 · 폰 5 · 워치 6)"
-                                         GroupName="SnippetActionType"
-                                         IsChecked="{Binding IsRemoteInstallAction, Mode=TwoWay}"
-                                         Style="{StaticResource Deck.ActionTypeToggleStyle}" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -79,77 +74,108 @@
                 <Border Grid.Row="1"
                         Style="{StaticResource Deck.InfoPanelBorderStyle}"
                         Margin="0,0,0,12">
-                    <Grid>
-                        <!-- 붙여넣을 문구 -->
+                    <StackPanel>
+                        <!-- 1. 붙여넣기 (문구 붙여넣기 / 파일 붙여넣기) -->
                         <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
-                                    Visibility="{Binding IsPasteTextAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    Visibility="{Binding IsPasteAction, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="붙여넣을 문구" />
-                            <TextBox MinHeight="80"
-                                     MaxHeight="260"
-                                     AcceptsReturn="True"
-                                     AcceptsTab="True"
-                                     Style="{StaticResource Deck.TextBoxStyle}"
-                                     Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto" />
-                            <TextBlock Margin="0,12,0,6"
-                                       Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="붙여넣기 방식" />
-                            <ComboBox ItemsSource="{Binding PasteShortcutModeOptions}"
-                                      SelectedValue="{Binding PasteShortcutMode, Mode=TwoWay}"
-                                      SelectedValuePath="Mode"
-                                      DisplayMemberPath="Label"
-                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                                       Text="붙여넣기 유형" />
+                            <UniformGrid Columns="2" Margin="-3,0,-3,10">
+                                <RadioButton Content="문구 붙여넣기"
+                                             GroupName="SnippetPasteSubMode"
+                                             IsChecked="{Binding IsPasteTextMode, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.SubModeToggleStyle}" />
+                                <RadioButton Content="파일 붙여넣기"
+                                             GroupName="SnippetPasteSubMode"
+                                             IsChecked="{Binding IsFilePasteMode, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.SubModeToggleStyle}" />
+                            </UniformGrid>
+
+                            <StackPanel Visibility="{Binding IsPasteTextMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="붙여넣을 문구" />
+                                <TextBox MinHeight="90"
+                                         MaxHeight="260"
+                                         AcceptsReturn="True"
+                                         AcceptsTab="True"
+                                         Style="{StaticResource Deck.TextBoxStyle}"
+                                         Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
+                                         TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto" />
+                                <TextBlock Margin="0,12,0,6"
+                                           Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="붙여넣기 방식" />
+                                <ComboBox ItemsSource="{Binding PasteShortcutModeOptions}"
+                                          SelectedValue="{Binding PasteShortcutMode, Mode=TwoWay}"
+                                          SelectedValuePath="Mode"
+                                          DisplayMemberPath="Label"
+                                          Style="{StaticResource Deck.ComboBoxStyle}" />
+                            </StackPanel>
+
+                            <StackPanel Visibility="{Binding IsFilePasteMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="{Binding FilePathLabel}" />
+                                <TextBox Style="{StaticResource Deck.TextBoxStyle}"
+                                         Text="{Binding LaunchPath, UpdateSourceTrigger=PropertyChanged}" />
+                                <WrapPanel Margin="0,8,0,-6">
+                                    <Button Margin="0,0,8,6"
+                                            Command="{Binding ChooseLaunchFileCommand}"
+                                            Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                            Content="{Binding FilePickerButtonText}" />
+                                </WrapPanel>
+                                <TextBlock Margin="0,8,0,0"
+                                           Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                           Text="직전에 사용하던 탐색기 또는 파일 붙여넣기를 지원하는 앱에 전달합니다."
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
                         </StackPanel>
 
-                        <!-- 파일/바로 가기 실행 -->
+                        <!-- 2. 열기 · 실행 (파일·폴더·앱 / 웹 주소 URL) -->
                         <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
-                                    Visibility="{Binding IsLaunchFileAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    Visibility="{Binding IsOpenLaunchAction, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="파일 동작" />
-                            <ComboBox ItemsSource="{Binding FileActionModeOptions}"
-                                      SelectedValue="{Binding SelectedFileActionMode, Mode=TwoWay}"
-                                      SelectedValuePath="Mode"
-                                      DisplayMemberPath="Label"
-                                      Style="{StaticResource Deck.ComboBoxStyle}" />
-                            <TextBlock Margin="0,10,0,6"
-                                       Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="{Binding FilePathLabel}" />
-                            <TextBox Style="{StaticResource Deck.TextBoxStyle}"
-                                     Text="{Binding LaunchPath, UpdateSourceTrigger=PropertyChanged}" />
-                            <WrapPanel Margin="0,8,0,0">
-                                <Button Command="{Binding ChooseLaunchFileCommand}"
-                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                        Content="{Binding FilePickerButtonText}" />
-                                <Button Margin="8,0,0,0"
-                                        Command="{Binding ChooseLaunchFolderCommand}"
-                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                        Content="폴더 선택"
-                                        Visibility="{Binding IsFileLaunchMode, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                <Button Margin="8,0,0,0"
-                                        Command="{Binding ChooseInstalledAppCommand}"
-                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                        Content="설치된 앱 선택"
-                                        Visibility="{Binding IsFileLaunchMode, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            </WrapPanel>
-                            <TextBlock Margin="0,8,0,0"
-                                       Foreground="{StaticResource Deck.Brush.Text.Secondary}"
-                                       Text="직전에 사용하던 탐색기 또는 파일 붙여넣기를 지원하는 앱에 전달합니다."
-                                       TextWrapping="Wrap"
-                                       Visibility="{Binding IsFilePasteMode, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                       Text="실행 대상" />
+                            <UniformGrid Columns="2" Margin="-3,0,-3,10">
+                                <RadioButton Content="파일 · 폴더 · 앱"
+                                             GroupName="SnippetOpenLaunchSubMode"
+                                             IsChecked="{Binding IsFileLaunchMode, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.SubModeToggleStyle}" />
+                                <RadioButton Content="웹 주소 (URL)"
+                                             GroupName="SnippetOpenLaunchSubMode"
+                                             IsChecked="{Binding IsLaunchUrlMode, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.SubModeToggleStyle}" />
+                            </UniformGrid>
+
+                            <StackPanel Visibility="{Binding IsFileLaunchMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="{Binding FilePathLabel}" />
+                                <TextBox Style="{StaticResource Deck.TextBoxStyle}"
+                                         Text="{Binding LaunchPath, UpdateSourceTrigger=PropertyChanged}" />
+                                <WrapPanel Margin="0,8,0,-6">
+                                    <Button Margin="0,0,8,6"
+                                            Command="{Binding ChooseLaunchFileCommand}"
+                                            Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                            Content="{Binding FilePickerButtonText}" />
+                                    <Button Margin="0,0,8,6"
+                                            Command="{Binding ChooseLaunchFolderCommand}"
+                                            Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                            Content="폴더 선택" />
+                                    <Button Margin="0,0,8,6"
+                                            Command="{Binding ChooseInstalledAppCommand}"
+                                            Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                            Content="설치된 앱 선택" />
+                                </WrapPanel>
+                            </StackPanel>
+
+                            <StackPanel Visibility="{Binding IsLaunchUrlMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="열 웹페이지 주소" />
+                                <TextBox Style="{StaticResource Deck.TextBoxStyle}"
+                                         Text="{Binding LaunchUrl, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
                         </StackPanel>
 
-                        <!-- 웹 주소 열기 -->
-                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
-                                    Visibility="{Binding IsLaunchUrlAction, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="열 웹페이지 주소" />
-                            <TextBox Style="{StaticResource Deck.TextBoxStyle}"
-                                     Text="{Binding LaunchUrl, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
-
-                        <!-- 음악/미디어 제어 -->
+                        <!-- 3. 미디어 제어 -->
                         <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
                                     Visibility="{Binding IsMediaAction, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
@@ -174,206 +200,28 @@
                                        Visibility="{Binding ShowSpotifyMediaConnectionNotice, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         </StackPanel>
 
-                        <!-- 터미널 명령 실행 -->
+                        <!-- 4. 시스템 · 편의 (화면 끄기 / 블루투스 / 타이머) -->
                         <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
-                                    Visibility="{Binding IsTerminalCommandAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    Visibility="{Binding IsSystemUtilityAction, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="빠른 설정 프리셋" />
-                            
-                            <!-- 2x2 스마트 프리셋 키캡 버튼 (DPI 및 폰트 크기 변경에 따른 잘림 방지 Grid 레이아웃) -->
-                            <Grid Margin="0,4,0,10">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="6" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="6" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
+                                       Text="기능 선택" />
+                            <UniformGrid Columns="3" Margin="-3,0,-3,10">
+                                <RadioButton Content="화면 끄기"
+                                             GroupName="SnippetSystemSubMode"
+                                             IsChecked="{Binding IsTurnOffDisplayPresetActive, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.SubModeToggleStyle}" />
+                                <RadioButton Content="블루투스"
+                                             GroupName="SnippetSystemSubMode"
+                                             IsChecked="{Binding IsBluetoothPresetActive, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.SubModeToggleStyle}" />
+                                <RadioButton Content="타이머"
+                                             GroupName="SnippetSystemSubMode"
+                                             IsChecked="{Binding IsTimerMode, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.SubModeToggleStyle}" />
+                            </UniformGrid>
 
-                                <!-- (Row 0, Col 0): 1. 화면 끄기 -->
-                                <Button Grid.Row="0" Grid.Column="0"
-                                        Command="{Binding SelectTurnOffDisplayPresetCommand}">
-                                    <Button.Style>
-                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsTurnOffDisplayPresetActive}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                                    <Setter Property="Background" Value="#FAF6F0" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <Grid VerticalAlignment="Center">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Path HorizontalAlignment="Center" Width="16" Height="14" Stretch="Uniform"
-                                              Data="{StaticResource Deck.Geometry.Monitor}">
-                                            <Path.Style>
-                                                <Style TargetType="{x:Type Path}">
-                                                    <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Text.Primary}" />
-                                                    <Setter Property="StrokeThickness" Value="1.5" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsTurnOffDisplayPresetActive}" Value="True">
-                                                            <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Path.Style>
-                                        </Path>
-                                        <TextBlock Grid.Row="1" Text="화면 끄기" FontSize="12" FontWeight="SemiBold"
-                                                   HorizontalAlignment="Center" Margin="0,4,0,1"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}"/>
-                                        <TextBlock Grid.Row="2" Text="모니터 절전" FontSize="10"
-                                                   HorizontalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"/>
-                                    </Grid>
-                                </Button>
-
-                                <!-- (Row 0, Col 2): 2. 블루투스 -->
-                                <Button Grid.Row="0" Grid.Column="2"
-                                        Command="{Binding SelectBluetoothPresetCommand}">
-                                    <Button.Style>
-                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsBluetoothPresetActive}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                                    <Setter Property="Background" Value="#FAF6F0" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <Grid VerticalAlignment="Center">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Path HorizontalAlignment="Center" Width="13" Height="15" Stretch="Uniform"
-                                              Data="M 6.5,2 L 12,7.5 L 8,11.5 L 12,15.5 L 6.5,21 L 6.5,2 Z M 3,7.5 L 11,15.5 M 11,7.5 L 3,15.5">
-                                            <Path.Style>
-                                                <Style TargetType="{x:Type Path}">
-                                                    <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Text.Primary}" />
-                                                    <Setter Property="StrokeThickness" Value="1.5" />
-                                                    <Setter Property="Fill" Value="Transparent" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsBluetoothPresetActive}" Value="True">
-                                                            <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Path.Style>
-                                        </Path>
-                                        <TextBlock Grid.Row="1" Text="블루투스" FontSize="12" FontWeight="SemiBold"
-                                                   HorizontalAlignment="Center" Margin="0,4,0,1"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}"/>
-                                        <TextBlock Grid.Row="2" Text="오디오 연결/해제" FontSize="10"
-                                                   HorizontalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"/>
-                                    </Grid>
-                                </Button>
-
-                                <!-- (Row 2, Col 0): 3. 무선 ADB -->
-                                <Button Grid.Row="2" Grid.Column="0"
-                                        Command="{Binding SelectAdbPairingPresetCommand}">
-                                    <Button.Style>
-                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsAdbPairingPresetActive}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                                    <Setter Property="Background" Value="#FAF6F0" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <Grid VerticalAlignment="Center">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Path HorizontalAlignment="Center" Width="14" Height="14" Stretch="Uniform"
-                                              Data="{StaticResource Deck.Geometry.Bolt}">
-                                            <Path.Style>
-                                                <Style TargetType="{x:Type Path}">
-                                                    <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Text.Primary}" />
-                                                    <Setter Property="StrokeThickness" Value="1.5" />
-                                                    <Setter Property="Fill" Value="Transparent" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsAdbPairingPresetActive}" Value="True">
-                                                            <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Path.Style>
-                                        </Path>
-                                        <TextBlock Grid.Row="1" Text="무선 ADB" FontSize="12" FontWeight="SemiBold"
-                                                   HorizontalAlignment="Center" Margin="0,4,0,1"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}"/>
-                                        <TextBlock Grid.Row="2" Text="디버깅 연결" FontSize="10"
-                                                   HorizontalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"/>
-                                    </Grid>
-                                </Button>
-
-                                <!-- (Row 2, Col 2): 4. 직접 입력 -->
-                                <Button Grid.Row="2" Grid.Column="2"
-                                        Command="{Binding SelectCustomTerminalCommandPresetCommand}">
-                                    <Button.Style>
-                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsCustomTerminalCommandActive}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                                    <Setter Property="Background" Value="#FAF6F0" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <Grid VerticalAlignment="Center">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Path HorizontalAlignment="Center" Width="15" Height="14" Stretch="Uniform"
-                                              Data="{StaticResource Deck.Geometry.Terminal}">
-                                            <Path.Style>
-                                                <Style TargetType="{x:Type Path}">
-                                                    <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Text.Primary}" />
-                                                    <Setter Property="StrokeThickness" Value="1.5" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsCustomTerminalCommandActive}" Value="True">
-                                                            <Setter Property="Stroke" Value="{StaticResource Deck.Brush.Brand.Accent}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Path.Style>
-                                        </Path>
-                                        <TextBlock Grid.Row="1" Text="직접 입력" FontSize="12" FontWeight="SemiBold"
-                                                   HorizontalAlignment="Center" Margin="0,4,0,1"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}"/>
-                                        <TextBlock Grid.Row="2" Text="커스텀 명령" FontSize="10"
-                                                   HorizontalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"/>
-                                    </Grid>
-                                </Button>
-                            </Grid>
-
-                            <!-- 화면 끄기 요약 안내 카드 (DPI/창폭 대응 완벽 잘림 방지) -->
-                            <Border Margin="0,2,0,8"
+                            <!-- 화면 끄기 카드 -->
+                            <Border Margin="0,2,0,4"
                                     Padding="12,10"
                                     CornerRadius="12"
                                     BorderThickness="1"
@@ -422,26 +270,27 @@
                             </Border>
 
                             <!-- 블루투스 오디오 연결/해제 카드 -->
-                            <Border Margin="0,2,0,8"
+                            <Border Margin="0,2,0,4"
                                     Style="{StaticResource Deck.InfoPanelBorderStyle}"
                                     Visibility="{Binding IsBluetoothPresetActive, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
                                     <TextBlock FontWeight="SemiBold"
                                                Foreground="{StaticResource Deck.Brush.Text.Primary}"
-                                               Text="블루투스 오디오 빠른 연결/해제" />
+                                               Text="블루투스 오디오 빠른 연결/해제"
+                                               TextWrapping="Wrap" />
                                     <TextBlock Margin="0,4,0,8"
                                                Foreground="{StaticResource Deck.Brush.Text.Secondary}"
                                                Text="외부 프로그램이나 관리자 권한 창 없이 윈도우 내장 블루투스 오디오를 즉시 연결하거나 해제합니다."
                                                TextWrapping="Wrap" />
                                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                                Text="동작" />
-                                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                                    <UniformGrid Columns="2" Margin="-3,0,-3,8">
                                         <RadioButton Content="연결 (ON)"
                                                      IsChecked="{Binding IsBluetoothConnectAction, Mode=TwoWay}"
-                                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                                     Style="{StaticResource Deck.SubModeToggleStyle}" />
                                         <RadioButton Content="연결 해제 (OFF)"
                                                      IsChecked="{Binding IsBluetoothDisconnectAction, Mode=TwoWay}"
-                                                     Style="{StaticResource Deck.ActionTypeToggleStyle}" />
+                                                     Style="{StaticResource Deck.SubModeToggleStyle}" />
                                     </UniformGrid>
                                     <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                                Text="대상 기기 (MAC 주소 또는 기기 이름)" />
@@ -450,24 +299,31 @@
                                              Text="{Binding BluetoothTarget, UpdateSourceTrigger=PropertyChanged}"
                                              ToolTip="예: E4:92:82:82:D5:9B 또는 WH-1000XM5" />
                                     <!-- 감지된 기기 아이콘 미리보기 -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
-                                                Visibility="{Binding HasDetectedAudioDeviceIcon, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <Border Width="26" Height="26" CornerRadius="6"
+                                    <DockPanel LastChildFill="True" Margin="0,6,0,0"
+                                               Visibility="{Binding HasDetectedAudioDeviceIcon, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Border DockPanel.Dock="Left"
+                                                Width="26" Height="26" CornerRadius="6"
                                                 Background="{StaticResource Deck.Brush.Background.SurfaceSoft}"
                                                 BorderBrush="{StaticResource Deck.Brush.Line.Soft}"
                                                 BorderThickness="1"
-                                                Margin="0,0,8,0">
+                                                Margin="0,0,8,0"
+                                                VerticalAlignment="Center">
                                             <Image Source="{Binding DetectedAudioDeviceIconResourcePath, Converter={StaticResource Deck.CachedImageSourceConverter}, ConverterParameter=32}"
                                                    Stretch="Uniform" Margin="2" />
                                         </Border>
-                                        <TextBlock Text="전용 기기 프리셋 아이콘이 슬롯에 자동 적용됩니다" FontSize="11.5" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                    <WrapPanel Margin="0,8,0,0">
-                                        <Button Command="{Binding ChooseBluetoothDeviceCommand}"
+                                        <TextBlock Text="전용 기기 프리셋 아이콘이 슬롯에 자동 적용됩니다"
+                                                   FontSize="11.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap" />
+                                    </DockPanel>
+                                    <WrapPanel Margin="0,8,0,-6">
+                                        <Button Margin="0,0,8,6"
+                                                Command="{Binding ChooseBluetoothDeviceCommand}"
                                                 Style="{StaticResource Deck.ImageActionButtonStyle}"
                                                 Content="페어링된 기기 선택" />
-                                        <Button Margin="8,0,0,0"
+                                        <Button Margin="0,0,8,6"
                                                 Command="{Binding ToggleAdvancedTerminalSettingsCommand}"
                                                 Padding="10,4"
                                                 MinHeight="28"
@@ -479,8 +335,51 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- 타이머 실행 카드 -->
+                            <Border Margin="0,2,0,4"
+                                    Padding="12,10"
+                                    CornerRadius="12"
+                                    BorderThickness="1"
+                                    BorderBrush="{StaticResource Deck.Brush.Line.Soft}"
+                                    Background="{StaticResource Deck.Brush.Background.Surface}"
+                                    Visibility="{Binding IsTimerMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                               Text="⏱️ 타이머 실행 설정" />
+                                    <TextBlock Text="이 슬롯을 클릭하면 타이머 시간(분/초)을 선택하는 팝업이 표시되며 백그라운드 카운트다운이 즉시 시작됩니다."
+                                               Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- 5. 터미널 안내 문구 -->
+                        <TextBlock Margin="0,0,0,4"
+                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                   FontSize="12"
+                                   Text="cmd 또는 PowerShell에서 실행할 명령을 직접 입력합니다."
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding IsTerminalAction, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                        <!-- 6. Android (무선 ADB 연결 / 앱 원격설치) -->
+                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                    Visibility="{Binding IsAndroidAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="Android 기능" />
+                            <UniformGrid Columns="2" Margin="-3,0,-3,10">
+                                <RadioButton Content="무선 ADB 연결"
+                                             GroupName="SnippetAndroidSubMode"
+                                             IsChecked="{Binding IsAdbPairingPresetActive, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.SubModeToggleStyle}" />
+                                <RadioButton Content="앱 원격설치"
+                                             GroupName="SnippetAndroidSubMode"
+                                             IsChecked="{Binding IsRemoteInstallMode, Mode=TwoWay}"
+                                             Style="{StaticResource Deck.SubModeToggleStyle}" />
+                            </UniformGrid>
+
                             <!-- ADB 무선 디버깅 카드 -->
-                            <Border Margin="0,2,0,8"
+                            <Border Margin="0,2,0,4"
                                     Style="{StaticResource Deck.InfoPanelBorderStyle}"
                                     Visibility="{Binding IsAdbPairingPresetActive, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <StackPanel>
@@ -509,55 +408,9 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- 고급 / 직접 입력 터미널 설정 (점진적 공개) -->
-                            <StackPanel Visibility="{Binding ShowAdvancedTerminalSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                           Margin="0,6,0,0"
-                                           Text="실행 셸" />
-                                <ComboBox ItemsSource="{Binding TerminalShellOptions}"
-                                          SelectedValue="{Binding SelectedTerminalShell, Mode=TwoWay}"
-                                          SelectedValuePath="Shell"
-                                          DisplayMemberPath="Label"
-                                          Style="{StaticResource Deck.ComboBoxStyle}" />
-                                <CheckBox Margin="0,10,0,0"
-                                          Content="관리자 권한으로 실행"
-                                          Style="{StaticResource Deck.CheckBoxStyle}"
-                                          IsChecked="{Binding RunAsAdministrator}" />
-                                <CheckBox Margin="0,8,0,0"
-                                          Content="터미널 창으로 열기"
-                                          Style="{StaticResource Deck.CheckBoxStyle}"
-                                          IsChecked="{Binding OpenTerminalWindow}" />
-                                <TextBlock Margin="0,12,0,0"
-                                           Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                           Text="작업 폴더 (선택)" />
-                                <TextBox Style="{StaticResource Deck.TextBoxStyle}"
-                                         Text="{Binding TerminalWorkingDirectory, UpdateSourceTrigger=PropertyChanged}" />
-                                <Button Margin="0,8,0,8"
-                                        HorizontalAlignment="Left"
-                                        Command="{Binding ChooseTerminalWorkingDirectoryCommand}"
-                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                        Content="폴더 선택" />
-                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                           Text="터미널 명령" />
-                                <TextBox MinHeight="80"
-                                         MaxHeight="260"
-                                         AcceptsReturn="True"
-                                         AcceptsTab="True"
-                                         FontFamily="Cascadia Code, Consolas"
-                                         Style="{StaticResource Deck.TextBoxStyle}"
-                                         Text="{Binding TerminalCommand, UpdateSourceTrigger=PropertyChanged}"
-                                         TextWrapping="Wrap"
-                                         VerticalScrollBarVisibility="Auto" />
-                                <TextBlock Margin="0,8,0,0"
-                                           Foreground="{StaticResource Deck.Brush.Text.Secondary}"
-                                           Text="신뢰하는 명령만 저장하고 실행하세요. 명령을 비우면 작업 폴더에서 셸만 엽니다. 관리자 권한 실행 시 Windows 확인창이 표시될 수 있습니다."
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </StackPanel>
-
-                        <!-- Android 원격설치 (복수 선택 지원: 태블릿 / 폰 / 워치) -->
-                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
-                                    Visibility="{Binding IsRemoteInstallAction, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <!-- Android 원격설치 (복수 선택 지원: 태블릿 / 폰 / 워치) -->
+                            <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
+                                        Visibility="{Binding IsRemoteInstallMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                        Text="1. 대상 기기 종류 (복수 선택 가능 · 동시 설치)" />
 
@@ -594,6 +447,8 @@
                                         <TextBlock Text="슬롯 4 · ≥600dp" FontSize="10"
                                                    Margin="0,2,0,0"
                                                    HorizontalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
                                                    Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
                                     </StackPanel>
                                 </Button>
@@ -622,6 +477,8 @@
                                         <TextBlock Text="슬롯 5 · 스마트폰" FontSize="10"
                                                    Margin="0,2,0,0"
                                                    HorizontalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
                                                    Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
                                     </StackPanel>
                                 </Button>
@@ -650,6 +507,8 @@
                                         <TextBlock Text="슬롯 6 · Wear OS" FontSize="10"
                                                    Margin="0,2,0,0"
                                                    HorizontalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
                                                    Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
                                     </StackPanel>
                                 </Button>
@@ -665,7 +524,8 @@
 
                                 <Button Grid.Column="0"
                                         Command="{Binding SelectRemoteInstallTabletPhoneComboCommand}"
-                                        Padding="8,5">
+                                        MinHeight="40"
+                                        Padding="6,6">
                                     <Button.Style>
                                         <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
                                             <Style.Triggers>
@@ -678,12 +538,15 @@
                                     </Button.Style>
                                     <TextBlock Text="태블릿 + 폰 동시" FontSize="11" FontWeight="SemiBold"
                                                HorizontalAlignment="Center"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"
                                                Foreground="{StaticResource Deck.Brush.Text.Primary}" />
                                 </Button>
 
                                 <Button Grid.Column="2"
                                         Command="{Binding SelectRemoteInstallAllKindsCommand}"
-                                        Padding="8,5">
+                                        MinHeight="40"
+                                        Padding="6,6">
                                     <Button.Style>
                                         <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
                                             <Style.Triggers>
@@ -694,8 +557,10 @@
                                             </Style.Triggers>
                                         </Style>
                                     </Button.Style>
-                                    <TextBlock Text="전체 선택 (태블릿·폰·워치)" FontSize="11" FontWeight="SemiBold"
+                                    <TextBlock Text="전체 (태블릿·폰·워치)" FontSize="11" FontWeight="SemiBold"
                                                HorizontalAlignment="Center"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"
                                                Foreground="{StaticResource Deck.Brush.Text.Primary}" />
                                 </Button>
                             </Grid>
@@ -707,48 +572,145 @@
                                        Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
 
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="2. Android 프로젝트 폴더" />
-                            <TextBox FontFamily="Cascadia Code, Consolas"
-                                     Style="{StaticResource Deck.TextBoxStyle}"
-                                     Text="{Binding RemoteInstallProjectPath, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="예: C:\Users\joajo\AndroidStudioProjects\WatchYouDoin" />
-                            <WrapPanel Margin="0,8,0,10">
-                                <Button Command="{Binding ChooseRemoteInstallProjectFolderCommand}"
-                                        Style="{StaticResource Deck.ImageActionButtonStyle}"
-                                        Content="프로젝트 폴더 선택" />
-                                <Button Margin="8,0,0,0"
-                                        Command="{Binding RescanRemoteInstallModulesCommand}"
-                                        Style="{StaticResource Deck.SecondaryButtonStyle}"
-                                        Padding="10,4"
-                                        MinHeight="28"
-                                        Content="모듈 다시 스캔" />
-                                <Button Margin="8,0,0,0"
+                                       Text="2. 프로젝트 지정 방식" />
+                            <Grid Margin="0,4,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0"
+                                        Command="{Binding SelectFixedRemoteInstallProjectModeCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsFixedRemoteInstallProjectMode}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="✓ " FontSize="12" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Brand.Accent}"
+                                                       Visibility="{Binding IsFixedRemoteInstallProjectMode, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Text="고정 프로젝트" FontSize="12" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        </StackPanel>
+                                        <TextBlock Text="지정한 프로젝트 바로 설치" FontSize="10"
+                                                   Margin="0,2,0,0"
+                                                   HorizontalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Grid.Column="2"
+                                        Command="{Binding SelectPromptRemoteInstallProjectModeCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RemoteInstallPromptProject}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="✓ " FontSize="12" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Brand.Accent}"
+                                                       Visibility="{Binding RemoteInstallPromptProject, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Text="실행 시 선택" FontSize="12" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        </StackPanel>
+                                        <TextBlock Text="최근 5개·목록에서 매번 선택" FontSize="10"
+                                                   Margin="0,2,0,0"
+                                                   HorizontalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <StackPanel Visibility="{Binding IsFixedRemoteInstallProjectMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="3. Android 프로젝트 폴더" />
+                                <TextBox FontFamily="Cascadia Code, Consolas"
+                                         Style="{StaticResource Deck.TextBoxStyle}"
+                                         Text="{Binding RemoteInstallProjectPath, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="예: C:\Users\joajo\AndroidStudioProjects\WatchYouDoin" />
+                                <WrapPanel Margin="0,8,0,4">
+                                    <Button Margin="0,0,8,6"
+                                            Command="{Binding ChooseRemoteInstallProjectFolderCommand}"
+                                            Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                            Content="프로젝트 폴더 선택" />
+                                    <Button Margin="0,0,8,6"
+                                            Command="{Binding RescanRemoteInstallModulesCommand}"
+                                            Style="{StaticResource Deck.SecondaryButtonStyle}"
+                                            Padding="10,4"
+                                            MinHeight="28"
+                                            Content="모듈 다시 스캔" />
+                                </WrapPanel>
+
+                                <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                           Text="4. 빌드할 Android 앱 모듈" />
+                                <ComboBox Margin="0,0,0,6"
+                                          ItemsSource="{Binding RemoteInstallModuleOptions}"
+                                          SelectedValue="{Binding RemoteInstallModule, Mode=TwoWay}"
+                                          SelectedValuePath="ModuleName"
+                                          DisplayMemberPath="DisplayLabel"
+                                          Style="{StaticResource Deck.ComboBoxStyle}"
+                                          Visibility="{Binding HasRemoteInstallModuleOptions, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <TextBox FontFamily="Cascadia Code, Consolas"
+                                         Style="{StaticResource Deck.TextBoxStyle}"
+                                         Text="{Binding RemoteInstallModule, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="예: :phone:android 또는 :wear:android 또는 :app" />
+                            </StackPanel>
+
+                            <Border Visibility="{Binding RemoteInstallPromptProject, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Margin="0,0,0,8"
+                                    Padding="12,10"
+                                    CornerRadius="12"
+                                    BorderThickness="1"
+                                    BorderBrush="{StaticResource Deck.Brush.Line.Soft}"
+                                    Background="{StaticResource Deck.Brush.Background.Surface}">
+                                <StackPanel>
+                                    <TextBlock FontSize="11.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource Deck.Brush.Text.Primary}"
+                                               Text="슬롯을 누를 때 설치할 Android 프로젝트를 선택합니다"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Margin="0,4,0,0"
+                                               FontSize="11"
+                                               Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                               Text="최근 사용한 프로젝트 5개가 버튼으로 먼저 표시되며, '더보기'로 전체 목록이나 폴더 직접 찾기도 가능합니다. 다중 모듈 앱은 기기에 맞는 모듈이 자동 추천됩니다."
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <WrapPanel Margin="0,4,0,2">
+                                <Button Margin="0,0,8,6"
                                         Command="{Binding ApplyBatch456RemoteInstallSlotsCommand}"
                                         Style="{StaticResource Deck.SecondaryButtonStyle}"
                                         Padding="10,4"
                                         MinHeight="28"
-                                        ToolTip="현재 프로젝트 기준으로 이 카테고리의 슬롯 4(태블릿)·5(폰)·6(워치)을 한 번에 저장합니다."
-                                        Content="슬롯 4·5·6 한 번에 배치 ⚡" />
+                                        ToolTip="{Binding Batch456ButtonToolTip}"
+                                        Content="{Binding Batch456ButtonText}" />
                             </WrapPanel>
 
-                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="3. 빌드할 Android 앱 모듈" />
-                            <ComboBox Margin="0,0,0,6"
-                                      ItemsSource="{Binding RemoteInstallModuleOptions}"
-                                      SelectedValue="{Binding RemoteInstallModule, Mode=TwoWay}"
-                                      SelectedValuePath="ModuleName"
-                                      DisplayMemberPath="DisplayLabel"
-                                      Style="{StaticResource Deck.ComboBoxStyle}"
-                                      Visibility="{Binding HasRemoteInstallModuleOptions, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <TextBox FontFamily="Cascadia Code, Consolas"
-                                     Style="{StaticResource Deck.TextBoxStyle}"
-                                     Text="{Binding RemoteInstallModule, UpdateSourceTrigger=PropertyChanged}"
-                                     ToolTip="예: :phone:android 또는 :wear:android 또는 :app" />
-
                             <CheckBox Margin="0,10,0,8"
-                                      Content="설치 완료 후 앱 자동 실행 (assembleDebug 빌드 후 실행)"
                                       Style="{StaticResource Deck.CheckBoxStyle}"
-                                      IsChecked="{Binding RemoteInstallLaunchAfterInstall}" />
+                                      IsChecked="{Binding RemoteInstallLaunchAfterInstall}">
+                                <TextBlock Text="설치 완료 후 앱 자동 실행 (assembleDebug 빌드 후 실행)"
+                                           TextWrapping="Wrap" />
+                            </CheckBox>
 
                             <!-- 연결된 ADB 기기 4단계 분류 미리보기 카드 -->
                             <Border Margin="0,4,0,6"
@@ -761,20 +723,22 @@
                                     <TextBlock FontSize="11.5"
                                                FontWeight="SemiBold"
                                                Foreground="{StaticResource Deck.Brush.Text.Primary}"
-                                               Text="실시간 ADB 기기 분류 상태 (특성 · 화면 dp · 모델명)" />
+                                               Text="실시간 ADB 기기 분류 상태 (특성 · 화면 dp · 모델명)"
+                                               TextWrapping="Wrap" />
                                     <TextBlock Margin="0,4,0,8"
                                                FontSize="11.5"
                                                Foreground="{StaticResource Deck.Brush.Text.Secondary}"
                                                Text="{Binding RemoteInstallConnectedDevicesSummary}"
                                                TextWrapping="Wrap" />
-                                    <WrapPanel>
-                                        <Button Command="{Binding RefreshRemoteInstallDevicesCommand}"
+                                    <WrapPanel Margin="0,0,0,-6">
+                                        <Button Margin="0,0,8,6"
+                                                Command="{Binding RefreshRemoteInstallDevicesCommand}"
                                                 Padding="10,4"
                                                 MinHeight="26"
                                                 FontSize="11.5"
                                                 Style="{StaticResource Deck.SecondaryButtonStyle}"
                                                 Content="연결 기기 새로고침 ↻" />
-                                        <Button Margin="8,0,0,0"
+                                        <Button Margin="0,0,8,6"
                                                 Command="{Binding ToggleAdvancedRemoteInstallSettingsCommand}"
                                                 Padding="10,4"
                                                 MinHeight="26"
@@ -789,7 +753,8 @@
                             <StackPanel Visibility="{Binding ShowAdvancedRemoteInstallSettings, Converter={StaticResource BooleanToVisibilityConverter}}"
                                         Margin="0,4,0,0">
                                 <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                           Text="특정 기기 IP 또는 시리얼 고정 (비워두면 기기 종류로 자동 매칭)" />
+                                           Text="특정 기기 IP 또는 시리얼 고정 (비워두면 기기 종류로 자동 매칭)"
+                                           TextWrapping="Wrap" />
                                 <TextBox FontFamily="Cascadia Code, Consolas"
                                          Style="{StaticResource Deck.TextBoxStyle}"
                                          Text="{Binding RemoteInstallTargetDevice, UpdateSourceTrigger=PropertyChanged}"
@@ -817,7 +782,53 @@
                                 </ItemsControl>
                             </StackPanel>
                         </StackPanel>
-                    </Grid>
+                        </StackPanel>
+
+                        <!-- 터미널 직접 입력 / 프리셋 고급 설정 -->
+                        <StackPanel Margin="0,6,0,0"
+                                    Visibility="{Binding ShowTerminalCommandEditor, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="실행 셸" />
+                            <ComboBox ItemsSource="{Binding TerminalShellOptions}"
+                                      SelectedValue="{Binding SelectedTerminalShell, Mode=TwoWay}"
+                                      SelectedValuePath="Shell"
+                                      DisplayMemberPath="Label"
+                                      Style="{StaticResource Deck.ComboBoxStyle}" />
+                            <CheckBox Margin="0,10,0,0"
+                                      Content="관리자 권한으로 실행"
+                                      Style="{StaticResource Deck.CheckBoxStyle}"
+                                      IsChecked="{Binding RunAsAdministrator}" />
+                            <CheckBox Margin="0,8,0,0"
+                                      Content="터미널 창으로 열기"
+                                      Style="{StaticResource Deck.CheckBoxStyle}"
+                                      IsChecked="{Binding OpenTerminalWindow}" />
+                            <TextBlock Margin="0,12,0,0"
+                                       Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="작업 폴더 (선택)" />
+                            <TextBox Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding TerminalWorkingDirectory, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button Margin="0,8,0,8"
+                                    HorizontalAlignment="Left"
+                                    Command="{Binding ChooseTerminalWorkingDirectoryCommand}"
+                                    Style="{StaticResource Deck.ImageActionButtonStyle}"
+                                    Content="폴더 선택" />
+                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
+                                       Text="터미널 명령" />
+                            <TextBox MinHeight="80"
+                                     MaxHeight="260"
+                                     AcceptsReturn="True"
+                                     AcceptsTab="True"
+                                     FontFamily="Cascadia Code, Consolas"
+                                     Style="{StaticResource Deck.TextBoxStyle}"
+                                     Text="{Binding TerminalCommand, UpdateSourceTrigger=PropertyChanged}"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto" />
+                            <TextBlock Margin="0,8,0,0"
+                                       Foreground="{StaticResource Deck.Brush.Text.Secondary}"
+                                       Text="신뢰하는 명령만 저장하고 실행하세요. 명령을 비우면 작업 폴더에서 셸만 엽니다. 관리자 권한 실행 시 Windows 확인창이 표시될 수 있습니다."
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
                 </Border>
 
                 <!-- 카드 3: 기타 옵션 -->
@@ -835,15 +846,6 @@
                                      Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
                                      TextWrapping="Wrap"
                                      VerticalScrollBarVisibility="Auto" />
-                        </StackPanel>
-                        <!-- 타이머 실행 -->
-                        <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
-                                    Visibility="{Binding IsTimerAction, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="⏱️ 타이머 실행 설정" />
-                            <TextBlock Text="이 슬롯을 클릭하면 타이머 시간(분/초)을 선택하는 팝업이 표시되며 백그라운드 카운트다운이 즉시 시작됩니다."
-                                       Foreground="{StaticResource Deck.Brush.Text.Primary}"
-                                       FontSize="12.5" TextWrapping="Wrap" Margin="0,4,0,0"/>
                         </StackPanel>
 
                         <CheckBox Margin="0,12,0,12"

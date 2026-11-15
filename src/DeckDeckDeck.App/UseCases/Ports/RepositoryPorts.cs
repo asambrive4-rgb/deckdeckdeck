@@ -1,4 +1,5 @@
 // 역할: 카테고리, 슬롯, 단축키, 설정 데이터를 영구 저장소에서 관리하기 위한 저장소 인터페이스들을 정의합니다.
+using DeckDeckDeck.App.Domain;
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.UseCases.Ports;
@@ -85,4 +86,19 @@ public interface ISettingsRepository
     void SetSnippetSlotEnabled(SlotKey slotKey, bool enabled);
 
     void SetPreferredBluetoothDeviceName(string? deviceName);
+
+    void RecordRecentRemoteInstallProject(string projectPath)
+    {
+        var normalized = RemoteInstallRules.NormalizeProjectPath(projectPath);
+        if (normalized is null)
+        {
+            return;
+        }
+
+        var settings = Load();
+        settings.RecentRemoteInstallProjects = RemoteInstallRules.PrependRecentProjectPath(
+            settings.RecentRemoteInstallProjects,
+            normalized);
+        Save(settings);
+    }
 }

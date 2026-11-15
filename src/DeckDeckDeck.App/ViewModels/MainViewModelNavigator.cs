@@ -90,8 +90,16 @@ internal sealed class MainViewModelNavigator
         // _showStatus($"{category.Name} 편집");
     }
 
-    public void OpenCategory(Category category)
+    public void OpenCategory(Category category) =>
+        OpenCategory(category, bypassCache: false);
+
+    public void OpenCategory(Category category, bool bypassCache)
     {
+        if (bypassCache)
+        {
+            InvalidateCategory(category.Id);
+        }
+
         _showViewModel(GetOrCreateCategory(category));
         // [removed from top bar] 네비 위치 문구 — TopBarTitle과 역할 겹침.
         // _showStatus($"{category.Name} 카테고리");

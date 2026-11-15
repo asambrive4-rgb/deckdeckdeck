@@ -176,7 +176,7 @@
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <!-- 기기명 (말줄임) -->
                                     <TextBlock Style="{StaticResource Deck.TopBarStatusTextStyle}"
-                                               MaxWidth="70"
+                                               MaxWidth="92"
                                                Text="{Binding TopBarDeviceName}" />
 
                                     <!-- 배터리 뱃지 (배터리 정보가 있을 때만 표시) -->

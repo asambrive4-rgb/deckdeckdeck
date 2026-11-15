@@ -250,7 +250,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         switch (resolution.Kind)
         {
             case CategoryHotkeyResolutionKind.OpenExisting:
-                OpenResolvedCategoryFromHotkey(resolution.Category!);
+                OpenResolvedCategoryFromHotkey(resolution.Category!, bypassCache: slotKey == SlotKey.Numpad8);
                 break;
             case CategoryHotkeyResolutionKind.CreateNew:
                 _navigator.CreateCategory(resolution.SlotKey);
@@ -456,15 +456,16 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _ => false
     };
 
-    private void OpenResolvedCategoryFromHotkey(Category category)
+    private void OpenResolvedCategoryFromHotkey(Category category, bool bypassCache = false)
     {
-        if (CurrentViewModel is CategoryViewModel categoryViewModel
+        if (!bypassCache
+            && CurrentViewModel is CategoryViewModel categoryViewModel
             && categoryViewModel.CategoryId == category.Id)
         {
             return;
         }
 
-        _navigator.OpenCategory(category);
+        _navigator.OpenCategory(category, bypassCache);
     }
 
     private static IReadOnlyList<string> GetThumbnailPaths(NumpadGridViewModel grid) =>

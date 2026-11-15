@@ -29,7 +29,8 @@ public static class SnippetRules
         string? remoteInstallModule = null,
         RemoteInstallDeviceKind? remoteInstallDeviceKind = null,
         string? remoteInstallTargetDevice = null,
-        bool remoteInstallLaunchAfterInstall = true)
+        bool remoteInstallLaunchAfterInstall = true,
+        bool remoteInstallPromptProject = false)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -68,18 +69,6 @@ public static class SnippetRules
 
         if (isRemoteInstall)
         {
-            if (string.IsNullOrWhiteSpace(remoteInstallProjectPath))
-            {
-                return SnippetSaveValidationResult.Failure(RemoteInstallRules.ProjectPathRequiredMessage);
-            }
-
-            normalizedRemoteInstallModule = RemoteInstallRules.NormalizeModuleName(remoteInstallModule);
-            if (string.IsNullOrWhiteSpace(normalizedRemoteInstallModule))
-            {
-                return SnippetSaveValidationResult.Failure(RemoteInstallRules.ModuleRequiredMessage);
-            }
-
-            normalizedRemoteInstallProjectPath = remoteInstallProjectPath.Trim();
             if (remoteInstallDeviceKind == RemoteInstallDeviceKind.None)
             {
                 return SnippetSaveValidationResult.Failure(RemoteInstallRules.DeviceKindRequiredMessage);
@@ -89,6 +78,22 @@ public static class SnippetRules
             normalizedRemoteInstallTargetDevice = string.IsNullOrWhiteSpace(remoteInstallTargetDevice)
                 ? null
                 : remoteInstallTargetDevice.Trim();
+
+            if (!remoteInstallPromptProject)
+            {
+                if (string.IsNullOrWhiteSpace(remoteInstallProjectPath))
+                {
+                    return SnippetSaveValidationResult.Failure(RemoteInstallRules.ProjectPathRequiredMessage);
+                }
+
+                normalizedRemoteInstallModule = RemoteInstallRules.NormalizeModuleName(remoteInstallModule);
+                if (string.IsNullOrWhiteSpace(normalizedRemoteInstallModule))
+                {
+                    return SnippetSaveValidationResult.Failure(RemoteInstallRules.ModuleRequiredMessage);
+                }
+
+                normalizedRemoteInstallProjectPath = remoteInstallProjectPath.Trim();
+            }
         }
 
         var isMedia = actionType == SnippetActionType.MediaAction;
@@ -135,7 +140,8 @@ public static class SnippetRules
             normalizedRemoteInstallModule,
             normalizedRemoteInstallDeviceKind,
             normalizedRemoteInstallTargetDevice,
-            !isRemoteInstall || remoteInstallLaunchAfterInstall);
+            !isRemoteInstall || remoteInstallLaunchAfterInstall,
+            isRemoteInstall && remoteInstallPromptProject);
     }
 }
 
@@ -155,7 +161,8 @@ public sealed record SnippetSaveValidationResult(
     string? RemoteInstallModule = null,
     RemoteInstallDeviceKind? RemoteInstallDeviceKind = null,
     string? RemoteInstallTargetDevice = null,
-    bool RemoteInstallLaunchAfterInstall = true)
+    bool RemoteInstallLaunchAfterInstall = true,
+    bool RemoteInstallPromptProject = false)
 {
     public static SnippetSaveValidationResult Success(
         string? normalizedLaunchUrl,
@@ -171,12 +178,13 @@ public sealed record SnippetSaveValidationResult(
         string? remoteInstallModule = null,
         RemoteInstallDeviceKind? remoteInstallDeviceKind = null,
         string? remoteInstallTargetDevice = null,
-        bool remoteInstallLaunchAfterInstall = true) =>
+        bool remoteInstallLaunchAfterInstall = true,
+        bool remoteInstallPromptProject = false) =>
         new(true, null, normalizedLaunchUrl, mediaProvider, mediaCommand,
             normalizedTerminalCommand, terminalShell, runAsAdministrator,
             openTerminalWindow, terminalWorkingDirectory, adbDeviceIp,
             remoteInstallProjectPath, remoteInstallModule, remoteInstallDeviceKind,
-            remoteInstallTargetDevice, remoteInstallLaunchAfterInstall);
+            remoteInstallTargetDevice, remoteInstallLaunchAfterInstall, remoteInstallPromptProject);
 
     public static SnippetSaveValidationResult Failure(string errorMessage) =>
         new(false, errorMessage, null, null, null, null, null, false, false, null, null);

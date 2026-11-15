@@ -1,4 +1,6 @@
-// 역할: 단축키 동작을 조회하고 등록하는 유스케이스 로직이 예상대로 동작하는지 검증하는 단위 테스트 모음입니다.
+// 역할: 단축키 동작의 조회·등록 유스케이스와 단축키 편집 화면 모델의 6개 실행 타입 전환을 검증하는 단위 테스트 모음입니다.
+using DeckDeckDeck.App.Domain;
+using DeckDeckDeck.App.Infrastructure.Gateways;
 using DeckDeckDeck.App.Models;
 using DeckDeckDeck.App.Native;
 using DeckDeckDeck.App.UseCases;
@@ -102,7 +104,7 @@ public sealed class HotkeyActionUseCaseTests
         var action = Assert.Single(reloadedServices.HotkeyActionRepository.GetAll());
         Assert.Equal(FileActionMode.Paste, action.FileActionMode);
         Assert.Equal(@"C:\notes\memo.md", action.LaunchPath);
-        Assert.Equal("파일 붙여넣기", HotkeyActionDisplayText.GetActionTypeLabel(action));
+        Assert.Equal("붙여넣기 · 파일", HotkeyActionDisplayText.GetActionTypeLabel(action));
     }
 
     [Fact]
@@ -201,6 +203,69 @@ public sealed class HotkeyActionUseCaseTests
         Assert.NotNull(executable);
         Assert.Equal("Run this", executable.Content);
         Assert.Null(skipped);
+    }
+
+    [Fact]
+    public void HotkeyEditViewModelSupportsSixUnifiedCategoriesWithoutSlotOnlyModes()
+    {
+        var services = CreateServices();
+        HotkeyAction? savedAction = null;
+        var viewModel = new HotkeyEditViewModel(
+            action: null,
+            new LoadHotkeyActionEditorStateUseCase(services.SettingsRepository).Execute(),
+            new SaveHotkeyActionUseCase(services.HotkeyActionRepository),
+            new DeleteHotkeyActionUseCase(services.HotkeyActionRepository, services.ImageFileRepository),
+            new DialogAdapter(),
+            () => { },
+            saved => savedAction = saved,
+            () => { },
+            () => { },
+            _ => { });
+
+        Assert.True(viewModel.IsPasteAction);
+        Assert.True(viewModel.IsPasteTextMode);
+
+        viewModel.IsFilePasteMode = true;
+        Assert.True(viewModel.IsPasteAction);
+        Assert.True(viewModel.IsFilePasteMode);
+
+        viewModel.IsOpenLaunchAction = true;
+        Assert.True(viewModel.IsOpenLaunchAction);
+        Assert.True(viewModel.IsFileLaunchMode);
+
+        viewModel.IsLaunchUrlMode = true;
+        Assert.True(viewModel.IsLaunchUrlMode);
+
+        viewModel.IsSystemUtilityAction = true;
+        Assert.True(viewModel.IsSystemUtilityAction);
+        Assert.True(viewModel.IsTurnOffDisplayPresetActive);
+
+        viewModel.IsBluetoothPresetActive = true;
+        Assert.True(viewModel.IsBluetoothPresetActive);
+
+        viewModel.IsTerminalAction = true;
+        Assert.True(viewModel.IsTerminalAction);
+        Assert.True(viewModel.ShowTerminalCommandEditor);
+        Assert.Equal(string.Empty, viewModel.TerminalCommand);
+
+        viewModel.IsAndroidAction = true;
+        Assert.True(viewModel.IsAndroidAction);
+        Assert.True(viewModel.IsAdbPairingPresetActive);
+        viewModel.HotkeyTitle = "Phone ADB";
+        viewModel.AdbDeviceIp = "192.168.0.55";
+        viewModel.SaveCommand.Execute(null);
+
+        Assert.NotNull(savedAction);
+        Assert.Equal(ActionEditorPanel.Android, ExecutableActionTypeCatalog.GetEditorPanel(
+            savedAction.ActionType,
+            savedAction.FileActionMode,
+            savedAction.TerminalCommand));
+        Assert.Equal("Android · 무선 ADB", HotkeyActionDisplayText.GetActionTypeLabel(savedAction));
+        Assert.Equal("192.168.0.55", HotkeyActionDisplayText.GetSummary(savedAction));
+
+        // Slot-only Timer / RemoteInstall are intentionally absent from HotkeyEditViewModel.
+        Assert.Null(typeof(HotkeyEditViewModel).GetProperty("IsTimerMode"));
+        Assert.Null(typeof(HotkeyEditViewModel).GetProperty("IsRemoteInstallMode"));
     }
 
     private static SaveHotkeyActionRequest CreateRequest(

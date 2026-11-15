@@ -145,6 +145,11 @@ public sealed class AppDbContextFactory
                 existingColumns,
                 "RemoteInstallLaunchAfterInstall",
                 "ALTER TABLE Snippets ADD COLUMN RemoteInstallLaunchAfterInstall INTEGER NOT NULL DEFAULT 1");
+            AddColumnIfMissing(
+                dbContext,
+                existingColumns,
+                "RemoteInstallPromptProject",
+                "ALTER TABLE Snippets ADD COLUMN RemoteInstallPromptProject INTEGER NOT NULL DEFAULT 0");
             var addedSlotImageMode = AddColumnIfMissing(
                 dbContext,
                 existingColumns,

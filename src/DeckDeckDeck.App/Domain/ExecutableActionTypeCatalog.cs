@@ -1,4 +1,4 @@
-// 역할: 프로그램에서 지원하는 모든 실행 동작 유형 목록과 기본 표시 정보를 제공합니다.
+// 역할: 프로그램에서 지원하는 6개 실행 타입 분류와 편집 패널/표시 이름 매핑을 제공합니다.
 using DeckDeckDeck.App.Models;
 
 namespace DeckDeckDeck.App.Domain;
@@ -10,29 +10,45 @@ namespace DeckDeckDeck.App.Domain;
 /// </summary>
 public static class ExecutableActionTypeCatalog
 {
-    public static ActionEditorPanel GetEditorPanel(SnippetActionType actionType) => actionType switch
+    public static ActionEditorPanel GetEditorPanel(
+        SnippetActionType actionType,
+        FileActionMode fileActionMode = FileActionMode.Launch,
+        string? terminalCommand = null) => actionType switch
     {
-        SnippetActionType.LaunchFile => ActionEditorPanel.LaunchFile,
-        SnippetActionType.LaunchUrl => ActionEditorPanel.LaunchUrl,
+        SnippetActionType.PasteText => ActionEditorPanel.Paste,
+        SnippetActionType.LaunchFile when fileActionMode == FileActionMode.Paste => ActionEditorPanel.Paste,
+        SnippetActionType.LaunchFile => ActionEditorPanel.OpenLaunch,
+        SnippetActionType.LaunchUrl => ActionEditorPanel.OpenLaunch,
         SnippetActionType.MediaAction => ActionEditorPanel.Media,
-        SnippetActionType.TerminalCommand => ActionEditorPanel.TerminalCommand,
-        SnippetActionType.Timer => ActionEditorPanel.Timer,
-        SnippetActionType.RemoteInstall => ActionEditorPanel.RemoteInstall,
-        _ => ActionEditorPanel.PasteText
+        SnippetActionType.Timer => ActionEditorPanel.SystemUtility,
+        SnippetActionType.RemoteInstall => ActionEditorPanel.Android,
+        SnippetActionType.TerminalCommand when IsSystemUtilityTerminalCommand(terminalCommand) =>
+            ActionEditorPanel.SystemUtility,
+        SnippetActionType.TerminalCommand when TerminalCommandParameterRules.IsAdbWirelessConnectCommand(terminalCommand) =>
+            ActionEditorPanel.Android,
+        SnippetActionType.TerminalCommand => ActionEditorPanel.Terminal,
+        _ => ActionEditorPanel.Paste
     };
 
     public static string GetDisplayLabel(
         SnippetActionType actionType,
-        FileActionMode fileActionMode = FileActionMode.Launch) => actionType switch
+        FileActionMode fileActionMode = FileActionMode.Launch,
+        string? terminalCommand = null) => actionType switch
     {
-        SnippetActionType.LaunchFile when fileActionMode == FileActionMode.Paste => "파일 붙여넣기",
-        SnippetActionType.LaunchFile => "파일/바로 가기 실행",
-        SnippetActionType.LaunchUrl => "웹 주소 열기",
-        SnippetActionType.MediaAction => "음악/미디어 제어",
-        SnippetActionType.TerminalCommand => "터미널 명령 실행",
-        SnippetActionType.Timer => "타이머 실행",
-        SnippetActionType.RemoteInstall => "Android 원격설치",
-        _ => "문구 붙여넣기"
+        SnippetActionType.LaunchFile when fileActionMode == FileActionMode.Paste => "붙여넣기 · 파일",
+        SnippetActionType.LaunchFile => "열기·실행 · 파일/앱",
+        SnippetActionType.LaunchUrl => "열기·실행 · 웹 주소",
+        SnippetActionType.MediaAction => "미디어 제어",
+        SnippetActionType.Timer => "시스템·편의 · 타이머",
+        SnippetActionType.RemoteInstall => "Android · 원격설치",
+        SnippetActionType.TerminalCommand when TerminalCommandParameterRules.IsTurnOffDisplayCommand(terminalCommand) =>
+            "시스템·편의 · 화면 끄기",
+        SnippetActionType.TerminalCommand when TerminalCommandParameterRules.TryParseBluetoothAudioCommand(terminalCommand, out _, allowEmptyTarget: true) =>
+            "시스템·편의 · 블루투스",
+        SnippetActionType.TerminalCommand when TerminalCommandParameterRules.IsAdbWirelessConnectCommand(terminalCommand) =>
+            "Android · 무선 ADB",
+        SnippetActionType.TerminalCommand => "터미널",
+        _ => "붙여넣기 · 문구"
     };
 
     /// <summary>
@@ -45,20 +61,31 @@ public static class ExecutableActionTypeCatalog
         autoHideAfterPaste && (actionType == SnippetActionType.PasteText
             || (actionType == SnippetActionType.LaunchFile && fileActionMode == FileActionMode.Paste));
 
-    public static bool IsEditorPanel(SnippetActionType actionType, ActionEditorPanel panel) =>
-        GetEditorPanel(actionType) == panel;
+    public static bool IsEditorPanel(
+        SnippetActionType actionType,
+        ActionEditorPanel panel,
+        FileActionMode fileActionMode = FileActionMode.Launch,
+        string? terminalCommand = null) =>
+        GetEditorPanel(actionType, fileActionMode, terminalCommand) == panel;
+
+    public static bool IsPresetTerminalCommand(string? terminalCommand) =>
+        IsSystemUtilityTerminalCommand(terminalCommand)
+        || TerminalCommandParameterRules.IsAdbWirelessConnectCommand(terminalCommand);
+
+    private static bool IsSystemUtilityTerminalCommand(string? terminalCommand) =>
+        TerminalCommandParameterRules.IsTurnOffDisplayCommand(terminalCommand)
+        || TerminalCommandParameterRules.TryParseBluetoothAudioCommand(terminalCommand, out _, allowEmptyTarget: true);
 }
 
 /// <summary>
-/// Which editor form section is shown for an action type.
+/// Which top-level execution type panel (one of 6 unified categories) is shown for an action.
 /// </summary>
 public enum ActionEditorPanel
 {
-    PasteText,
-    LaunchFile,
-    LaunchUrl,
+    Paste,
+    OpenLaunch,
     Media,
-    TerminalCommand,
-    Timer,
-    RemoteInstall
+    SystemUtility,
+    Terminal,
+    Android
 }

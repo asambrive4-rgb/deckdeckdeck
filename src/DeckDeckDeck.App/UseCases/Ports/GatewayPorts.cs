@@ -69,6 +69,8 @@ public interface IDialogAdapter
     InstalledAppSelection? SelectInstalledApp() => null;
 
     BluetoothDeviceSelection? SelectPairedBluetoothDevice() => null;
+
+    RemoteInstallProjectSelection? SelectRemoteInstallProject(RemoteInstallProjectPromptRequest request) => null;
 }
 
 public interface IAppLogger
@@ -157,4 +159,6 @@ public interface IAndroidRemoteInstallGateway
     Task<bool> TryStartRemoteInstallAsync(
         AndroidRemoteInstallRequest request,
         CancellationToken cancellationToken = default);
+
+    IReadOnlyList<string> DiscoverLocalProjects() => [];
 }

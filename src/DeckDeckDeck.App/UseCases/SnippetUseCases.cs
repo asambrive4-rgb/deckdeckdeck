@@ -47,7 +47,8 @@ public sealed class SaveSnippetUseCase
             data.RemoteInstallModule,
             data.RemoteInstallDeviceKind,
             data.RemoteInstallTargetDevice,
-            data.RemoteInstallLaunchAfterInstall);
+            data.RemoteInstallLaunchAfterInstall,
+            data.RemoteInstallPromptProject);
 
         if (!validation.Succeeded)
         {
@@ -81,7 +82,8 @@ public sealed class SaveSnippetUseCase
             RemoteInstallModule = validation.RemoteInstallModule,
             RemoteInstallDeviceKind = validation.RemoteInstallDeviceKind,
             RemoteInstallTargetDevice = validation.RemoteInstallTargetDevice,
-            RemoteInstallLaunchAfterInstall = validation.RemoteInstallLaunchAfterInstall
+            RemoteInstallLaunchAfterInstall = validation.RemoteInstallLaunchAfterInstall,
+            RemoteInstallPromptProject = validation.RemoteInstallPromptProject
         })
             .NormalizeForStorage();
 

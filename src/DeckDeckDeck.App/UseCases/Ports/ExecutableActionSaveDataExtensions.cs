@@ -31,7 +31,8 @@ public static class ExecutableActionSaveDataExtensions
             data.RemoteInstallModule,
             data.RemoteInstallDeviceKind,
             data.RemoteInstallTargetDevice,
-            data.RemoteInstallLaunchAfterInstall);
+            data.RemoteInstallLaunchAfterInstall,
+            data.RemoteInstallPromptProject);
 
         return data with
         {
@@ -57,7 +58,8 @@ public static class ExecutableActionSaveDataExtensions
             RemoteInstallModule = normalized.RemoteInstallModule,
             RemoteInstallDeviceKind = normalized.RemoteInstallDeviceKind,
             RemoteInstallTargetDevice = normalized.RemoteInstallTargetDevice,
-            RemoteInstallLaunchAfterInstall = normalized.RemoteInstallLaunchAfterInstall
+            RemoteInstallLaunchAfterInstall = normalized.RemoteInstallLaunchAfterInstall,
+            RemoteInstallPromptProject = normalized.RemoteInstallPromptProject
         };
     }
 
@@ -87,7 +89,8 @@ public static class ExecutableActionSaveDataExtensions
             data.RemoteInstallModule,
             data.RemoteInstallDeviceKind,
             data.RemoteInstallTargetDevice,
-            data.RemoteInstallLaunchAfterInstall);
+            data.RemoteInstallLaunchAfterInstall,
+            data.RemoteInstallPromptProject);
 
         return data with
         {
@@ -113,7 +116,8 @@ public static class ExecutableActionSaveDataExtensions
             RemoteInstallModule = normalized.RemoteInstallModule,
             RemoteInstallDeviceKind = normalized.RemoteInstallDeviceKind,
             RemoteInstallTargetDevice = normalized.RemoteInstallTargetDevice,
-            RemoteInstallLaunchAfterInstall = normalized.RemoteInstallLaunchAfterInstall
+            RemoteInstallLaunchAfterInstall = normalized.RemoteInstallLaunchAfterInstall,
+            RemoteInstallPromptProject = normalized.RemoteInstallPromptProject
         };
     }
 }

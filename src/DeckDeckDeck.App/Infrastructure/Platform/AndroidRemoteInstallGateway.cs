@@ -38,6 +38,44 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
         _waitForCompletion = waitForCompletion;
     }
 
+    public IReadOnlyList<string> DiscoverLocalProjects()
+    {
+        try
+        {
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (string.IsNullOrWhiteSpace(userProfile))
+            {
+                return [];
+            }
+
+            return DiscoverLocalProjectsInDirectory(Path.Combine(userProfile, "AndroidStudioProjects"));
+        }
+        catch (Exception ex)
+        {
+            _logger?.Log("Failed to discover local Android Studio projects.", ex);
+            return [];
+        }
+    }
+
+    internal static IReadOnlyList<string> DiscoverLocalProjectsInDirectory(string rootDir)
+    {
+        if (string.IsNullOrWhiteSpace(rootDir) || !Directory.Exists(rootDir))
+        {
+            return [];
+        }
+
+        return Directory.EnumerateDirectories(rootDir)
+            .Where(static dir =>
+                File.Exists(Path.Combine(dir, "settings.gradle.kts"))
+                || File.Exists(Path.Combine(dir, "settings.gradle")))
+            .Select(RemoteInstallRules.NormalizeProjectPath)
+            .Where(static path => !string.IsNullOrWhiteSpace(path))
+            .Select(static path => path!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     public IReadOnlyList<AndroidAppModuleInfo> ScanProjectModules(string? projectPath)
     {
         if (string.IsNullOrWhiteSpace(projectPath))

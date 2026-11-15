@@ -30,6 +30,7 @@ internal static class SettingsKeys
     public const string LastWindowTop = "lastWindowTop";
     public const string LastWindowScreenDeviceName = "lastWindowScreenDeviceName";
     public const string PreferredBluetoothDeviceName = "preferredBluetoothDeviceName";
+    public const string RecentRemoteInstallProjects = "recentRemoteInstallProjects";
 
     private const string CategorySlotEnabledPrefix = "enabledCategorySlotKeys.";
     private const string SnippetSlotEnabledPrefix = "enabledSnippetSlotKeys.";
@@ -53,7 +54,8 @@ internal static class SettingsKeys
         new(LastWindowLeft, string.Empty),
         new(LastWindowTop, string.Empty),
         new(LastWindowScreenDeviceName, string.Empty),
-        new(PreferredBluetoothDeviceName, string.Empty)
+        new(PreferredBluetoothDeviceName, string.Empty),
+        new(RecentRemoteInstallProjects, string.Empty)
     ];
 
     public static string GetCategorySlotEnabledKey(SlotKey slotKey)

@@ -29,8 +29,8 @@ public sealed class SnippetEditViewModel : ObservableObject
     private readonly Guid? _snippetId;
     private readonly Action<string> _showStatus;
     private readonly TransferSnippetUseCase _transferSnippetUseCase;
+    private const string TurnOffDisplayDefaultDescription = "모니터 화면을 끕니다. 핫스팟과 백그라운드 작업은 유지됩니다.";
     private string _errorMessage = string.Empty;
-    private bool _isAdbPairingEnabled;
     private bool _showAdvancedTerminalSettings;
     private bool _showAdvancedRemoteInstallSettings;
     private string _remoteInstallConnectedDevicesSummary = "연결 기기 새로고침을 눌러 ADB 분류 결과를 확인하세요.";
@@ -38,6 +38,8 @@ public sealed class SnippetEditViewModel : ObservableObject
     private BluetoothAudioActionKind _bluetoothControlAction = BluetoothAudioActionKind.Connect;
     private string _bluetoothTarget = string.Empty;
     private bool _isBluetoothPresetSelected;
+    private bool _hasAutoFilledTitle;
+    private bool _hasAutoFilledDescription;
     private bool _isSlotEnabled;
     private IReadOnlyList<SnippetMediaCommandOption> _mediaCommandOptions;
     private SnippetTransferTargetSlot? _selectedTransferTarget;
@@ -108,10 +110,6 @@ public sealed class SnippetEditViewModel : ObservableObject
         ChooseLaunchFolderCommand = new RelayCommand(ChooseLaunchFolder);
         ChooseInstalledAppCommand = new RelayCommand(ChooseInstalledApp);
         ChooseTerminalWorkingDirectoryCommand = new RelayCommand(ChooseTerminalWorkingDirectory);
-        SelectTurnOffDisplayPresetCommand = new RelayCommand(SelectTurnOffDisplayPreset);
-        SelectAdbPairingPresetCommand = new RelayCommand(SelectAdbPairingPreset);
-        SelectCustomTerminalCommandPresetCommand = new RelayCommand(SelectCustomTerminalCommandPreset);
-        SelectBluetoothPresetCommand = new RelayCommand(SelectBluetoothPreset);
         ChooseBluetoothDeviceCommand = new RelayCommand(ChooseBluetoothDevice);
         ToggleAdvancedTerminalSettingsCommand = new RelayCommand(ToggleAdvancedTerminalSettings);
         SelectRemoteInstallTabletCommand = new RelayCommand(() => ToggleRemoteInstallDeviceKind(RemoteInstallDeviceKind.Tablet));
@@ -119,13 +117,14 @@ public sealed class SnippetEditViewModel : ObservableObject
         SelectRemoteInstallWatchCommand = new RelayCommand(() => ToggleRemoteInstallDeviceKind(RemoteInstallDeviceKind.Watch));
         SelectRemoteInstallTabletPhoneComboCommand = new RelayCommand(() => SetRemoteInstallDeviceKind(RemoteInstallDeviceKind.Tablet | RemoteInstallDeviceKind.Phone));
         SelectRemoteInstallAllKindsCommand = new RelayCommand(() => SetRemoteInstallDeviceKind(RemoteInstallDeviceKind.Tablet | RemoteInstallDeviceKind.Phone | RemoteInstallDeviceKind.Watch));
+        SelectFixedRemoteInstallProjectModeCommand = new RelayCommand(() => RemoteInstallPromptProject = false);
+        SelectPromptRemoteInstallProjectModeCommand = new RelayCommand(() => RemoteInstallPromptProject = true);
         ChooseRemoteInstallProjectFolderCommand = new RelayCommand(ChooseRemoteInstallProjectFolder);
         RescanRemoteInstallModulesCommand = new RelayCommand(() => RefreshRemoteInstallModules(autoRecommendModule: false));
         RefreshRemoteInstallDevicesCommand = new RelayCommand(() => _ = RefreshRemoteInstallDevicesAsync());
         ToggleAdvancedRemoteInstallSettingsCommand = new RelayCommand(ToggleAdvancedRemoteInstallSettings);
         ApplyAdbIpHintCommand = new RelayCommand<string?>(ApplyAdbIpHint);
         ApplyBatch456RemoteInstallSlotsCommand = new RelayCommand(ApplyBatch456RemoteInstallSlots);
-        _isAdbPairingEnabled = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(_draft.TerminalCommand);
         if (TerminalCommandParameterRules.TryParseBluetoothAudioCommand(_draft.TerminalCommand, out var parsedBt, allowEmptyTarget: true))
         {
             _isBluetoothPresetSelected = true;
@@ -133,9 +132,12 @@ public sealed class SnippetEditViewModel : ObservableObject
             _bluetoothTarget = parsedBt.Target;
         }
 
-        if (IsRemoteInstallAction)
+        if (IsRemoteInstallMode)
         {
-            RefreshRemoteInstallModules(autoRecommendModule: string.IsNullOrWhiteSpace(_draft.RemoteInstallModule));
+            if (!RemoteInstallPromptProject)
+            {
+                RefreshRemoteInstallModules(autoRecommendModule: string.IsNullOrWhiteSpace(_draft.RemoteInstallModule));
+            }
             _ = RefreshRemoteInstallDevicesAsync();
         }
     }
@@ -152,7 +154,6 @@ public sealed class SnippetEditViewModel : ObservableObject
     public IReadOnlyList<SnippetTransferTargetSlot> TransferTargetSlots { get; }
     public IReadOnlyList<SnippetMediaProviderOption> MediaProviderOptions => SnippetMediaProviderOption.All;
     public IReadOnlyList<PasteShortcutModeOption> PasteShortcutModeOptions => PasteShortcutModeOption.All;
-    public IReadOnlyList<FileActionModeOption> FileActionModeOptions => FileActionModeOption.All;
     public IReadOnlyList<TerminalShellOption> TerminalShellOptions => TerminalShellOption.All;
 
     public IReadOnlyList<SnippetMediaCommandOption> MediaCommandOptions
@@ -174,6 +175,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         {
             if (SetDraftValue(_draft.Title, value, static (draft, v) => draft.Title = v))
             {
+                _hasAutoFilledTitle = false;
                 NotifyDetectedAudioIconChanged();
             }
         }
@@ -200,61 +202,46 @@ public sealed class SnippetEditViewModel : ObservableObject
 
             _draft.SetActionType(value);
             OnPropertyChanged();
-            NotifyActionTypePresentationChanged();
-            NotifyFileActionModeChanged();
-            OnPropertyChanged(nameof(ShowSpotifyMediaConnectionNotice));
-            NotifyImageChanged();
+            NotifyActionModeTransition();
         }
     }
 
-    public ActionEditorPanel EditorPanel => ExecutableActionTypeCatalog.GetEditorPanel(ActionType);
+    public ActionEditorPanel EditorPanel => _draft.EditorPanel;
 
-    public bool IsPasteTextAction
+    public bool IsPasteAction
     {
-        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.PasteText);
-        set { if (value) ActionType = SnippetActionType.PasteText; }
+        get => EditorPanel == ActionEditorPanel.Paste;
+        set { if (value && !IsPasteAction) ActivatePasteTextMode(); }
     }
 
-    public bool IsLaunchFileAction
+    public bool IsOpenLaunchAction
     {
-        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.LaunchFile);
-        set { if (value) ActionType = SnippetActionType.LaunchFile; }
-    }
-
-    public bool IsLaunchUrlAction
-    {
-        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.LaunchUrl);
-        set { if (value) ActionType = SnippetActionType.LaunchUrl; }
+        get => EditorPanel == ActionEditorPanel.OpenLaunch;
+        set { if (value && !IsOpenLaunchAction) ActivateOpenFileMode(); }
     }
 
     public bool IsMediaAction
     {
-        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.Media);
-        set { if (value) ActionType = SnippetActionType.MediaAction; }
+        get => EditorPanel == ActionEditorPanel.Media;
+        set { if (value && !IsMediaAction) ActivateMediaMode(); }
     }
 
-    public bool IsTerminalCommandAction
+    public bool IsSystemUtilityAction
     {
-        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.TerminalCommand);
-        set { if (value) ActionType = SnippetActionType.TerminalCommand; }
+        get => EditorPanel == ActionEditorPanel.SystemUtility;
+        set { if (value && !IsSystemUtilityAction) ActivateTurnOffDisplayMode(); }
     }
 
-    public bool IsTimerAction
+    public bool IsTerminalAction
     {
-        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.Timer);
-        set { if (value) ActionType = SnippetActionType.Timer; }
+        get => EditorPanel == ActionEditorPanel.Terminal;
+        set { if (value && !IsTerminalAction) ActivateCustomTerminalMode(); }
     }
 
-    public bool IsRemoteInstallAction
+    public bool IsAndroidAction
     {
-        get => ExecutableActionTypeCatalog.IsEditorPanel(ActionType, ActionEditorPanel.RemoteInstall);
-        set
-        {
-            if (value)
-            {
-                ActivateRemoteInstallAction();
-            }
-        }
+        get => EditorPanel == ActionEditorPanel.Android;
+        set { if (value && !IsAndroidAction) ActivateAdbConnectMode(); }
     }
 
     public string LaunchPath
@@ -277,13 +264,45 @@ public sealed class SnippetEditViewModel : ObservableObject
             if (_draft.FileActionMode == value) return;
             _draft.SetFileActionMode(value);
             OnPropertyChanged();
-            NotifyFileActionModeChanged();
-            NotifyImageChanged();
+            NotifyActionModeTransition();
         }
     }
 
-    public bool IsFileLaunchMode => IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Launch;
-    public bool IsFilePasteMode => IsLaunchFileAction && SelectedFileActionMode == FileActionMode.Paste;
+    public bool IsPasteTextMode
+    {
+        get => ActionType == SnippetActionType.PasteText;
+        set { if (value) ActivatePasteTextMode(); }
+    }
+
+    public bool IsFilePasteMode
+    {
+        get => ActionType == SnippetActionType.LaunchFile && SelectedFileActionMode == FileActionMode.Paste;
+        set { if (value) ActivatePasteFileMode(); }
+    }
+
+    public bool IsFileLaunchMode
+    {
+        get => ActionType == SnippetActionType.LaunchFile && SelectedFileActionMode == FileActionMode.Launch;
+        set { if (value) ActivateOpenFileMode(); }
+    }
+
+    public bool IsLaunchUrlMode
+    {
+        get => ActionType == SnippetActionType.LaunchUrl;
+        set { if (value) ActivateOpenUrlMode(); }
+    }
+
+    public bool IsTimerMode
+    {
+        get => ActionType == SnippetActionType.Timer;
+        set { if (value) ActivateTimerMode(); }
+    }
+
+    public bool IsRemoteInstallMode
+    {
+        get => ActionType == SnippetActionType.RemoteInstall;
+        set { if (value) ActivateRemoteInstallAction(); }
+    }
 
     public string FilePathLabel => IsFilePasteMode ? "붙여넣을 파일" : "실행할 파일, 폴더 또는 바로 가기";
     public string FilePickerButtonText => IsFilePasteMode ? "파일 선택" : "파일/바로 가기 선택";
@@ -336,13 +355,6 @@ public sealed class SnippetEditViewModel : ObservableObject
                 return;
             }
 
-            var isAdb = TerminalCommandParameterRules.IsAdbWirelessConnectCommand(value);
-            if (_isAdbPairingEnabled != isAdb)
-            {
-                _isAdbPairingEnabled = isAdb;
-                OnPropertyChanged(nameof(IsAdbPairingEnabled));
-            }
-
             if (TerminalCommandParameterRules.TryParseBluetoothAudioCommand(value, out var btCmd, allowEmptyTarget: true))
             {
                 _isBluetoothPresetSelected = true;
@@ -357,11 +369,7 @@ public sealed class SnippetEditViewModel : ObservableObject
                 _isBluetoothPresetSelected = false;
             }
 
-            OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
-            OnPropertyChanged(nameof(IsAdbPairingPresetActive));
-            OnPropertyChanged(nameof(IsBluetoothPresetActive));
-            OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
-            OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
+            NotifyActionModeTransition();
         }
     }
 
@@ -373,13 +381,40 @@ public sealed class SnippetEditViewModel : ObservableObject
             if (_showAdvancedTerminalSettings == value) return;
             _showAdvancedTerminalSettings = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(ShowTerminalCommandEditor));
         }
     }
 
-    public bool IsTurnOffDisplayPresetActive => TerminalCommandParameterRules.IsTurnOffDisplayCommand(TerminalCommand);
-    public bool IsAdbPairingPresetActive => TerminalCommandParameterRules.IsAdbWirelessConnectCommand(TerminalCommand);
-    public bool IsBluetoothPresetActive => _isBluetoothPresetSelected || TerminalCommandParameterRules.TryParseBluetoothAudioCommand(TerminalCommand, out _, allowEmptyTarget: true);
-    public bool IsCustomTerminalCommandActive => !IsTurnOffDisplayPresetActive && !IsAdbPairingPresetActive && !IsBluetoothPresetActive;
+    public bool IsTurnOffDisplayPresetActive
+    {
+        get => ActionType == SnippetActionType.TerminalCommand
+            && TerminalCommandParameterRules.IsTurnOffDisplayCommand(TerminalCommand);
+        set { if (value) ActivateTurnOffDisplayMode(); }
+    }
+
+    public bool IsAdbPairingPresetActive
+    {
+        get => ActionType == SnippetActionType.TerminalCommand
+            && TerminalCommandParameterRules.IsAdbWirelessConnectCommand(TerminalCommand);
+        set { if (value) ActivateAdbConnectMode(); }
+    }
+
+    public bool IsBluetoothPresetActive
+    {
+        get => ActionType == SnippetActionType.TerminalCommand
+            && (_isBluetoothPresetSelected
+                || TerminalCommandParameterRules.TryParseBluetoothAudioCommand(TerminalCommand, out _, allowEmptyTarget: true));
+        set { if (value) ActivateBluetoothMode(); }
+    }
+
+    public bool IsCustomTerminalCommandActive =>
+        ActionType == SnippetActionType.TerminalCommand
+        && !IsTurnOffDisplayPresetActive
+        && !IsAdbPairingPresetActive
+        && !IsBluetoothPresetActive;
+
+    public bool ShowTerminalCommandEditor =>
+        ActionType == SnippetActionType.TerminalCommand && ShowAdvancedTerminalSettings;
 
     public BluetoothAudioActionKind BluetoothControlAction
     {
@@ -434,10 +469,6 @@ public sealed class SnippetEditViewModel : ObservableObject
         OnPropertyChanged(nameof(HasDetectedAudioDeviceIcon));
     }
 
-    public IRelayCommand SelectTurnOffDisplayPresetCommand { get; }
-    public IRelayCommand SelectAdbPairingPresetCommand { get; }
-    public IRelayCommand SelectCustomTerminalCommandPresetCommand { get; }
-    public IRelayCommand SelectBluetoothPresetCommand { get; }
     public IRelayCommand ChooseBluetoothDeviceCommand { get; }
     public IRelayCommand ToggleAdvancedTerminalSettingsCommand { get; }
     public IRelayCommand SelectRemoteInstallTabletCommand { get; }
@@ -445,6 +476,8 @@ public sealed class SnippetEditViewModel : ObservableObject
     public IRelayCommand SelectRemoteInstallWatchCommand { get; }
     public IRelayCommand SelectRemoteInstallTabletPhoneComboCommand { get; }
     public IRelayCommand SelectRemoteInstallAllKindsCommand { get; }
+    public IRelayCommand SelectFixedRemoteInstallProjectModeCommand { get; }
+    public IRelayCommand SelectPromptRemoteInstallProjectModeCommand { get; }
     public IRelayCommand ChooseRemoteInstallProjectFolderCommand { get; }
     public IRelayCommand RescanRemoteInstallModulesCommand { get; }
     public IRelayCommand RefreshRemoteInstallDevicesCommand { get; }
@@ -538,6 +571,58 @@ public sealed class SnippetEditViewModel : ObservableObject
         set => SetDraftValue(_draft.RemoteInstallLaunchAfterInstall, value, static (draft, v) => draft.RemoteInstallLaunchAfterInstall = v);
     }
 
+    public bool RemoteInstallPromptProject
+    {
+        get => _draft.RemoteInstallPromptProject;
+        set
+        {
+            if (!SetDraftValue(_draft.RemoteInstallPromptProject, value, static (draft, v) => draft.RemoteInstallPromptProject = v))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsFixedRemoteInstallProjectMode));
+            OnPropertyChanged(nameof(Batch456ButtonText));
+            OnPropertyChanged(nameof(Batch456ButtonToolTip));
+
+            if (!value)
+            {
+                if (string.IsNullOrWhiteSpace(RemoteInstallProjectPath))
+                {
+                    var candidatePath = ResolveInitialRemoteInstallProjectPath();
+                    if (!string.IsNullOrWhiteSpace(candidatePath))
+                    {
+                        RemoteInstallProjectPath = candidatePath;
+                    }
+                }
+                else
+                {
+                    RefreshRemoteInstallModules(autoRecommendModule: string.IsNullOrWhiteSpace(RemoteInstallModule));
+                }
+            }
+
+            if (RemoteInstallRules.IsAutoGeneratedSlotTitle(SnippetTitle))
+            {
+                SnippetTitle = RemoteInstallRules.RecommendDefaultSlotTitle(
+                    RemoteInstallProjectPath,
+                    RemoteInstallDeviceKind,
+                    value);
+            }
+
+            ErrorMessage = string.Empty;
+        }
+    }
+
+    public bool IsFixedRemoteInstallProjectMode => !RemoteInstallPromptProject;
+
+    public string Batch456ButtonText => RemoteInstallPromptProject
+        ? "슬롯 4·5·6 일괄 배치 (실행 시 선택) ⚡"
+        : "슬롯 4·5·6 한 번에 배치 ⚡";
+
+    public string Batch456ButtonToolTip => RemoteInstallPromptProject
+        ? "실행 시 프로젝트 선택 모드로 이 카테고리의 슬롯 4(태블릿)·5(폰)·6(워치)을 한 번에 저장합니다."
+        : "현재 프로젝트 기준으로 이 카테고리의 슬롯 4(태블릿)·5(폰)·6(워치)을 한 번에 저장합니다.";
+
     public bool ShowAdvancedRemoteInstallSettings
     {
         get => _showAdvancedRemoteInstallSettings || !string.IsNullOrWhiteSpace(RemoteInstallTargetDevice);
@@ -568,18 +653,6 @@ public sealed class SnippetEditViewModel : ObservableObject
         set => SetDraftValue(_draft.OpenTerminalWindow, value, static (draft, v) => draft.OpenTerminalWindow = v);
     }
 
-    public bool IsAdbPairingEnabled
-    {
-        get => _isAdbPairingEnabled;
-        set
-        {
-            if (_isAdbPairingEnabled == value) return;
-            _isAdbPairingEnabled = value;
-            OnPropertyChanged();
-            if (value) ApplyAdbPairingDefaults();
-        }
-    }
-
     public string TerminalWorkingDirectory
     {
         get => _draft.TerminalWorkingDirectory;
@@ -595,7 +668,13 @@ public sealed class SnippetEditViewModel : ObservableObject
     public string Description
     {
         get => _draft.Description;
-        set => SetDraftValue(_draft.Description, value, static (draft, v) => draft.Description = v);
+        set
+        {
+            if (SetDraftValue(_draft.Description, value, static (draft, v) => draft.Description = v))
+            {
+                _hasAutoFilledDescription = false;
+            }
+        }
     }
 
     public bool IsSlotEnabled
@@ -820,59 +899,153 @@ public sealed class SnippetEditViewModel : ObservableObject
         ErrorMessage = string.Empty;
     }
 
-    private void ApplyAdbPairingDefaults()
+    private void ActivatePasteTextMode() => SwitchActionMode(_draft.ActivatePasteText);
+
+    private void ActivatePasteFileMode() => SwitchActionMode(_draft.ActivatePasteFile);
+
+    private void ActivateOpenFileMode() => SwitchActionMode(_draft.ActivateOpenFile);
+
+    private void ActivateOpenUrlMode() => SwitchActionMode(_draft.ActivateOpenUrl);
+
+    private void ActivateMediaMode() => SwitchActionMode(_draft.ActivateMedia);
+
+    private void ActivateTurnOffDisplayMode()
     {
-        _draft.ApplyAdbPairingDefaults();
-        NotifyTerminalPropertiesChanged();
+        SwitchActionMode(() =>
+        {
+            _isBluetoothPresetSelected = false;
+            _showAdvancedTerminalSettings = false;
+            _draft.ActivateTurnOffDisplay();
+            if (CanApplyAutoTitle())
+            {
+                ApplyAutoTitle("화면 끄기");
+            }
+
+            if (CanApplyAutoDescription())
+            {
+                ApplyAutoDescription(TurnOffDisplayDefaultDescription);
+            }
+        });
     }
 
-    private void SelectTurnOffDisplayPreset()
+    private void ActivateBluetoothMode()
     {
-        _draft.ApplyTurnOffDisplayDefaults();
-        if (string.IsNullOrWhiteSpace(SnippetTitle) || SnippetTitle == "새 실행 항목")
+        SwitchActionMode(() =>
         {
-            SnippetTitle = "화면 끄기";
+            _isBluetoothPresetSelected = true;
+            _showAdvancedTerminalSettings = false;
+            _draft.ActivateBluetoothControl(_bluetoothControlAction, _bluetoothTarget);
+        });
+    }
+
+    private void ActivateTimerMode()
+    {
+        SwitchActionMode(() =>
+        {
+            _isBluetoothPresetSelected = false;
+            _draft.ActivateTimer();
+            if (CanApplyAutoTitle())
+            {
+                ApplyAutoTitle("타이머");
+            }
+        });
+    }
+
+    private void ActivateCustomTerminalMode()
+    {
+        SwitchActionMode(() =>
+        {
+            _isBluetoothPresetSelected = false;
+            _showAdvancedTerminalSettings = true;
+            _draft.ActivateCustomTerminalCommand();
+        });
+    }
+
+    private void ActivateAdbConnectMode()
+    {
+        SwitchActionMode(() =>
+        {
+            _isBluetoothPresetSelected = false;
+            _showAdvancedTerminalSettings = false;
+            _draft.ActivateAdbConnect();
+        });
+    }
+
+    private void ActivateRemoteInstallAction()
+    {
+        ClearUntouchedAutoFilledPresetCopy();
+        _isBluetoothPresetSelected = false;
+        _draft.ActivateRemoteInstall();
+
+        if (!RemoteInstallPromptProject && string.IsNullOrWhiteSpace(RemoteInstallProjectPath))
+        {
+            var candidatePath = ResolveInitialRemoteInstallProjectPath();
+            if (!string.IsNullOrWhiteSpace(candidatePath))
+            {
+                RemoteInstallProjectPath = candidatePath;
+            }
+        }
+        else if (!RemoteInstallPromptProject)
+        {
+            RefreshRemoteInstallModules(autoRecommendModule: string.IsNullOrWhiteSpace(RemoteInstallModule));
         }
 
-        if (string.IsNullOrWhiteSpace(Description))
+        if (RemoteInstallRules.IsAutoGeneratedSlotTitle(SnippetTitle))
         {
-            Description = "모니터 화면을 끕니다. 핫스팟과 백그라운드 작업은 유지됩니다.";
+            SnippetTitle = RemoteInstallRules.RecommendDefaultSlotTitle(
+                RemoteInstallProjectPath,
+                RemoteInstallDeviceKind,
+                RemoteInstallPromptProject);
         }
 
-        _isAdbPairingEnabled = false;
-        _isBluetoothPresetSelected = false;
-        _showAdvancedTerminalSettings = false;
-        NotifyTerminalPropertiesChanged();
+        NotifyActionModeTransition();
+        _ = RefreshRemoteInstallDevicesAsync();
     }
 
-    private void SelectAdbPairingPreset()
+    private void SwitchActionMode(Action apply)
     {
-        _isBluetoothPresetSelected = false;
-        IsAdbPairingEnabled = true;
-        _showAdvancedTerminalSettings = false;
-        NotifyTerminalPropertiesChanged();
+        ClearUntouchedAutoFilledPresetCopy();
+        apply();
+        NotifyActionModeTransition();
     }
 
-    private void SelectCustomTerminalCommandPreset()
+    private bool CanApplyAutoTitle() =>
+        string.IsNullOrWhiteSpace(SnippetTitle) || SnippetTitle == "새 실행 항목" || _hasAutoFilledTitle;
+
+    private bool CanApplyAutoDescription() =>
+        string.IsNullOrWhiteSpace(Description) || _hasAutoFilledDescription;
+
+    private void ApplyAutoTitle(string title)
     {
-        if (IsTurnOffDisplayPresetActive || TerminalCommandParameterRules.TryParseBluetoothAudioCommand(TerminalCommand, out _, allowEmptyTarget: true))
+        _draft.Title = title;
+        _hasAutoFilledTitle = true;
+        OnPropertyChanged(nameof(SnippetTitle));
+        NotifyDetectedAudioIconChanged();
+    }
+
+    private void ApplyAutoDescription(string description)
+    {
+        _draft.Description = description;
+        _hasAutoFilledDescription = true;
+        OnPropertyChanged(nameof(Description));
+    }
+
+    private void ClearUntouchedAutoFilledPresetCopy()
+    {
+        if (_hasAutoFilledTitle)
         {
-            TerminalCommand = string.Empty;
+            _draft.Title = string.Empty;
+            _hasAutoFilledTitle = false;
+            OnPropertyChanged(nameof(SnippetTitle));
+            NotifyDetectedAudioIconChanged();
         }
 
-        _isBluetoothPresetSelected = false;
-        _isAdbPairingEnabled = false;
-        _showAdvancedTerminalSettings = true;
-        NotifyTerminalPropertiesChanged();
-    }
-
-    private void SelectBluetoothPreset()
-    {
-        _isBluetoothPresetSelected = true;
-        _isAdbPairingEnabled = false;
-        _showAdvancedTerminalSettings = false;
-        _draft.ApplyBluetoothControlDefaults(_bluetoothControlAction, _bluetoothTarget);
-        NotifyTerminalPropertiesChanged();
+        if (_hasAutoFilledDescription)
+        {
+            _draft.Description = string.Empty;
+            _hasAutoFilledDescription = false;
+            OnPropertyChanged(nameof(Description));
+        }
     }
 
     private void SyncBluetoothTerminalCommand()
@@ -887,7 +1060,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         if (selected is null) return;
 
         BluetoothTarget = selected.MacAddress;
-        if (string.IsNullOrWhiteSpace(SnippetTitle) || SnippetTitle == "새 실행 항목")
+        if (CanApplyAutoTitle())
         {
             var suffix = IsBluetoothDisconnectAction ? "off" : "on";
             SnippetTitle = $"{selected.DisplayName} {suffix}";
@@ -901,31 +1074,6 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private void ToggleAdvancedRemoteInstallSettings() =>
         ShowAdvancedRemoteInstallSettings = !_showAdvancedRemoteInstallSettings;
-
-    private void ActivateRemoteInstallAction()
-    {
-        ActionType = SnippetActionType.RemoteInstall;
-
-        if (string.IsNullOrWhiteSpace(RemoteInstallProjectPath))
-        {
-            var candidatePath = ResolveInitialRemoteInstallProjectPath();
-            if (!string.IsNullOrWhiteSpace(candidatePath))
-            {
-                RemoteInstallProjectPath = candidatePath;
-            }
-        }
-        else
-        {
-            RefreshRemoteInstallModules(autoRecommendModule: string.IsNullOrWhiteSpace(RemoteInstallModule));
-        }
-
-        if (RemoteInstallRules.IsAutoGeneratedSlotTitle(SnippetTitle))
-        {
-            SnippetTitle = RemoteInstallRules.RecommendDefaultSlotTitle(RemoteInstallProjectPath, RemoteInstallDeviceKind);
-        }
-
-        _ = RefreshRemoteInstallDevicesAsync();
-    }
 
     private void ToggleRemoteInstallDeviceKind(RemoteInstallDeviceKind kind)
     {
@@ -958,7 +1106,10 @@ public sealed class SnippetEditViewModel : ObservableObject
 
         if (RemoteInstallRules.IsAutoGeneratedSlotTitle(SnippetTitle))
         {
-            SnippetTitle = RemoteInstallRules.RecommendDefaultSlotTitle(RemoteInstallProjectPath, kind);
+            SnippetTitle = RemoteInstallRules.RecommendDefaultSlotTitle(
+                RemoteInstallProjectPath,
+                kind,
+                RemoteInstallPromptProject);
         }
 
         ErrorMessage = string.Empty;
@@ -1049,27 +1200,31 @@ public sealed class SnippetEditViewModel : ObservableObject
 
     private void ApplyBatch456RemoteInstallSlots()
     {
-        if (string.IsNullOrWhiteSpace(RemoteInstallProjectPath))
+        List<string> moduleNames = [];
+        if (!RemoteInstallPromptProject)
         {
-            ErrorMessage = RemoteInstallRules.ProjectPathRequiredMessage;
-            return;
-        }
-
-        var modules = _androidRemoteInstallGateway?.ScanProjectModules(RemoteInstallProjectPath) ?? [];
-        var moduleNames = modules.Select(static m => m.ModuleName).ToList();
-        if (moduleNames.Count == 0 && !string.IsNullOrWhiteSpace(RemoteInstallModule))
-        {
-            var fallbackMod = RemoteInstallRules.NormalizeModuleName(RemoteInstallModule);
-            if (!string.IsNullOrWhiteSpace(fallbackMod))
+            if (string.IsNullOrWhiteSpace(RemoteInstallProjectPath))
             {
-                moduleNames.Add(fallbackMod);
+                ErrorMessage = RemoteInstallRules.ProjectPathRequiredMessage;
+                return;
             }
-        }
 
-        if (moduleNames.Count == 0)
-        {
-            ErrorMessage = "선택한 폴더에서 Android 앱 모듈(settings.gradle)을 찾지 못했습니다.";
-            return;
+            var modules = _androidRemoteInstallGateway?.ScanProjectModules(RemoteInstallProjectPath) ?? [];
+            moduleNames = modules.Select(static m => m.ModuleName).ToList();
+            if (moduleNames.Count == 0 && !string.IsNullOrWhiteSpace(RemoteInstallModule))
+            {
+                var fallbackMod = RemoteInstallRules.NormalizeModuleName(RemoteInstallModule);
+                if (!string.IsNullOrWhiteSpace(fallbackMod))
+                {
+                    moduleNames.Add(fallbackMod);
+                }
+            }
+
+            if (moduleNames.Count == 0)
+            {
+                ErrorMessage = "선택한 폴더에서 Android 앱 모듈(settings.gradle)을 찾지 못했습니다.";
+                return;
+            }
         }
 
         var batchTargets = new (SlotKey Slot, RemoteInstallDeviceKind Kind)[]
@@ -1082,20 +1237,29 @@ public sealed class SnippetEditViewModel : ObservableObject
         Snippet? lastSaved = null;
         foreach (var (slot, kind) in batchTargets)
         {
-            var moduleForKind = RemoteInstallRules.RecommendModuleForDeviceKind(moduleNames, kind) ?? moduleNames[0];
-            var title = RemoteInstallRules.RecommendDefaultSlotTitle(RemoteInstallProjectPath, kind);
+            var moduleForKind = RemoteInstallPromptProject
+                ? null
+                : RemoteInstallRules.RecommendModuleForDeviceKind(moduleNames, kind) ?? moduleNames[0];
+            var title = RemoteInstallRules.RecommendDefaultSlotTitle(
+                RemoteInstallProjectPath,
+                kind,
+                RemoteInstallPromptProject);
+            var description = RemoteInstallPromptProject
+                ? $"{RemoteInstallRules.GetDeviceKindKoreanLabel(kind)} 원격설치 (실행 시 프로젝트 선택)"
+                : $"{RemoteInstallRules.GetDeviceKindKoreanLabel(kind)} ({moduleForKind}) 원격설치";
             var saveData = new SnippetSaveData(
                 Title: title,
                 Content: string.Empty,
-                Description: $"{RemoteInstallRules.GetDeviceKindKoreanLabel(kind)} ({moduleForKind}) 원격설치",
+                Description: description,
                 ImagePath: null,
                 ThumbnailPath: null,
                 ActionType: SnippetActionType.RemoteInstall,
-                RemoteInstallProjectPath: RemoteInstallProjectPath.Trim(),
+                RemoteInstallProjectPath: RemoteInstallPromptProject ? null : RemoteInstallProjectPath.Trim(),
                 RemoteInstallModule: moduleForKind,
                 RemoteInstallDeviceKind: kind,
                 RemoteInstallTargetDevice: null,
-                RemoteInstallLaunchAfterInstall: RemoteInstallLaunchAfterInstall);
+                RemoteInstallLaunchAfterInstall: RemoteInstallLaunchAfterInstall,
+                RemoteInstallPromptProject: RemoteInstallPromptProject);
 
             var existingId = slot == SlotKey ? _snippetId : null;
             var result = _saveSnippetUseCase.Execute(new SaveSnippetRequest(
@@ -1122,7 +1286,9 @@ public sealed class SnippetEditViewModel : ObservableObject
         {
             _draft.MarkSaved();
             ErrorMessage = string.Empty;
-            _showStatus("슬롯 4(태블릿) · 5(폰) · 6(워치) 원격설치 구성을 저장했습니다.");
+            _showStatus(RemoteInstallPromptProject
+                ? "슬롯 4(태블릿) · 5(폰) · 6(워치) 실행 시 선택형 원격설치 구성을 저장했습니다."
+                : "슬롯 4(태블릿) · 5(폰) · 6(워치) 원격설치 구성을 저장했습니다.");
             _afterSave(lastSaved);
         }
     }
@@ -1155,13 +1321,24 @@ public sealed class SnippetEditViewModel : ObservableObject
         return null;
     }
 
+    private void NotifyActionModeTransition()
+    {
+        OnPropertyChanged(nameof(ActionType));
+        OnPropertyChanged(nameof(SelectedFileActionMode));
+        NotifyActionTypePresentationChanged();
+        NotifyFileActionModeChanged();
+        NotifyTerminalPropertiesChanged();
+        OnPropertyChanged(nameof(ShowSpotifyMediaConnectionNotice));
+        NotifyImageChanged();
+        NotifyDetectedAudioIconChanged();
+    }
+
     private void NotifyTerminalPropertiesChanged()
     {
         OnPropertyChanged(nameof(TerminalCommand));
         OnPropertyChanged(nameof(SelectedTerminalShell));
         OnPropertyChanged(nameof(OpenTerminalWindow));
         OnPropertyChanged(nameof(RunAsAdministrator));
-        OnPropertyChanged(nameof(IsAdbPairingEnabled));
         OnPropertyChanged(nameof(IsTurnOffDisplayPresetActive));
         OnPropertyChanged(nameof(IsAdbPairingPresetActive));
         OnPropertyChanged(nameof(IsBluetoothPresetActive));
@@ -1170,6 +1347,7 @@ public sealed class SnippetEditViewModel : ObservableObject
         OnPropertyChanged(nameof(BluetoothTarget));
         OnPropertyChanged(nameof(IsCustomTerminalCommandActive));
         OnPropertyChanged(nameof(ShowAdvancedTerminalSettings));
+        OnPropertyChanged(nameof(ShowTerminalCommandEditor));
         ErrorMessage = string.Empty;
     }
 
@@ -1183,13 +1361,16 @@ public sealed class SnippetEditViewModel : ObservableObject
     private void NotifyActionTypePresentationChanged()
     {
         OnPropertyChanged(nameof(EditorPanel));
-        OnPropertyChanged(nameof(IsPasteTextAction));
-        OnPropertyChanged(nameof(IsLaunchFileAction));
-        OnPropertyChanged(nameof(IsLaunchUrlAction));
+        OnPropertyChanged(nameof(IsPasteAction));
+        OnPropertyChanged(nameof(IsOpenLaunchAction));
         OnPropertyChanged(nameof(IsMediaAction));
-        OnPropertyChanged(nameof(IsTerminalCommandAction));
-        OnPropertyChanged(nameof(IsTimerAction));
-        OnPropertyChanged(nameof(IsRemoteInstallAction));
+        OnPropertyChanged(nameof(IsSystemUtilityAction));
+        OnPropertyChanged(nameof(IsTerminalAction));
+        OnPropertyChanged(nameof(IsAndroidAction));
+        OnPropertyChanged(nameof(IsPasteTextMode));
+        OnPropertyChanged(nameof(IsLaunchUrlMode));
+        OnPropertyChanged(nameof(IsTimerMode));
+        OnPropertyChanged(nameof(IsRemoteInstallMode));
     }
 
     private void NotifyFileActionModeChanged()
@@ -1272,15 +1453,6 @@ public sealed record PasteShortcutModeOption(PasteShortcutMode Mode, string Labe
     [
         new(PasteShortcutMode.CtrlV, "기본 붙여넣기 (Ctrl+V)"),
         new(PasteShortcutMode.CtrlShiftV, "터미널 붙여넣기 (Ctrl+Shift+V)")
-    ];
-}
-
-public sealed record FileActionModeOption(FileActionMode Mode, string Label)
-{
-    public static IReadOnlyList<FileActionModeOption> All { get; } =
-    [
-        new(FileActionMode.Launch, "실행"),
-        new(FileActionMode.Paste, "파일 붙여넣기")
     ];
 }
 

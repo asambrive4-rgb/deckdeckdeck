@@ -555,14 +555,14 @@
     </Style>
 
     <Style x:Key="Deck.ActionTypeToggleStyle" TargetType="{x:Type RadioButton}">
-        <Setter Property="Margin" Value="0,0,6,6" />
-        <Setter Property="MinHeight" Value="36" />
-        <Setter Property="Padding" Value="6,6" />
+        <Setter Property="Margin" Value="3" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="4,6" />
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
         <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
         <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource Deck.Brush.Text.Primary}" />
         <Setter Property="FocusVisualStyle" Value="{StaticResource Deck.FocusVisualStyle}" />
@@ -639,12 +639,21 @@
         </Setter>
     </Style>
 
+    <Style x:Key="Deck.SubModeToggleStyle"
+           BasedOn="{StaticResource Deck.ActionTypeToggleStyle}"
+           TargetType="{x:Type RadioButton}">
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Padding" Value="6,5" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Margin" Value="3" />
+    </Style>
+
     <Style x:Key="Deck.TerminalPresetButtonStyle"
            BasedOn="{StaticResource Deck.SecondaryButtonStyle}"
            TargetType="{x:Type Button}">
         <Setter Property="Width" Value="Auto" />
-        <Setter Property="MinHeight" Value="58" />
-        <Setter Property="Padding" Value="2,6" />
+        <Setter Property="MinHeight" Value="54" />
+        <Setter Property="Padding" Value="6,6" />
         <Setter Property="Background" Value="{StaticResource Deck.Brush.Background.Surface}" />
         <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Line.Soft}" />
         <Setter Property="BorderThickness" Value="{StaticResource Deck.Thickness.Border}" />

@@ -523,6 +523,127 @@ public sealed class MainViewModelNavigationTests
     }
 
     [Fact]
+    public void Numpad8CategoryHotkeyAlwaysBypassesCacheAndRebuildsCategory()
+    {
+        var services = CreateServices();
+        services.CategoryRepository.Create(SlotKey.Numpad1, "General", null);
+        services.CategoryRepository.Create(SlotKey.Numpad8, "Android", null);
+        var viewModel = CreateMainViewModel(services);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        var cachedGeneral = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        viewModel.OpenHomeFromHotkey();
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad1);
+        Assert.Same(cachedGeneral, viewModel.CurrentViewModel);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad8);
+        var first = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+
+        // Ctrl + 8 while already on category 8 still creates a fresh instance.
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad8);
+        var second = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        Assert.NotSame(first, second);
+
+        // Ctrl + 8 after returning to Home also ignores LRU cache.
+        viewModel.OpenHomeFromHotkey();
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad8);
+        var third = Assert.IsType<CategoryViewModel>(viewModel.CurrentViewModel);
+        Assert.NotSame(second, third);
+    }
+
+    [Fact]
+    public async Task Numpad8CategoryHotkeyRescansAndroidDevicesOnEveryPress()
+    {
+        var services = CreateServices();
+        var category = services.CategoryRepository.Create(SlotKey.Numpad8, "Android", null);
+        services.SnippetRepository.Create(category.Id, SlotKey.Numpad4, new SnippetSaveData(
+            Title: "폰 원격설치",
+            Content: string.Empty,
+            Description: null,
+            ImagePath: null,
+            ThumbnailPath: null,
+            ActionType: SnippetActionType.RemoteInstall,
+            RemoteInstallProjectPath: @"C:\Projects\SampleApp",
+            RemoteInstallModule: ":app",
+            RemoteInstallDeviceKind: RemoteInstallDeviceKind.Phone));
+
+        var spyGateway = new SpyAndroidGateway();
+        var composition = AppComposition.Create(
+            services.CategoryRepository,
+            services.BackupGateway,
+            new DialogAdapter(),
+            services.SettingsRepository,
+            services.SnippetRepository,
+            services.HotkeyActionRepository,
+            services.SnippetImageResolver,
+            new RecordingClipboardPasteGateway(),
+            new RecordingFileLaunchGatewayAdapter(),
+            new RecordingUrlLaunchGatewayAdapter(),
+            new RecordingSystemMediaActionGatewayAdapter(),
+            new RecordingTerminalCommandGatewayAdapter(),
+            new SpotifyConnectionGatewayAdapter(new RecordingUrlLaunchGatewayAdapter()),
+            new RecordingSpotifyMediaActionGatewayAdapter(),
+            new RecordingStartupRegistrationGateway(),
+            services.StoredImagePathResolver,
+            services.FileLogger,
+            services.ImageFileRepository,
+            new SlotGridViewModelFactory(services.StoredImagePathResolver, services.SnippetImageResolver),
+            new FakeClipboardAdapter(null),
+            new RecordingFilePasteGateway(),
+            androidRemoteInstallGateway: spyGateway);
+
+        using var viewModel = new MainViewModel(
+            composition.CreateMainViewModelDependencies(
+                autoBackupCoordinator: null,
+                executeActionAsync: _ => Task.CompletedTask,
+                bluetoothAudioStatusGateway: new StubBluetoothAudioStatusGateway()));
+        viewModel.InitializeHome();
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad8);
+        await spyGateway.WaitForScanCountAsync(1);
+
+        viewModel.OpenHomeFromHotkey();
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad8);
+        await spyGateway.WaitForScanCountAsync(2);
+
+        viewModel.OpenCategoryFromHotkey(SlotKey.Numpad8);
+        await spyGateway.WaitForScanCountAsync(3);
+
+        Assert.Equal(3, spyGateway.ScanCallCount);
+    }
+
+    private sealed class SpyAndroidGateway : IAndroidRemoteInstallGateway
+    {
+        private int _scanCallCount;
+
+        public int ScanCallCount => Volatile.Read(ref _scanCallCount);
+
+        public IReadOnlyList<AndroidAppModuleInfo> ScanProjectModules(string? projectPath) => [];
+
+        public Task<IReadOnlyList<AndroidConnectedDeviceInfo>> ScanConnectedDevicesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _scanCallCount);
+            return Task.FromResult<IReadOnlyList<AndroidConnectedDeviceInfo>>([]);
+        }
+
+        public Task<bool> TryStartRemoteInstallAsync(
+            AndroidRemoteInstallRequest request,
+            CancellationToken cancellationToken = default) => Task.FromResult(true);
+
+        public async Task WaitForScanCountAsync(int expectedCount)
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(2);
+            while (ScanCallCount < expectedCount && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(15);
+            }
+
+            Assert.True(ScanCallCount >= expectedCount, $"Expected at least {expectedCount} scans, got {ScanCallCount}.");
+        }
+    }
+
+    [Fact]
     public void SaveWindowPlacementDoesNotRequestAutoBackup()
     {
         var services = CreateServices();

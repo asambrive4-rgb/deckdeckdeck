@@ -29,7 +29,8 @@ public static class ExecutableActionStorageRules
         string? remoteInstallModule = null,
         RemoteInstallDeviceKind? remoteInstallDeviceKind = null,
         string? remoteInstallTargetDevice = null,
-        bool remoteInstallLaunchAfterInstall = true)
+        bool remoteInstallLaunchAfterInstall = true,
+        bool remoteInstallPromptProject = false)
     {
         var storedImageMode = GetStoredSlotImageMode(slotImageMode, imagePath);
         var isTerminal = actionType == SnippetActionType.TerminalCommand;
@@ -72,10 +73,10 @@ public static class ExecutableActionStorageRules
             isTerminal
                 ? NormalizeOptionalText(adbDeviceIp)
                 : null,
-            isRemoteInstall
+            isRemoteInstall && !remoteInstallPromptProject
                 ? NormalizeOptionalText(remoteInstallProjectPath)
                 : null,
-            isRemoteInstall
+            isRemoteInstall && !remoteInstallPromptProject
                 ? RemoteInstallRules.NormalizeModuleName(remoteInstallModule)
                 : null,
             isRemoteInstall
@@ -86,7 +87,8 @@ public static class ExecutableActionStorageRules
             isRemoteInstall
                 ? NormalizeOptionalText(remoteInstallTargetDevice)
                 : null,
-            !isRemoteInstall || remoteInstallLaunchAfterInstall);
+            !isRemoteInstall || remoteInstallLaunchAfterInstall,
+            isRemoteInstall && remoteInstallPromptProject);
     }
 
     private static string? NormalizeOptionalText(string? value) =>
@@ -121,4 +123,5 @@ public sealed record ExecutableActionStorageData(
     string? RemoteInstallModule = null,
     RemoteInstallDeviceKind? RemoteInstallDeviceKind = null,
     string? RemoteInstallTargetDevice = null,
-    bool RemoteInstallLaunchAfterInstall = true);
+    bool RemoteInstallLaunchAfterInstall = true,
+    bool RemoteInstallPromptProject = false);

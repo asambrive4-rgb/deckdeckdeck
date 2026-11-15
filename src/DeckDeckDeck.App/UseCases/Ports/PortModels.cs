@@ -32,7 +32,8 @@ public sealed record SnippetSaveData(
     string? RemoteInstallModule = null,
     RemoteInstallDeviceKind? RemoteInstallDeviceKind = null,
     string? RemoteInstallTargetDevice = null,
-    bool RemoteInstallLaunchAfterInstall = true);
+    bool RemoteInstallLaunchAfterInstall = true,
+    bool RemoteInstallPromptProject = false);
 
 public sealed record HotkeyActionSaveData(
     string Title,
@@ -61,7 +62,8 @@ public sealed record HotkeyActionSaveData(
     string? RemoteInstallModule = null,
     RemoteInstallDeviceKind? RemoteInstallDeviceKind = null,
     string? RemoteInstallTargetDevice = null,
-    bool RemoteInstallLaunchAfterInstall = true);
+    bool RemoteInstallLaunchAfterInstall = true,
+    bool RemoteInstallPromptProject = false);
 
 public enum FilePasteGatewayStatus
 {
@@ -174,3 +176,23 @@ public sealed record AndroidRemoteInstallRequest(
     RemoteInstallDeviceKind TargetDeviceKind,
     string? TargetDeviceFilter,
     bool LaunchAfterInstall);
+
+public sealed record RemoteInstallProjectCandidate(
+    string ProjectPath,
+    string ProjectName,
+    bool IsRecent,
+    bool ExistsOnDisk = true,
+    string? SourceBadge = null);
+
+public sealed record RemoteInstallProjectPromptRequest(
+    string SlotTitle,
+    RemoteInstallDeviceKind TargetDeviceKind,
+    string? TargetDeviceFilter,
+    IReadOnlyList<RemoteInstallProjectCandidate> RecentProjects,
+    IReadOnlyList<RemoteInstallProjectCandidate> AllProjects,
+    Func<string, IReadOnlyList<AndroidAppModuleInfo>> ScanModules,
+    Func<CancellationToken, Task<IReadOnlyList<AndroidConnectedDeviceInfo>>>? ScanConnectedDevicesAsync = null);
+
+public sealed record RemoteInstallProjectSelection(
+    string ProjectPath,
+    string ModuleName);

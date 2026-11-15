@@ -203,7 +203,9 @@ internal sealed record AppComposition(
                 slotTimerCoordinator,
                 displayPowerGateway: new DisplayPowerGatewayAdapter(),
                 bluetoothDeviceControlGateway: new WindowsBluetoothDeviceControlGateway(fileLogger),
-                androidRemoteInstallGateway: androidRemoteInstallGateway);
+                androidRemoteInstallGateway: androidRemoteInstallGateway,
+                settingsRepository: settingsRepository,
+                snippetRepository: snippetRepository);
         }
 
         return new AppComposition(
@@ -325,7 +327,9 @@ internal sealed record AppComposition(
                 effectiveSlotTimerCoordinator,
                 displayPowerGateway: displayPowerGateway ?? new DisplayPowerGatewayAdapter(),
                 bluetoothDeviceControlGateway: bluetoothDeviceControlGateway ?? new WindowsBluetoothDeviceControlGateway(fileLogger),
-                androidRemoteInstallGateway: effectiveAndroidRemoteInstallGateway),
+                androidRemoteInstallGateway: effectiveAndroidRemoteInstallGateway,
+                settingsRepository: settingsRepository,
+                snippetRepository: snippetRepository),
             new ResolveCategoryHotkeyUseCase(categoryRepository, settingsRepository),
             new SpotifyConnectionUseCase(
                 settingsRepository,
@@ -456,7 +460,9 @@ internal sealed record AppComposition(
         ITimerActionGateway? timerActionGateway = null,
         IDisplayPowerGateway? displayPowerGateway = null,
         IBluetoothDeviceControlGateway? bluetoothDeviceControlGateway = null,
-        IAndroidRemoteInstallGateway? androidRemoteInstallGateway = null)
+        IAndroidRemoteInstallGateway? androidRemoteInstallGateway = null,
+        ISettingsRepository? settingsRepository = null,
+        ISnippetRepository? snippetRepository = null)
     {
         return new ExecuteSnippetActionUseCase(
             clipboardPasteGateway,
@@ -470,7 +476,9 @@ internal sealed record AppComposition(
             timerActionGateway,
             displayPowerGateway: displayPowerGateway ?? new DisplayPowerGatewayAdapter(),
             bluetoothDeviceControlGateway: bluetoothDeviceControlGateway ?? new WindowsBluetoothDeviceControlGateway(),
-            androidRemoteInstallGateway: androidRemoteInstallGateway ?? new AndroidRemoteInstallGateway());
+            androidRemoteInstallGateway: androidRemoteInstallGateway ?? new AndroidRemoteInstallGateway(),
+            settingsRepository: settingsRepository,
+            snippetRepository: snippetRepository);
     }
 
     private static TimeSpan? PromptTimerDuration()

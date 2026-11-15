@@ -225,6 +225,64 @@ public sealed class ExecutableActionEditDraftTests
         Assert.False(draft.RunAsAdministrator);
     }
 
+    [Fact]
+    public void UnifiedActivateTransitions_MapAllSixPanelsAndSubModesCleanly()
+    {
+        var draft = ExecutableActionEditDraft.FromSnippet(null, null);
+
+        draft.ActivatePasteFile();
+        Assert.Equal(SnippetActionType.LaunchFile, draft.ActionType);
+        Assert.Equal(FileActionMode.Paste, draft.FileActionMode);
+        Assert.Equal(ActionEditorPanel.Paste, draft.EditorPanel);
+
+        draft.ActivateOpenFile();
+        Assert.Equal(SnippetActionType.LaunchFile, draft.ActionType);
+        Assert.Equal(FileActionMode.Launch, draft.FileActionMode);
+        Assert.Equal(ActionEditorPanel.OpenLaunch, draft.EditorPanel);
+
+        draft.ActivateOpenUrl();
+        Assert.Equal(SnippetActionType.LaunchUrl, draft.ActionType);
+        Assert.Equal(ActionEditorPanel.OpenLaunch, draft.EditorPanel);
+
+        draft.ActivateMedia();
+        Assert.Equal(SnippetActionType.MediaAction, draft.ActionType);
+        Assert.Equal(ActionEditorPanel.Media, draft.EditorPanel);
+
+        draft.ActivateTurnOffDisplay();
+        Assert.Equal(SnippetActionType.TerminalCommand, draft.ActionType);
+        Assert.Equal(TerminalCommandParameterRules.TurnOffDisplayCommand, draft.TerminalCommand);
+        Assert.Equal(ActionEditorPanel.SystemUtility, draft.EditorPanel);
+
+        draft.ActivateBluetoothControl(BluetoothAudioActionKind.Disconnect, "WH-1000XM5");
+        Assert.Equal(SnippetActionType.TerminalCommand, draft.ActionType);
+        Assert.Equal(ActionEditorPanel.SystemUtility, draft.EditorPanel);
+        Assert.Contains("disconnect", draft.TerminalCommand, StringComparison.Ordinal);
+
+        draft.ActivateTimer();
+        Assert.Equal(SnippetActionType.Timer, draft.ActionType);
+        Assert.Equal(ActionEditorPanel.SystemUtility, draft.EditorPanel);
+
+        draft.ActivateAdbConnect();
+        Assert.Equal(SnippetActionType.TerminalCommand, draft.ActionType);
+        Assert.Equal(TerminalCommandParameterRules.AdbWirelessPowerShellExample, draft.TerminalCommand);
+        Assert.Equal(ActionEditorPanel.Android, draft.EditorPanel);
+
+        // Switching from a preset (ADB/BT/Display) into Terminal clears the preset command.
+        draft.ActivateCustomTerminalCommand();
+        Assert.Equal(SnippetActionType.TerminalCommand, draft.ActionType);
+        Assert.Equal(string.Empty, draft.TerminalCommand);
+        Assert.Equal(ActionEditorPanel.Terminal, draft.EditorPanel);
+
+        // Custom terminal commands stay intact when re-activating Terminal.
+        draft.TerminalCommand = "Get-Date";
+        draft.ActivateCustomTerminalCommand();
+        Assert.Equal("Get-Date", draft.TerminalCommand);
+
+        draft.ActivateRemoteInstall();
+        Assert.Equal(SnippetActionType.RemoteInstall, draft.ActionType);
+        Assert.Equal(ActionEditorPanel.Android, draft.EditorPanel);
+    }
+
     private sealed class PrefixPathResolver : IStoredImagePathResolver
     {
         private readonly string _prefix;
