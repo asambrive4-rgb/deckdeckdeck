@@ -114,9 +114,11 @@ public sealed class SnippetEditViewModel : ObservableObject
         SelectBluetoothPresetCommand = new RelayCommand(SelectBluetoothPreset);
         ChooseBluetoothDeviceCommand = new RelayCommand(ChooseBluetoothDevice);
         ToggleAdvancedTerminalSettingsCommand = new RelayCommand(ToggleAdvancedTerminalSettings);
-        SelectRemoteInstallTabletCommand = new RelayCommand(() => SelectRemoteInstallDeviceKind(RemoteInstallDeviceKind.Tablet));
-        SelectRemoteInstallPhoneCommand = new RelayCommand(() => SelectRemoteInstallDeviceKind(RemoteInstallDeviceKind.Phone));
-        SelectRemoteInstallWatchCommand = new RelayCommand(() => SelectRemoteInstallDeviceKind(RemoteInstallDeviceKind.Watch));
+        SelectRemoteInstallTabletCommand = new RelayCommand(() => ToggleRemoteInstallDeviceKind(RemoteInstallDeviceKind.Tablet));
+        SelectRemoteInstallPhoneCommand = new RelayCommand(() => ToggleRemoteInstallDeviceKind(RemoteInstallDeviceKind.Phone));
+        SelectRemoteInstallWatchCommand = new RelayCommand(() => ToggleRemoteInstallDeviceKind(RemoteInstallDeviceKind.Watch));
+        SelectRemoteInstallTabletPhoneComboCommand = new RelayCommand(() => SetRemoteInstallDeviceKind(RemoteInstallDeviceKind.Tablet | RemoteInstallDeviceKind.Phone));
+        SelectRemoteInstallAllKindsCommand = new RelayCommand(() => SetRemoteInstallDeviceKind(RemoteInstallDeviceKind.Tablet | RemoteInstallDeviceKind.Phone | RemoteInstallDeviceKind.Watch));
         ChooseRemoteInstallProjectFolderCommand = new RelayCommand(ChooseRemoteInstallProjectFolder);
         RescanRemoteInstallModulesCommand = new RelayCommand(() => RefreshRemoteInstallModules(autoRecommendModule: false));
         RefreshRemoteInstallDevicesCommand = new RelayCommand(() => _ = RefreshRemoteInstallDevicesAsync());
@@ -441,6 +443,8 @@ public sealed class SnippetEditViewModel : ObservableObject
     public IRelayCommand SelectRemoteInstallTabletCommand { get; }
     public IRelayCommand SelectRemoteInstallPhoneCommand { get; }
     public IRelayCommand SelectRemoteInstallWatchCommand { get; }
+    public IRelayCommand SelectRemoteInstallTabletPhoneComboCommand { get; }
+    public IRelayCommand SelectRemoteInstallAllKindsCommand { get; }
     public IRelayCommand ChooseRemoteInstallProjectFolderCommand { get; }
     public IRelayCommand RescanRemoteInstallModulesCommand { get; }
     public IRelayCommand RefreshRemoteInstallDevicesCommand { get; }
@@ -478,12 +482,31 @@ public sealed class SnippetEditViewModel : ObservableObject
             OnPropertyChanged(nameof(IsRemoteInstallTabletSelected));
             OnPropertyChanged(nameof(IsRemoteInstallPhoneSelected));
             OnPropertyChanged(nameof(IsRemoteInstallWatchSelected));
+            OnPropertyChanged(nameof(IsRemoteInstallTabletPhoneComboSelected));
+            OnPropertyChanged(nameof(IsRemoteInstallAllKindsSelected));
+            OnPropertyChanged(nameof(RemoteInstallDeviceKindSelectionSummary));
         }
     }
 
-    public bool IsRemoteInstallTabletSelected => RemoteInstallDeviceKind == RemoteInstallDeviceKind.Tablet;
-    public bool IsRemoteInstallPhoneSelected => RemoteInstallDeviceKind == RemoteInstallDeviceKind.Phone;
-    public bool IsRemoteInstallWatchSelected => RemoteInstallDeviceKind == RemoteInstallDeviceKind.Watch;
+    public bool IsRemoteInstallTabletSelected => RemoteInstallDeviceKind.HasFlag(RemoteInstallDeviceKind.Tablet);
+    public bool IsRemoteInstallPhoneSelected => RemoteInstallDeviceKind.HasFlag(RemoteInstallDeviceKind.Phone);
+    public bool IsRemoteInstallWatchSelected => RemoteInstallDeviceKind.HasFlag(RemoteInstallDeviceKind.Watch);
+    public bool IsRemoteInstallTabletPhoneComboSelected =>
+        RemoteInstallDeviceKind == (RemoteInstallDeviceKind.Tablet | RemoteInstallDeviceKind.Phone);
+    public bool IsRemoteInstallAllKindsSelected =>
+        RemoteInstallDeviceKind == (RemoteInstallDeviceKind.Tablet | RemoteInstallDeviceKind.Phone | RemoteInstallDeviceKind.Watch);
+
+    public string RemoteInstallDeviceKindSelectionSummary
+    {
+        get
+        {
+            var count = RemoteInstallRules.SplitSelectedDeviceKinds(RemoteInstallDeviceKind).Count;
+            var label = RemoteInstallRules.GetDeviceKindKoreanLabel(RemoteInstallDeviceKind);
+            return count <= 1
+                ? $"선택됨: {label} (다른 기기 버튼을 추가로 눌러 동시 설치 가능)"
+                : $"선택됨: {label} ({count}종 동시 설치 · 1회 빌드 후 연결된 기기에 병렬 설치)";
+        }
+    }
 
     public string RemoteInstallProjectPath
     {
@@ -904,7 +927,22 @@ public sealed class SnippetEditViewModel : ObservableObject
         _ = RefreshRemoteInstallDevicesAsync();
     }
 
-    private void SelectRemoteInstallDeviceKind(RemoteInstallDeviceKind kind)
+    private void ToggleRemoteInstallDeviceKind(RemoteInstallDeviceKind kind)
+    {
+        var updated = RemoteInstallDeviceKind.HasFlag(kind)
+            ? RemoteInstallDeviceKind & ~kind
+            : RemoteInstallDeviceKind | kind;
+
+        // Keep at least one device kind selected so the user cannot accidentally clear all targets.
+        if (updated == RemoteInstallDeviceKind.None)
+        {
+            return;
+        }
+
+        SetRemoteInstallDeviceKind(updated);
+    }
+
+    private void SetRemoteInstallDeviceKind(RemoteInstallDeviceKind kind)
     {
         RemoteInstallDeviceKind = kind;
 

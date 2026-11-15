@@ -80,6 +80,11 @@ public static class SnippetRules
             }
 
             normalizedRemoteInstallProjectPath = remoteInstallProjectPath.Trim();
+            if (remoteInstallDeviceKind == RemoteInstallDeviceKind.None)
+            {
+                return SnippetSaveValidationResult.Failure(RemoteInstallRules.DeviceKindRequiredMessage);
+            }
+
             normalizedRemoteInstallDeviceKind = remoteInstallDeviceKind ?? RemoteInstallDeviceKind.Phone;
             normalizedRemoteInstallTargetDevice = string.IsNullOrWhiteSpace(remoteInstallTargetDevice)
                 ? null

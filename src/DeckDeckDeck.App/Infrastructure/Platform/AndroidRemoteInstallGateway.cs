@@ -180,7 +180,8 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
         AndroidRemoteInstallRequest request,
         bool skipBuild,
         bool uninstallFirst,
-        CancellationToken externalCancellationToken)
+        CancellationToken externalCancellationToken,
+        IReadOnlySet<string>? uninstallSerials = null)
     {
         using var jobCts = CancellationTokenSource.CreateLinkedTokenSource(externalCancellationToken);
         var cancellationToken = jobCts.Token;
@@ -188,6 +189,15 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
         var normalizedModule = RemoteInstallRules.NormalizeModuleName(request.ModuleName) ?? request.ModuleName;
         var headerTitle = $"{request.Title} ({kindLabel} · {normalizedModule})";
         var logBuilder = new StringBuilder();
+        var logLock = new object();
+
+        void AppendLog(string line)
+        {
+            lock (logLock)
+            {
+                logBuilder.AppendLine(line);
+            }
+        }
 
         void CancelJob()
         {
@@ -233,12 +243,20 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
                 logBuilder.AppendLine($"  - {d.DisplaySummary} ({d.ClassificationSource})");
             }
 
-            var matchingDevices = allDevices
-                .Where(d => d.DeviceKind == request.TargetDeviceKind
-                    && RemoteInstallRules.MatchesTargetFilter(d.Serial, d.Model, d.IpAddress, request.TargetDeviceFilter))
-                .ToList();
+            var resolution = ResolveTargetDevicesForRequest(
+                allDevices,
+                request.TargetDeviceKind,
+                request.TargetDeviceFilter,
+                selectDevicePrompt: _feedbackNotifier is not null
+                    ? (kind, candidates) => _feedbackNotifier.PromptSelectDevice(request.Title, kind, candidates)
+                    : null);
 
-            if (matchingDevices.Count == 0)
+            if (resolution.WasCancelled)
+            {
+                return false;
+            }
+
+            if (resolution.SelectedDevices.Count == 0)
             {
                 var connectedSummary = allDevices.Count == 0
                     ? "현재 연결된 ADB 기기가 없습니다 (1·2·3 슬롯으로 먼저 연결 후 확인)"
@@ -252,26 +270,20 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
                 return false;
             }
 
-            AndroidConnectedDeviceInfo targetDevice;
-            if (matchingDevices.Count == 1)
-            {
-                targetDevice = matchingDevices[0];
-            }
-            else
-            {
-                var picked = _feedbackNotifier is not null
-                    ? _feedbackNotifier.PromptSelectDevice(request.Title, request.TargetDeviceKind, matchingDevices)
-                    : matchingDevices[0];
+            var targetDevices = resolution.SelectedDevices;
+            var missingKinds = resolution.MissingKinds;
+            var targetSummary = string.Join(" · ", targetDevices.Select(static d => d.Model));
 
-                if (picked is null)
-                {
-                    return false;
-                }
-
-                targetDevice = picked;
+            foreach (var device in targetDevices)
+            {
+                AppendLog($"[선택된 기기] {device.DisplaySummary}");
             }
 
-            logBuilder.AppendLine($"[선택된 기기] {targetDevice.DisplaySummary}");
+            if (missingKinds.Count > 0)
+            {
+                var missingLabel = string.Join(", ", missingKinds.Select(RemoteInstallRules.GetDeviceKindKoreanLabel));
+                AppendLog($"[미연결 건너뜀] {missingLabel} 기기가 연결되지 않아 연결된 기기에만 설치합니다.");
+            }
 
             // 2. Resolve Project & Module Metadata
             var projectRoot = Path.GetFullPath(request.ProjectPath.Trim());
@@ -303,10 +315,10 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
                 _feedbackNotifier?.NotifyProgress(
                     "빌드",
                     headerTitle,
-                    $"{targetDevice.Model} 대상 {assembleTask} 준비 중...",
+                    $"{targetSummary} 대상 {assembleTask} 준비 중...",
                     CancelJob);
 
-                logBuilder.AppendLine($"[빌드 시작] {gradlewPath} {assembleTask} --parallel");
+                AppendLog($"[빌드 시작] {gradlewPath} {assembleTask} --parallel");
 
                 var buildResult = await RunProcessCaptureAsync(
                     gradlewPath,
@@ -314,7 +326,7 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
                     workingDirectory: projectRoot,
                     onOutputLine: line =>
                     {
-                        logBuilder.AppendLine(line);
+                        AppendLog(line);
                         var trimmed = line.Trim();
                         if (trimmed.StartsWith("> Task ", StringComparison.Ordinal)
                             || trimmed.StartsWith("FAILURE:", StringComparison.Ordinal)
@@ -323,7 +335,7 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
                             _feedbackNotifier?.NotifyProgress(
                                 "빌드",
                                 headerTitle,
-                                $"{targetDevice.Model} · {trimmed}",
+                                $"{targetSummary} · {trimmed}",
                                 CancelJob);
                         }
                     },
@@ -345,7 +357,7 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
             // build/outputs/apk/release/output-metadata.json 및 서명된 APK를 탐색하도록 확장합니다.
             if (!TryResolveBuiltApk(projectRoot, matchedModule, variant: "debug", out var apkPath, out var resolvedAppId))
             {
-                logBuilder.AppendLine("[오류] 빌드된 APK 파일을 찾지 못했습니다.");
+                AppendLog("[오류] 빌드된 APK 파일을 찾지 못했습니다.");
                 _feedbackNotifier?.NotifyFailed(
                     $"{headerTitle} - APK 탐색 실패",
                     $"{matchedModule.ModuleName} 모듈의 Debug APK 파일을 찾지 못했습니다.",
@@ -357,88 +369,151 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
             var appId = !string.IsNullOrWhiteSpace(resolvedAppId)
                 ? resolvedAppId
                 : matchedModule.ApplicationId;
-            logBuilder.AppendLine($"[APK 확인] {apkPath} (appId: {appId ?? "미확인"})");
+            AppendLog($"[APK 확인] {apkPath} (appId: {appId ?? "미확인"})");
 
             var adbPath = ResolveAdbExecutablePath();
 
-            // Optional: Uninstall existing package when recovering from INSTALL_FAILED_UPDATE_INCOMPATIBLE
-            if (uninstallFirst && !string.IsNullOrWhiteSpace(appId))
-            {
-                _feedbackNotifier?.NotifyProgress(
-                    "삭제",
-                    headerTitle,
-                    $"{targetDevice.Model}에서 기존 앱({appId}) 삭제 중...",
-                    CancelJob);
+            // 5. Optional Uninstall + Parallel ADB Streaming Install across all selected devices
+            var installStageText = targetDevices.Count == 1
+                ? $"{targetDevices[0].Model} ({RemoteInstallRules.GetDeviceKindKoreanLabel(targetDevices[0].DeviceKind)})에 APK 설치 중..."
+                : $"{targetDevices.Count}대 기기({targetSummary})에 APK 동시 설치 중...";
 
-                var uninstallResult = await RunProcessCaptureAsync(
-                    adbPath,
-                    ["-s", targetDevice.Serial, "uninstall", appId],
-                    workingDirectory: projectRoot,
-                    onOutputLine: line => logBuilder.AppendLine(line),
-                    cancellationToken);
-                logBuilder.AppendLine($"[기존 앱 삭제] ExitCode={uninstallResult.ExitCode}");
-            }
-
-            // 5. ADB Streaming Install
             _feedbackNotifier?.NotifyProgress(
-                "설치",
+                uninstallFirst ? "삭제/설치" : "설치",
                 headerTitle,
-                $"{targetDevice.Model} ({kindLabel})에 APK 설치 중...",
+                installStageText,
                 CancelJob);
 
-            var installResult = await RunProcessCaptureAsync(
-                adbPath,
-                ["-s", targetDevice.Serial, "install", "-r", "-d", apkPath],
-                workingDirectory: projectRoot,
-                onOutputLine: line => logBuilder.AppendLine(line),
-                cancellationToken);
-
-            var installCombined = $"{installResult.StandardOutput}\n{installResult.StandardError}".Trim();
-            var installSucceeded = (installResult.ExitCode == 0
-                    || installCombined.Contains("Success", StringComparison.OrdinalIgnoreCase))
-                && !installCombined.Contains("Failure", StringComparison.OrdinalIgnoreCase);
-
-            if (!installSucceeded)
+            var installTasks = targetDevices.Select(async device =>
             {
+                var devicePrefix = targetDevices.Count > 1 ? $"[{device.Model}] " : string.Empty;
+
+                if (uninstallFirst
+                    && !string.IsNullOrWhiteSpace(appId)
+                    && (uninstallSerials is null || uninstallSerials.Contains(device.Serial)))
+                {
+                    AppendLog($"{devicePrefix}[기존 앱 삭제] {appId}");
+                    var uninstallResult = await RunProcessCaptureAsync(
+                        adbPath,
+                        ["-s", device.Serial, "uninstall", appId],
+                        workingDirectory: projectRoot,
+                        onOutputLine: line => AppendLog($"{devicePrefix}{line}"),
+                        cancellationToken);
+                    AppendLog($"{devicePrefix}[기존 앱 삭제] ExitCode={uninstallResult.ExitCode}");
+                }
+
+                var installResult = await RunProcessCaptureAsync(
+                    adbPath,
+                    ["-s", device.Serial, "install", "-r", "-d", apkPath],
+                    workingDirectory: projectRoot,
+                    onOutputLine: line => AppendLog($"{devicePrefix}{line}"),
+                    cancellationToken);
+
+                var installCombined = $"{installResult.StandardOutput}\n{installResult.StandardError}".Trim();
+                var installSucceeded = (installResult.ExitCode == 0
+                        || installCombined.Contains("Success", StringComparison.OrdinalIgnoreCase))
+                    && !installCombined.Contains("Failure", StringComparison.OrdinalIgnoreCase);
+
+                if (installSucceeded)
+                {
+                    return (Device: device, Succeeded: true, FailureCode: (string?)null, IsIncompatible: false);
+                }
+
                 RemoteInstallRules.TryExtractInstallFailureCode(installCombined, out var failureCode, out var isIncompatible);
-                var failureLabel = string.IsNullOrWhiteSpace(failureCode) ? "ADB 설치 실패" : failureCode;
+                return (Device: device, Succeeded: false, FailureCode: failureCode, IsIncompatible: isIncompatible);
+            });
+
+            var installOutcomes = await Task.WhenAll(installTasks);
+            var succeededDevices = installOutcomes.Where(static o => o.Succeeded).Select(static o => o.Device).ToList();
+            var failedOutcomes = installOutcomes.Where(static o => !o.Succeeded).ToList();
+
+            // 6. Auto-Launch Installed App on all succeeded devices in parallel
+            if (request.LaunchAfterInstall && !string.IsNullOrWhiteSpace(appId) && succeededDevices.Count > 0)
+            {
+                _feedbackNotifier?.NotifyProgress(
+                    "실행",
+                    headerTitle,
+                    succeededDevices.Count == 1
+                        ? $"{succeededDevices[0].Model}에서 앱 실행 중..."
+                        : $"{succeededDevices.Count}대 기기에서 앱 동시 실행 중...",
+                    CancelJob);
+
+                var launchTasks = succeededDevices.Select(async device =>
+                {
+                    var deviceLog = new StringBuilder();
+                    await LaunchInstalledAppAsync(adbPath, device.Serial, appId, deviceLog, cancellationToken);
+                    var text = deviceLog.ToString().TrimEnd();
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        AppendLog(text);
+                    }
+                });
+
+                await Task.WhenAll(launchTasks);
+            }
+
+            if (failedOutcomes.Count > 0)
+            {
+                var firstFailure = failedOutcomes[0];
+                var failureLabel = string.IsNullOrWhiteSpace(firstFailure.FailureCode)
+                    ? "ADB 설치 실패"
+                    : firstFailure.FailureCode!;
+                var incompatibleSerials = failedOutcomes
+                    .Where(static o => o.IsIncompatible)
+                    .Select(static o => o.Device.Serial)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 Action? uninstallAndReinstallCallback = null;
-                if (isIncompatible && !string.IsNullOrWhiteSpace(appId))
+                if (incompatibleSerials.Count > 0 && !string.IsNullOrWhiteSpace(appId))
                 {
                     uninstallAndReinstallCallback = () => _ = Task.Run(
-                        () => ExecuteDeploymentPipelineAsync(request, skipBuild: true, uninstallFirst: true, CancellationToken.None));
+                        () => ExecuteDeploymentPipelineAsync(
+                            request,
+                            skipBuild: true,
+                            uninstallFirst: true,
+                            CancellationToken.None,
+                            uninstallSerials: incompatibleSerials));
                 }
+
+                var failedSummary = string.Join(
+                    ", ",
+                    failedOutcomes.Select(static o => $"{o.Device.Model}({(string.IsNullOrWhiteSpace(o.FailureCode) ? "실패" : o.FailureCode)})"));
+                var succeededPrefix = succeededDevices.Count > 0
+                    ? $"성공: {string.Join(", ", succeededDevices.Select(static d => d.Model))} · "
+                    : string.Empty;
+                var detailMessage = incompatibleSerials.Count > 0
+                    ? $"{succeededPrefix}실패: {failedSummary}. 기존 앱과 서명이 다른 기기는 [기존 앱 삭제 후 재설치]를 누르세요."
+                    : $"{succeededPrefix}실패: {failedSummary}";
 
                 _feedbackNotifier?.NotifyFailed(
                     $"{headerTitle} - {failureLabel}",
-                    isIncompatible
-                        ? $"{targetDevice.Model}: 기존 앱과 서명이 다릅니다. [기존 앱 삭제 후 재설치]를 누르세요."
-                        : $"{targetDevice.Model}에 APK 설치 실패 ({failureLabel})",
+                    detailMessage,
                     logBuilder.ToString(),
                     onRetry: () => _ = Task.Run(() => ExecuteDeploymentPipelineAsync(request, skipBuild: true, uninstallFirst: false, CancellationToken.None)),
                     onUninstallAndReinstall: uninstallAndReinstallCallback);
                 return false;
             }
 
-            // 6. Auto-Launch Installed App
-            if (request.LaunchAfterInstall && !string.IsNullOrWhiteSpace(appId))
-            {
-                _feedbackNotifier?.NotifyProgress(
-                    "실행",
-                    headerTitle,
-                    $"{targetDevice.Model}에서 앱 실행 중...",
-                    CancelJob);
+            totalStopwatch.Stop();
+            var completedTitle = succeededDevices.Count == 1
+                ? $"✓ {succeededDevices[0].Model} ({RemoteInstallRules.GetDeviceKindKoreanLabel(succeededDevices[0].DeviceKind)}) 설치 완료"
+                : $"✓ {succeededDevices.Count}대 기기 ({string.Join("·", succeededDevices.Select(static d => RemoteInstallRules.GetDeviceKindKoreanLabel(d.DeviceKind)).Distinct())}) 동시 설치 완료";
 
-                await LaunchInstalledAppAsync(adbPath, targetDevice.Serial, appId, logBuilder, cancellationToken);
+            var baseDetail = request.LaunchAfterInstall
+                ? $"{matchedModule.ModuleName} 빌드·설치 및 앱 실행 완료"
+                : $"{matchedModule.ModuleName} 빌드·설치 완료";
+            var detailWithDevices = succeededDevices.Count > 1
+                ? $"{string.Join(", ", succeededDevices.Select(static d => $"{d.Model}({RemoteInstallRules.GetDeviceKindKoreanLabel(d.DeviceKind)})"))} · {baseDetail}"
+                : baseDetail;
+            if (missingKinds.Count > 0)
+            {
+                var skippedLabel = string.Join(", ", missingKinds.Select(RemoteInstallRules.GetDeviceKindKoreanLabel));
+                detailWithDevices = $"{detailWithDevices} ({skippedLabel} 미연결 건너뜀)";
             }
 
-            totalStopwatch.Stop();
             _feedbackNotifier?.NotifyCompleted(
-                $"✓ {targetDevice.Model} ({kindLabel}) 설치 완료",
-                request.LaunchAfterInstall
-                    ? $"{matchedModule.ModuleName} 빌드·설치 및 앱 실행 완료"
-                    : $"{matchedModule.ModuleName} 빌드·설치 완료",
+                completedTitle,
+                detailWithDevices,
                 totalStopwatch.Elapsed);
 
             return true;
@@ -468,6 +543,60 @@ public sealed partial class AndroidRemoteInstallGateway : IAndroidRemoteInstallG
             }
         }
     }
+
+    internal static RemoteInstallTargetResolution ResolveTargetDevicesForRequest(
+        IReadOnlyList<AndroidConnectedDeviceInfo> allDevices,
+        RemoteInstallDeviceKind targetDeviceKind,
+        string? targetDeviceFilter,
+        Func<RemoteInstallDeviceKind, IReadOnlyList<AndroidConnectedDeviceInfo>, AndroidConnectedDeviceInfo?>? selectDevicePrompt = null)
+    {
+        var selectedKinds = RemoteInstallRules.SplitSelectedDeviceKinds(targetDeviceKind);
+        if (selectedKinds.Count == 0)
+        {
+            return new RemoteInstallTargetResolution([], [], WasCancelled: false);
+        }
+
+        var selectedDevices = new List<AndroidConnectedDeviceInfo>();
+        var missingKinds = new List<RemoteInstallDeviceKind>();
+
+        foreach (var kind in selectedKinds)
+        {
+            var candidates = allDevices
+                .Where(d => d.DeviceKind == kind
+                    && RemoteInstallRules.MatchesTargetFilter(d.Serial, d.Model, d.IpAddress, targetDeviceFilter))
+                .ToList();
+
+            if (candidates.Count == 0)
+            {
+                missingKinds.Add(kind);
+                continue;
+            }
+
+            if (candidates.Count == 1)
+            {
+                selectedDevices.Add(candidates[0]);
+                continue;
+            }
+
+            var picked = selectDevicePrompt is not null
+                ? selectDevicePrompt(kind, candidates)
+                : candidates[0];
+
+            if (picked is null)
+            {
+                return new RemoteInstallTargetResolution([], missingKinds, WasCancelled: true);
+            }
+
+            selectedDevices.Add(picked);
+        }
+
+        return new RemoteInstallTargetResolution(selectedDevices, missingKinds, WasCancelled: false);
+    }
+
+    internal sealed record RemoteInstallTargetResolution(
+        IReadOnlyList<AndroidConnectedDeviceInfo> SelectedDevices,
+        IReadOnlyList<RemoteInstallDeviceKind> MissingKinds,
+        bool WasCancelled);
 
     private async Task<AndroidConnectedDeviceInfo?> ProbeDeviceAsync(
         string adbPath,

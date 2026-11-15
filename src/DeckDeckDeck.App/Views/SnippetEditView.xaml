@@ -555,13 +555,13 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <!-- Android 원격설치 (태블릿 4 / 폰 5 / 워치 6) -->
+                        <!-- Android 원격설치 (복수 선택 지원: 태블릿 / 폰 / 워치) -->
                         <StackPanel Style="{StaticResource Deck.FieldGroupStyle}"
                                     Visibility="{Binding IsRemoteInstallAction, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
-                                       Text="1. 대상 기기 종류 (태블릿 4 · 폰 5 · 워치 6)" />
+                                       Text="1. 대상 기기 종류 (복수 선택 가능 · 동시 설치)" />
 
-                            <Grid Margin="0,4,0,10">
+                            <Grid Margin="0,4,0,6">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="6" />
@@ -584,9 +584,13 @@
                                         </Style>
                                     </Button.Style>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="태블릿" FontSize="12.5" FontWeight="Bold"
-                                                   HorizontalAlignment="Center"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="✓ " FontSize="12" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Brand.Accent}"
+                                                       Visibility="{Binding IsRemoteInstallTabletSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Text="태블릿" FontSize="12.5" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        </StackPanel>
                                         <TextBlock Text="슬롯 4 · ≥600dp" FontSize="10"
                                                    Margin="0,2,0,0"
                                                    HorizontalAlignment="Center"
@@ -608,9 +612,13 @@
                                         </Style>
                                     </Button.Style>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="폰" FontSize="12.5" FontWeight="Bold"
-                                                   HorizontalAlignment="Center"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="✓ " FontSize="12" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Brand.Accent}"
+                                                       Visibility="{Binding IsRemoteInstallPhoneSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Text="폰" FontSize="12.5" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        </StackPanel>
                                         <TextBlock Text="슬롯 5 · 스마트폰" FontSize="10"
                                                    Margin="0,2,0,0"
                                                    HorizontalAlignment="Center"
@@ -632,9 +640,13 @@
                                         </Style>
                                     </Button.Style>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="워치" FontSize="12.5" FontWeight="Bold"
-                                                   HorizontalAlignment="Center"
-                                                   Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="✓ " FontSize="12" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Brand.Accent}"
+                                                       Visibility="{Binding IsRemoteInstallWatchSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            <TextBlock Text="워치" FontSize="12.5" FontWeight="Bold"
+                                                       Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                        </StackPanel>
                                         <TextBlock Text="슬롯 6 · Wear OS" FontSize="10"
                                                    Margin="0,2,0,0"
                                                    HorizontalAlignment="Center"
@@ -642,6 +654,57 @@
                                     </StackPanel>
                                 </Button>
                             </Grid>
+
+                            <!-- 빠른 조합 프리셋 & 선택 요약 -->
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0"
+                                        Command="{Binding SelectRemoteInstallTabletPhoneComboCommand}"
+                                        Padding="8,5">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRemoteInstallTabletPhoneComboSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <TextBlock Text="태블릿 + 폰 동시" FontSize="11" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                </Button>
+
+                                <Button Grid.Column="2"
+                                        Command="{Binding SelectRemoteInstallAllKindsCommand}"
+                                        Padding="8,5">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}" BasedOn="{StaticResource Deck.TerminalPresetButtonStyle}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsRemoteInstallAllKindsSelected}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource Deck.Brush.Brand.Accent}" />
+                                                    <Setter Property="Background" Value="#FAF6F0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <TextBlock Text="전체 선택 (태블릿·폰·워치)" FontSize="11" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               Foreground="{StaticResource Deck.Brush.Text.Primary}" />
+                                </Button>
+                            </Grid>
+
+                            <TextBlock Text="{Binding RemoteInstallDeviceKindSelectionSummary}"
+                                       FontSize="10.5"
+                                       Margin="0,2,0,10"
+                                       TextWrapping="Wrap"
+                                       Foreground="{StaticResource Deck.Brush.Text.Secondary}" />
 
                             <TextBlock Style="{StaticResource Deck.FieldLabelTextStyle}"
                                        Text="2. Android 프로젝트 폴더" />

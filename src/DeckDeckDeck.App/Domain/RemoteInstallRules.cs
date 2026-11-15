@@ -16,6 +16,7 @@ public static partial class RemoteInstallRules
 
     public const string ProjectPathRequiredMessage = "Android 프로젝트 폴더를 선택해 주세요.";
     public const string ModuleRequiredMessage = "빌드할 Android 앱 모듈을 선택하거나 입력해 주세요.";
+    public const string DeviceKindRequiredMessage = "설치할 기기 종류(태블릿/폰/워치)를 하나 이상 선택해 주세요.";
 
     /// <summary>
     /// Maps Numpad 4 -> Tablet, Numpad 5 -> Phone, Numpad 6 -> Watch as the default device order.
@@ -28,21 +29,66 @@ public static partial class RemoteInstallRules
         _ => RemoteInstallDeviceKind.Phone
     };
 
-    public static string GetDeviceKindKoreanLabel(RemoteInstallDeviceKind kind) => kind switch
+    public static IReadOnlyList<RemoteInstallDeviceKind> SplitSelectedDeviceKinds(RemoteInstallDeviceKind kinds)
     {
-        RemoteInstallDeviceKind.Tablet => "태블릿",
-        RemoteInstallDeviceKind.Phone => "폰",
-        RemoteInstallDeviceKind.Watch => "워치",
-        _ => "폰"
-    };
+        var list = new List<RemoteInstallDeviceKind>(3);
+        if (kinds.HasFlag(RemoteInstallDeviceKind.Tablet))
+        {
+            list.Add(RemoteInstallDeviceKind.Tablet);
+        }
 
-    public static string GetDeviceKindBadgeText(RemoteInstallDeviceKind kind) => kind switch
+        if (kinds.HasFlag(RemoteInstallDeviceKind.Phone))
+        {
+            list.Add(RemoteInstallDeviceKind.Phone);
+        }
+
+        if (kinds.HasFlag(RemoteInstallDeviceKind.Watch))
+        {
+            list.Add(RemoteInstallDeviceKind.Watch);
+        }
+
+        return list;
+    }
+
+    public static bool MatchesDeviceKind(
+        RemoteInstallDeviceKind targetKinds,
+        RemoteInstallDeviceKind actualDeviceKind) =>
+        actualDeviceKind != RemoteInstallDeviceKind.None
+        && (targetKinds & actualDeviceKind) != RemoteInstallDeviceKind.None;
+
+    public static string GetDeviceKindKoreanLabel(RemoteInstallDeviceKind kind)
     {
-        RemoteInstallDeviceKind.Tablet => "태블릿 (4)",
-        RemoteInstallDeviceKind.Phone => "폰 (5)",
-        RemoteInstallDeviceKind.Watch => "워치 (6)",
-        _ => "폰"
-    };
+        var selected = SplitSelectedDeviceKinds(kind);
+        if (selected.Count == 0)
+        {
+            return "폰";
+        }
+
+        return string.Join("·", selected.Select(static single => single switch
+        {
+            RemoteInstallDeviceKind.Tablet => "태블릿",
+            RemoteInstallDeviceKind.Phone => "폰",
+            RemoteInstallDeviceKind.Watch => "워치",
+            _ => "폰"
+        }));
+    }
+
+    public static string GetDeviceKindBadgeText(RemoteInstallDeviceKind kind)
+    {
+        var selected = SplitSelectedDeviceKinds(kind);
+        if (selected.Count == 1)
+        {
+            return selected[0] switch
+            {
+                RemoteInstallDeviceKind.Tablet => "태블릿 (4)",
+                RemoteInstallDeviceKind.Phone => "폰 (5)",
+                RemoteInstallDeviceKind.Watch => "워치 (6)",
+                _ => "폰"
+            };
+        }
+
+        return GetDeviceKindKoreanLabel(kind);
+    }
 
     /// <summary>
     /// Classifies an Android device into Tablet / Phone / Watch using a 4-stage pipeline:
@@ -240,36 +286,33 @@ public static partial class RemoteInstallRules
             return moduleNames[0];
         }
 
-        return deviceKind switch
+        var hasWatch = deviceKind.HasFlag(RemoteInstallDeviceKind.Watch);
+        var hasTablet = deviceKind.HasFlag(RemoteInstallDeviceKind.Tablet);
+        var hasPhone = deviceKind.HasFlag(RemoteInstallDeviceKind.Phone);
+
+        if (hasWatch && !hasTablet && !hasPhone)
         {
-            RemoteInstallDeviceKind.Watch =>
-                moduleNames.FirstOrDefault(static m => ContainsSegment(m, "wear") || ContainsSegment(m, "watch"))
-                ?? moduleNames[0],
-            RemoteInstallDeviceKind.Tablet =>
-                moduleNames.FirstOrDefault(static m => ContainsSegment(m, "tablet") || ContainsSegment(m, "tab"))
+            return moduleNames.FirstOrDefault(static m => ContainsSegment(m, "wear") || ContainsSegment(m, "watch"))
+                ?? moduleNames[0];
+        }
+
+        if (hasTablet && !hasPhone)
+        {
+            return moduleNames.FirstOrDefault(static m => ContainsSegment(m, "tablet") || ContainsSegment(m, "tab"))
                 ?? moduleNames.FirstOrDefault(static m => ContainsSegment(m, "phone"))
                 ?? moduleNames.FirstOrDefault(static m => !ContainsSegment(m, "wear") && !ContainsSegment(m, "watch"))
-                ?? moduleNames[0],
-            _ =>
-                moduleNames.FirstOrDefault(static m => ContainsSegment(m, "phone"))
-                ?? moduleNames.FirstOrDefault(static m => !ContainsSegment(m, "wear") && !ContainsSegment(m, "watch"))
-                ?? moduleNames[0]
-        };
+                ?? moduleNames[0];
+        }
+
+        return moduleNames.FirstOrDefault(static m => ContainsSegment(m, "phone"))
+            ?? moduleNames.FirstOrDefault(static m => !ContainsSegment(m, "wear") && !ContainsSegment(m, "watch"))
+            ?? moduleNames[0];
     }
 
     public static string RecommendDefaultSlotTitle(string? projectPath, RemoteInstallDeviceKind deviceKind)
     {
         var kindLabel = GetDeviceKindKoreanLabel(deviceKind);
-        if (string.IsNullOrWhiteSpace(projectPath))
-        {
-            return $"{kindLabel} 원격설치";
-        }
-
-        var trimmed = projectPath.Trim().TrimEnd('\\', '/');
-        var folderName = System.IO.Path.GetFileName(trimmed);
-        return string.IsNullOrWhiteSpace(folderName)
-            ? $"{kindLabel} 원격설치"
-            : $"{kindLabel} 원격설치";
+        return $"{kindLabel} 원격설치";
     }
 
     public static bool IsAutoGeneratedSlotTitle(string? title)
@@ -284,6 +327,10 @@ public static partial class RemoteInstallRules
             or "태블릿 원격설치"
             or "폰 원격설치"
             or "워치 원격설치"
+            or "태블릿·폰 원격설치"
+            or "태블릿·워치 원격설치"
+            or "폰·워치 원격설치"
+            or "태블릿·폰·워치 원격설치"
             or "태블릿"
             or "폰"
             or "워치";

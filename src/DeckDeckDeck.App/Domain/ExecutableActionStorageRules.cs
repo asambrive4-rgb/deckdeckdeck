@@ -79,7 +79,9 @@ public static class ExecutableActionStorageRules
                 ? RemoteInstallRules.NormalizeModuleName(remoteInstallModule)
                 : null,
             isRemoteInstall
-                ? remoteInstallDeviceKind ?? RemoteInstallDeviceKind.Phone
+                ? (remoteInstallDeviceKind is { } kinds && kinds != RemoteInstallDeviceKind.None
+                    ? kinds
+                    : RemoteInstallDeviceKind.Phone)
                 : null,
             isRemoteInstall
                 ? NormalizeOptionalText(remoteInstallTargetDevice)
